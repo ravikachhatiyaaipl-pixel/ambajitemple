@@ -1,0 +1,136 @@
+/***
+*
+*  Application Name: I3EMS
+*
+*  Developed By: Aark InfoSoft Pvt Ltd.
+*
+*  Version: Ambaji Mata Temple Management
+*  
+*  All Rights Reserved, Unauthorized use, copying, or distribution is strictly prohibited.
+*  All source code, database structures, UI/UX designs, workflows,
+*  business logic, and documentation are confidential intellectual property.
+*  Reverse engineering, duplication, or redistribution without written permission
+*  is strictly prohibited and may result in legal action.
+*  
+*/
+
+@import "tailwindcss";
+
+@theme {
+  /* Ambaji Temple red theme: blue / indigo / violet / purple / sky are remapped to red (#E53935 -> #B71C1C) */
+  --color-blue-50: #ffffff;
+  --color-blue-100: #ffcdd2;
+  --color-blue-200: #ef9a9a;
+  --color-blue-300: #e57373;
+  --color-blue-400: #ef5350;
+  --color-blue-500: #e94b47;
+  --color-blue-600: #e53935;
+  --color-blue-700: #c62828;
+  --color-blue-800: #b71c1c;
+  --color-blue-900: #7f1313;
+  --color-blue-950: #4a0a0a;
+  --color-indigo-50: #ffffff;
+  --color-indigo-100: #ffcdd2;
+  --color-indigo-200: #ef9a9a;
+  --color-indigo-300: #e57373;
+  --color-indigo-400: #ef5350;
+  --color-indigo-500: #e94b47;
+  --color-indigo-600: #e53935;
+  --color-indigo-700: #c62828;
+  --color-indigo-800: #b71c1c;
+  --color-indigo-900: #7f1313;
+  --color-indigo-950: #4a0a0a;
+  --color-violet-50: #ffffff;
+  --color-violet-100: #ffcdd2;
+  --color-violet-200: #ef9a9a;
+  --color-violet-300: #e57373;
+  --color-violet-400: #ef5350;
+  --color-violet-500: #e94b47;
+  --color-violet-600: #e53935;
+  --color-violet-700: #c62828;
+  --color-violet-800: #b71c1c;
+  --color-violet-900: #7f1313;
+  --color-violet-950: #4a0a0a;
+  --color-purple-50: #ffffff;
+  --color-purple-100: #ffcdd2;
+  --color-purple-200: #ef9a9a;
+  --color-purple-300: #e57373;
+  --color-purple-400: #ef5350;
+  --color-purple-500: #e94b47;
+  --color-purple-600: #e53935;
+  --color-purple-700: #c62828;
+  --color-purple-800: #b71c1c;
+  --color-purple-900: #7f1313;
+  --color-purple-950: #4a0a0a;
+  --color-sky-50: #ffffff;
+  --color-sky-100: #ffcdd2;
+  --color-sky-200: #ef9a9a;
+  --color-sky-300: #e57373;
+  --color-sky-400: #ef5350;
+  --color-sky-500: #e94b47;
+  --color-sky-600: #e53935;
+  --color-sky-700: #c62828;
+  --color-sky-800: #b71c1c;
+  --color-sky-900: #7f1313;
+  --color-sky-950: #4a0a0a;
+}
+
+/* ---- Landing page tokens (brand red + deep maroon + temple gold) ---- */
+@theme {
+  --color-brand: #e53935;
+  --color-brand-dark: #b71c1c;
+  --color-temple-950: #1f0505;
+  --color-temple-900: #2b0a0a;
+  --color-temple-800: #3d0f0f;
+  --color-temple-700: #5a1414;
+  --color-gold: #f5b800;
+  --color-gold-soft: #ffd65a;
+  --color-cream: #fff4e8;
+  --color-cream-light: #fffaf4;
+  --font-display: "Cinzel", Georgia, "Times New Roman", serif;
+}
+
+:root {
+  --primary: #b71c1c;
+  --secondary: #e53935;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+}
+
+body {
+  font-family: "Inter", sans-serif;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.3s ease-out;
+}
+
+.fixed.z-50 {
+  z-index: 9999;
+}
+.bdr-btm {
+  position: relative;
+}
+
+.bdr-btm::after {
+  content: "";
+  position: absolute;
+  left: 10%;
+  right: 10%;
+  bottom: 0;
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(to left, transparent, #e53935 90%, transparent);
+}

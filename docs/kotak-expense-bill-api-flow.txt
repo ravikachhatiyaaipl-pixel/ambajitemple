@@ -1,0 +1,301 @@
+================================================================================
+AMT / I3EMS — Expense Bill Payment via Kotak CMS
+API & Process Flow Document (for Kotak Bank)
+================================================================================
+Date: 12-Oct-2026
+================================================================================
+
+
+1. OVERVIEW
+-----------
+Expense bills are created and approved inside the AMT application.
+Kotak bank APIs are called ONLY at the payment stage, and ONLY from the
+AMT application server (not from the user browser).
+
+Browser / User  -->  AMT Backend (Laravel)  -->  Kotak CMS APIs
+
+
+2. END-TO-END PROCESS
+---------------------
+
+Step 1: Create Expense Bill
+Step 2: Multi-level Approval
+Step 3: Final Approval (bill ready for payment)
+Step 4: Bank Payment via Kotak CMS
+Step 5: Status / UTR enquiry
+Step 6: Accounting entry (only after bank success)
+
+
+--------------------------------------------------------------------------------
+STEP 1 — CREATE EXPENSE BILL
+--------------------------------------------------------------------------------
+Who      : Department user
+Kotak API: None
+
+Purpose  : Create / update expense bill with amount, beneficiary bank details
+           (account number, IFSC, name), expense ledger, payment mode.
+
+Main AMT APIs:
+  POST   /api/new-one-chl-voucher          (create bill)
+  PUT    /api/new-one-chl-voucher/{id}     (update bill)
+  GET    /api/new-one-chl-voucher/{id}     (view bill)
+  GET    /api/lst-new-one-chl-voucher/...  (list bills)
+
+Supporting APIs (masters only):
+  GET    /api/ledgers/all/data
+  GET    /api/payment-mode/all
+  GET    /api/tender-type/all
+  GET    /api/sub-ledgers/all
+  GET    /api/dpt-master/all/lst-dpt-master
+  GET    /api/new-chl-voucher/next-vou-no/data/by-cv-no
+
+Result   : Bill number (CV_No) created. No bank call.
+
+
+--------------------------------------------------------------------------------
+STEP 2 — APPROVAL (MID STAGES)
+--------------------------------------------------------------------------------
+Who      : Approving officers (stage-wise)
+Kotak API: None
+
+Purpose  : Move bill from one approval stage to next.
+           Select debit bank ledger where required.
+           Create cheque record only if payment mode is Cheque.
+
+Main AMT APIs:
+  GET    /api/lst-new-one-chl-voucher
+  GET    /api/new-one-chl-voucher/{id}
+  PUT    /api/new-chl-voucher/{id}/status
+  PUT    /api/new-chl-voucher/bulk/status/update
+  PUT    /api/new-chl-voucher/update-sl-lg-id
+  POST   /api/cheques                      (cheque mode only)
+  GET    /api/activity-logs?CV_No=...      (approval history)
+
+Result   : Status updated. No bank call. No financial posting.
+
+
+--------------------------------------------------------------------------------
+STEP 3 — FINAL APPROVAL
+--------------------------------------------------------------------------------
+Who      : Final approving authority
+Kotak API: None
+
+Purpose  : Mark bill as ready for bank payment.
+           Do NOT call Kotak.
+           Do NOT create financial entries at this step.
+
+Main AMT API:
+  PUT    /api/new-chl-voucher/bulk/status/update
+         (or single status update)
+
+  Key fields set:
+    Status     = Final approved status
+    Py_Status  = initiate
+
+Result   : Bill appears in Manage Payments as "Initiate".
+
+
+--------------------------------------------------------------------------------
+STEP 4 — BANK PAYMENT (KOTAK CMS)
+--------------------------------------------------------------------------------
+Who      : Payment / accounts user (Manage Payments screen)
+Kotak API: Yes (via AMT server only)
+
+Purpose  : Pay one bill at a time through Kotak CMS.
+
+4.1 List bills ready for payment
+  GET    /api/lst-new-one-chl-voucher?Is_income=N&Py_Status=initiate
+
+4.2 Get Kotak OAuth token
+  Browser -> AMT:
+    POST   /api/kotak/cms/token
+
+  AMT -> Kotak:
+    POST   {KOTAK_API_URL}/auth/oauth/v2/token
+    Body:  grant_type=client_credentials
+           client_id / client_secret
+    Reply: access_token
+
+4.3 Initiate CMS payment
+  Browser -> AMT:
+    POST   /api/kotak/cms/payment
+    Body:  MessageId, voucher id, debit account, beneficiary account,
+           IFSC, amount, PayMode (IFT / NEFT / RTGS)
+
+  AMT -> Kotak:
+    POST   {KOTAK_API_URL}/v1/cms/pay
+    Header: Authorization: Bearer {token}
+            Content-Type: application/xml
+            SOAPAction: Payment service
+    Body:   AES-encrypted CMS Payment SOAP XML
+
+  AMT stores on bill:
+    Py_Status        = pending (if accepted) / failed (if rejected)
+    Cms_Message_Id
+    Cms_Inst_Ref_No
+    Cms_Status
+    Cms_Pay_Mode
+
+Result   : Bill moves to Pending (or Failed if rejected by CMS).
+
+
+--------------------------------------------------------------------------------
+STEP 5 — STATUS / UTR ENQUIRY
+--------------------------------------------------------------------------------
+Who      : Payment user (Refresh Status)
+Kotak API: Yes (via AMT server only)
+
+Purpose  : Check bank processing status and capture UTR.
+
+Browser -> AMT:
+  POST   /api/kotak/cms/status
+  Body:  MessageId, InstRefNo
+
+AMT -> Kotak:
+  POST   {KOTAK_API_URL}/v1/cms/rev
+  Header: Authorization: Bearer {token}
+          Content-Type: application/xml
+          SOAPAction: Reversal / status service
+  Body:   AES-encrypted status SOAP XML
+
+Bank status handling:
+  U     = Success (Processed)  -> store UTR, Py_Status = success
+  C/PA  = Still in process     -> remain pending
+  R/AR/DF/... = Failed         -> Py_Status = failed
+
+
+--------------------------------------------------------------------------------
+STEP 6 — ACCOUNTING ENTRY (AFTER BANK SUCCESS ONLY)
+--------------------------------------------------------------------------------
+Who      : System (automatic after status U)
+Kotak API: None
+
+Purpose  : Post financial voucher only when bank confirms success.
+
+AMT APIs:
+  GET    /api/finan-trns/all?Vou_Rf={BillNo}   (check already posted)
+  POST   /api/finan-trns                       (create PAY entries)
+
+Result   : Accounting done. Bill shows Success with UTR.
+
+
+--------------------------------------------------------------------------------
+3. KOTAK APIs USED (SERVER SIDE ONLY)
+--------------------------------------------------------------------------------
+
+  #  Bank API                                      Used for
+  -  ---------------------------------------------  ---------------------------
+  1  POST /auth/oauth/v2/token                      OAuth access token
+  2  POST /v1/cms/pay                               Payment initiation
+  3  POST /v1/cms/rev                               Status / UTR enquiry
+
+Notes:
+  - All three are called from AMT Backend only.
+  - User browser never calls Kotak host directly.
+  - Server IP is whitelisted by Kotak.
+  - Request body to /v1/cms/pay and /v1/cms/rev is AES encrypted.
+  - Credentials from active Kotak Configuration (encrypted DB) or server .env.
+
+
+--------------------------------------------------------------------------------
+4. PAYMENT STATUS TRACKING
+--------------------------------------------------------------------------------
+
+  Status      Meaning
+  ----------  --------------------------------------------------
+  initiate    Final approved; waiting for Pay action
+  pending     Sent to Kotak; waiting for bank confirmation
+  success     Bank status U; UTR saved; accounts posted
+  failed      Rejected by CMS or failed at bank
+
+  Trace fields stored on bill (for audit):
+    Bill No (CV_No)
+    Cms_Message_Id
+    Cms_Inst_Ref_No
+    Cms_Status
+    Cms_Utr
+    Cms_Pay_Mode
+    Py_Status
+
+
+--------------------------------------------------------------------------------
+5. LOGGING / SECURITY (FOR BANK REVIEW)
+--------------------------------------------------------------------------------
+
+5.1 Centralized logging
+  - All Kotak calls are logged from one place: AMT Backend server.
+  - Logs are stored on the application server log system.
+
+5.2 No PII in operational / audit logs
+  Logs focus on:
+    - Date / time
+    - User id (who clicked Pay / Refresh)
+    - Bill number
+    - MessageId / InstRefNo
+    - Bank status code
+    - UTR
+    - API path (/token, /pay, /rev) and success/failure
+
+  Not written into open audit screenshots / reports:
+    - Client secret / access token
+    - Full personal KYC dumps
+    - Encryption keys
+
+  Beneficiary payment details required by CMS travel only inside the
+  encrypted payload from AMT server to Kotak over TLS.
+
+5.3 Transaction traceability
+  One payment can be traced using:
+    Bill No  +  MessageId  +  InstRefNo  +  Status  +  UTR
+
+5.4 Secure access
+  - Application login required (Bearer token).
+  - Payment screens restricted by role / menu rights.
+  - Kotak credentials stored encrypted on server.
+  - Server log files accessible only to authorized admins.
+  - Browser cannot call Kotak APIs directly.
+
+
+--------------------------------------------------------------------------------
+6. SIMPLE FLOW CHART
+--------------------------------------------------------------------------------
+
+  Create Bill
+       |
+       v
+  Approval Stages  ----------->  (status update only)
+       |
+       v
+  Final Approval  ------------>  Py_Status = initiate
+       |                         (no Kotak, no accounts)
+       v
+  Manage Payments — Pay
+       |
+       +--> AMT /kotak/cms/token  --> Kotak /auth/oauth/v2/token
+       |
+       +--> AMT /kotak/cms/payment --> Kotak /v1/cms/pay
+       |         |
+       |         +--> pending / failed
+       |
+       +--> AMT /kotak/cms/status  --> Kotak /v1/cms/rev
+                 |
+                 +--> Success (U) + UTR --> Post accounts
+                 +--> Failed --> mark failed
+                 +--> In process --> keep pending
+
+
+--------------------------------------------------------------------------------
+7. IMPORTANT POINTS FOR BANK
+--------------------------------------------------------------------------------
+1. Kotak APIs are used only for payment and status (token + pay + rev).
+2. Create bill and approval stages do not call Kotak.
+3. Browser never hits Kotak; only AMT server does.
+4. Payload to pay/status APIs is encrypted.
+5. UTR is stored against the bill after success.
+6. Accounting is posted only after bank status success (U).
+7. Traceability is by Bill No + MessageId + UTR.
+8. Logs are centralized on AMT server with controlled access.
+
+================================================================================
+END
+================================================================================
