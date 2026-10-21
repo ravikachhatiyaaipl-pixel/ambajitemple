@@ -44,7 +44,7 @@ export const todayLabel = () =>
 /* ------------------------------- Page shell ------------------------------ */
 export const PortalPage = ({ children, narrow = false }) => (
   <div className="min-h-screen" style={{ background: CREAM }}>
-    <div className={`${narrow ? "max-w-full" : "max-w-full"} mx-auto px-4 sm:px-6 py-6 space-y-6`}>
+    <div className={`${narrow ? "max-w-6xl" : "max-w-7xl"} mx-auto px-4 sm:px-6 py-6 space-y-6`}>
       {children}
     </div>
   </div>
@@ -94,7 +94,7 @@ export const HeroButton = ({ onClick, icon: Icon, children, solid = false }) => 
 export const StatCard = ({ label, value, sub, icon: Icon, tone = "red", to }) => {
   const t = TONES[tone] || TONES.red;
   const body = (
-    <div className="h-full rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
+    <div className="h-full rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">{label}</p>

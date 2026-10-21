@@ -160,12 +160,16 @@ const AdminDashboard = () => {
 
       {/* Trend + role split */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <Panel title="Estate Revenue Trend" subtitle="Estate & bookings" className="lg:col-span-2">
-          <TrendChart data={est?.trend} series={[{ key: "value", name: "Hall Revenue", color: "#F5B800" }]} />
+        <Panel title="Receipts vs Payments" subtitle="Monthly trend" className="lg:col-span-2"
+          action={<Link to="/dashboards/finance" className="inline-flex items-center text-xs font-medium text-red-700 hover:underline">Details <ChevronRight className="h-3.5 w-3.5" /></Link>}>
+          <TrendChart data={fin?.trend} series={[
+            { key: "receipts", name: "Receipts", color: "#059669" },
+            { key: "payments", name: "Payments", color: "#B71C1C" },
+          ]} />
         </Panel>
         <Panel title="Users by Role" subtitle="Who uses the portal">
           <DonutChart data={usersByRole} centerValue={users.length} centerLabel="users" />
-        </Panel>        
+        </Panel>
       </div>
 
       {hasNewUsers && (
