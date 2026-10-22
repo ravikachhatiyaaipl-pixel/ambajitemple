@@ -14,6 +14,7 @@ import {
   Users,
   Calendar,
 } from "lucide-react";
+import { CrudFormPage } from "../../../../components/crud/crudkit";
 
 const SevaPackages = ({ user }) => {
   const [rows, setRows] = useState([]);
@@ -270,6 +271,348 @@ const SevaPackages = ({ user }) => {
     );
   }
 
+  if (showForm) {
+    return (
+      <CrudFormPage
+        title={editing ? "Edit Package" : "Add Package"}
+        onClose={() => setShowForm(false)}
+        onSubmit={handleSave}
+        saving={saving}
+        submitLabel={editing ? "Update" : "Create"}
+      >
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-xs font-medium text-gray-700">
+                Service *
+              </label>
+              <select
+                value={form.service_id}
+                onChange={(e) =>
+                  setForm((p) => ({ ...p, service_id: e.target.value }))
+                }
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+              >
+                <option value="">— select —</option>
+                {services.map((s) => (
+                  <option key={s.service_id} value={s.service_id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="mb-1 block text-xs font-medium text-gray-700">
+                Package Name *
+              </label>
+              <input
+                value={form.name}
+                onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
+                placeholder="Basic (1 person)"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+              />
+            </div>
+
+            <div>
+              <label className="mb-1 block text-xs font-medium text-gray-700">
+                Base Fee (Rs) *
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={form.fee}
+                onChange={(e) => setForm((p) => ({ ...p, fee: e.target.value }))}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+              />
+            </div>
+
+            <div>
+              <label className="mb-1 block text-xs font-medium text-gray-700">
+                Pooja Duration
+              </label>
+              <input
+                type="number"
+                min="1"
+                value={form.duration_minutes}
+                onChange={(e) =>
+                  setForm((p) => ({ ...p, duration_minutes: e.target.value }))
+                }
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+              />
+            </div>
+
+            <div>
+              <label className="mb-1 block text-xs font-medium text-gray-700">
+                Persons per Group
+              </label>
+              <input
+                type="number"
+                min="1"
+                value={form.max_persons}
+                onChange={(e) =>
+                  setForm((p) => ({
+                    ...p,
+                    max_persons: e.target.value,
+                    persons_served:
+                      Number(p.persons_served) > Number(e.target.value)
+                        ? e.target.value
+                        : p.persons_served,
+                  }))
+                }
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+              />
+            </div>
+
+            <div>
+              <label className="mb-1 block text-xs font-medium text-gray-700">
+                Persons Served
+              </label>
+              <input
+                type="number"
+                min="1"
+                max={Number(form.max_persons) || 1}
+                value={form.persons_served}
+                onChange={(e) =>
+                  setForm((p) => ({
+                    ...p,
+                    persons_served: e.target.value,
+                  }))
+                }
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+              />
+            </div>
+
+            <div>
+              <label className="mb-1 block text-xs font-medium text-gray-700">
+                Daily Limit (persons / day for this seva)
+              </label>
+              <input
+                type="number"
+                min="0"
+                value={form.daily_quota}
+                onChange={(e) =>
+                  setForm((p) => ({ ...p, daily_quota: e.target.value }))
+                }
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+              />
+            </div>
+
+            <div>
+              <label className="mb-1 block text-xs font-medium text-gray-700">
+                Start Date
+              </label>
+              <input
+                type="date"
+                value={form.effective_from}
+                onChange={(e) =>
+                  setForm((p) => ({ ...p, effective_from: e.target.value }))
+                }
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+              />
+            </div>
+
+            <div>
+              <label className="mb-1 block text-xs font-medium text-gray-700">
+                End Date
+              </label>
+              <input
+                type="date"
+                value={form.effective_to}
+                onChange={(e) =>
+                  setForm((p) => ({ ...p, effective_to: e.target.value }))
+                }
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-medium text-gray-700">
+              Description
+            </label>
+            <textarea
+              rows={2}
+              value={form.description}
+              onChange={(e) =>
+                setForm((p) => ({ ...p, description: e.target.value }))
+              }
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-medium text-gray-700">
+              What's included
+            </label>
+            <div className="flex gap-2">
+              <input
+                value={includeInput}
+                onChange={(e) => setIncludeInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    addInclude();
+                  }
+                }}
+                placeholder="Type an item and press Enter"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+              />
+              <button
+                type="button"
+                onClick={addInclude}
+                className="shrink-0 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Add
+              </button>
+            </div>
+            {form.includes.length > 0 && (
+              <ul className="mt-2 space-y-1.5">
+                {form.includes.map((item, i) => (
+                  <li
+                    key={i}
+                    className="flex items-center gap-2 rounded-lg bg-gray-50 px-2.5 py-1.5 text-xs text-gray-700"
+                  >
+                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-red-500" />
+                    <span className="flex-1">{item}</span>
+                    <button
+                      type="button"
+                      onClick={() => removeInclude(item)}
+                      className="text-gray-400 hover:text-red-600"
+                      title="Remove"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          {/* TIME SLOTS - dynamic (recurring) */}
+          <div>
+            <label className="mb-1 block text-xs font-medium text-gray-700">
+              Time Slots
+            </label>
+            <p className="mb-2 text-[10px] text-gray-500">
+              Ye time slots roz repeat honge — har date par automatically
+              available. Multiple add kar sakte hain.
+            </p>
+
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+              <div>
+                <label className="mb-1 block text-[10px] text-gray-500">
+                  Start
+                </label>
+                <input
+                  type="time"
+                  value={slotDraft.start}
+                  onChange={(e) =>
+                    setSlotDraft((s) => ({ ...s, start: e.target.value }))
+                  }
+                  className="w-full rounded-lg border border-gray-300 px-2 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-[10px] text-gray-500">
+                  End
+                </label>
+                <input
+                  type="time"
+                  value={slotDraft.end}
+                  onChange={(e) =>
+                    setSlotDraft((s) => ({ ...s, end: e.target.value }))
+                  }
+                  className="w-full rounded-lg border border-gray-300 px-2 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-[10px] text-gray-500">
+                  Label
+                </label>
+                <input
+                  value={slotDraft.label}
+                  onChange={(e) =>
+                    setSlotDraft((s) => ({ ...s, label: e.target.value }))
+                  }
+                  placeholder="Mangala Aarti"
+                  className="w-full rounded-lg border border-gray-300 px-2 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-[10px] text-gray-500">
+                  Capacity
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={slotDraft.capacity}
+                  onChange={(e) =>
+                    setSlotDraft((s) => ({
+                      ...s,
+                      capacity: e.target.value,
+                    }))
+                  }
+                  className="w-full rounded-lg border border-gray-300 px-2 py-2 text-sm"
+                />
+              </div>
+              <div className="flex items-end">
+                <button
+                  type="button"
+                  onClick={addSlot}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  Add Slot
+                </button>
+              </div>
+            </div>
+
+            {form.slot_times.length > 0 && (
+              <div className="mt-2 space-y-1.5">
+                {form.slot_times.map((t, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center gap-2 rounded-lg bg-gray-50 px-2.5 py-1.5 text-xs text-gray-700"
+                  >
+                    <Clock className="h-3.5 w-3.5 shrink-0 text-gray-400" />
+                    <span className="font-semibold">
+                      {t.start} – {t.end}
+                    </span>
+                    {t.label && (
+                      <span className="text-gray-500">({t.label})</span>
+                    )}
+                    <span className="text-gray-500">
+                      cap {t.capacity || "∞"}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => removeSlot(i)}
+                      className="ml-auto text-gray-400 hover:text-red-600"
+                      title="Remove"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <label className="flex items-center gap-2 text-sm text-gray-700">
+            <input
+              type="checkbox"
+              checked={form.is_active}
+              onChange={(e) =>
+                setForm((p) => ({ ...p, is_active: e.target.checked }))
+              }
+              className="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
+            />
+            Active
+          </label>
+      </CrudFormPage>
+    );
+  }
+
   return (
     <div className="p-6 space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -479,371 +822,6 @@ const SevaPackages = ({ user }) => {
         </div>
       </div>
 
-      {showForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white shadow-xl">
-            <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
-              <h3 className="text-base font-semibold text-gray-900">
-                {editing ? "Edit Package" : "Add Package"}
-              </h3>
-              <button
-                onClick={() => setShowForm(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="space-y-4 px-5 py-4">
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-gray-700">
-                    Service *
-                  </label>
-                  <select
-                    value={form.service_id}
-                    onChange={(e) =>
-                      setForm((p) => ({ ...p, service_id: e.target.value }))
-                    }
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-                  >
-                    <option value="">— select —</option>
-                    {services.map((s) => (
-                      <option key={s.service_id} value={s.service_id}>
-                        {s.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-gray-700">
-                    Package Name *
-                  </label>
-                  <input
-                    value={form.name}
-                    onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-                    placeholder="Basic (1 person)"
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-gray-700">
-                    Base Fee (Rs) *
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={form.fee}
-                    onChange={(e) => setForm((p) => ({ ...p, fee: e.target.value }))}
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-gray-700">
-                    Pooja Duration
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={form.duration_minutes}
-                    onChange={(e) =>
-                      setForm((p) => ({ ...p, duration_minutes: e.target.value }))
-                    }
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-gray-700">
-                    Persons per Group
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={form.max_persons}
-                    onChange={(e) =>
-                      setForm((p) => ({
-                        ...p,
-                        max_persons: e.target.value,
-                        persons_served:
-                          Number(p.persons_served) > Number(e.target.value)
-                            ? e.target.value
-                            : p.persons_served,
-                      }))
-                    }
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-gray-700">
-                    Persons Served
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    max={Number(form.max_persons) || 1}
-                    value={form.persons_served}
-                    onChange={(e) =>
-                      setForm((p) => ({
-                        ...p,
-                        persons_served: e.target.value,
-                      }))
-                    }
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-gray-700">
-                    Daily Limit (persons / day for this seva)
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={form.daily_quota}
-                    onChange={(e) =>
-                      setForm((p) => ({ ...p, daily_quota: e.target.value }))
-                    }
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-gray-700">
-                    Start Date
-                  </label>
-                  <input
-                    type="date"
-                    value={form.effective_from}
-                    onChange={(e) =>
-                      setForm((p) => ({ ...p, effective_from: e.target.value }))
-                    }
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-gray-700">
-                    End Date
-                  </label>
-                  <input
-                    type="date"
-                    value={form.effective_to}
-                    onChange={(e) =>
-                      setForm((p) => ({ ...p, effective_to: e.target.value }))
-                    }
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="mb-1 block text-xs font-medium text-gray-700">
-                  Description
-                </label>
-                <textarea
-                  rows={2}
-                  value={form.description}
-                  onChange={(e) =>
-                    setForm((p) => ({ ...p, description: e.target.value }))
-                  }
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-                />
-              </div>
-
-              <div>
-                <label className="mb-1 block text-xs font-medium text-gray-700">
-                  What's included
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    value={includeInput}
-                    onChange={(e) => setIncludeInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        addInclude();
-                      }
-                    }}
-                    placeholder="Type an item and press Enter"
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-                  />
-                  <button
-                    type="button"
-                    onClick={addInclude}
-                    className="shrink-0 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                  >
-                    Add
-                  </button>
-                </div>
-                {form.includes.length > 0 && (
-                  <ul className="mt-2 space-y-1.5">
-                    {form.includes.map((item, i) => (
-                      <li
-                        key={i}
-                        className="flex items-center gap-2 rounded-lg bg-gray-50 px-2.5 py-1.5 text-xs text-gray-700"
-                      >
-                        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-red-500" />
-                        <span className="flex-1">{item}</span>
-                        <button
-                          type="button"
-                          onClick={() => removeInclude(item)}
-                          className="text-gray-400 hover:text-red-600"
-                          title="Remove"
-                        >
-                          <X className="h-3.5 w-3.5" />
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-
-              {/* TIME SLOTS - dynamic (recurring) */}
-              <div>
-                <label className="mb-1 block text-xs font-medium text-gray-700">
-                  Time Slots
-                </label>
-                <p className="mb-2 text-[10px] text-gray-500">
-                  Ye time slots roz repeat honge — har date par automatically
-                  available. Multiple add kar sakte hain.
-                </p>
-
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
-                  <div>
-                    <label className="mb-1 block text-[10px] text-gray-500">
-                      Start
-                    </label>
-                    <input
-                      type="time"
-                      value={slotDraft.start}
-                      onChange={(e) =>
-                        setSlotDraft((s) => ({ ...s, start: e.target.value }))
-                      }
-                      className="w-full rounded-lg border border-gray-300 px-2 py-2 text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-[10px] text-gray-500">
-                      End
-                    </label>
-                    <input
-                      type="time"
-                      value={slotDraft.end}
-                      onChange={(e) =>
-                        setSlotDraft((s) => ({ ...s, end: e.target.value }))
-                      }
-                      className="w-full rounded-lg border border-gray-300 px-2 py-2 text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-[10px] text-gray-500">
-                      Label
-                    </label>
-                    <input
-                      value={slotDraft.label}
-                      onChange={(e) =>
-                        setSlotDraft((s) => ({ ...s, label: e.target.value }))
-                      }
-                      placeholder="Mangala Aarti"
-                      className="w-full rounded-lg border border-gray-300 px-2 py-2 text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-[10px] text-gray-500">
-                      Capacity
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={slotDraft.capacity}
-                      onChange={(e) =>
-                        setSlotDraft((s) => ({
-                          ...s,
-                          capacity: e.target.value,
-                        }))
-                      }
-                      className="w-full rounded-lg border border-gray-300 px-2 py-2 text-sm"
-                    />
-                  </div>
-                  <div className="flex items-end">
-                    <button
-                      type="button"
-                      onClick={addSlot}
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                    >
-                      Add Slot
-                    </button>
-                  </div>
-                </div>
-
-                {form.slot_times.length > 0 && (
-                  <div className="mt-2 space-y-1.5">
-                    {form.slot_times.map((t, i) => (
-                      <div
-                        key={i}
-                        className="flex items-center gap-2 rounded-lg bg-gray-50 px-2.5 py-1.5 text-xs text-gray-700"
-                      >
-                        <Clock className="h-3.5 w-3.5 shrink-0 text-gray-400" />
-                        <span className="font-semibold">
-                          {t.start} – {t.end}
-                        </span>
-                        {t.label && (
-                          <span className="text-gray-500">({t.label})</span>
-                        )}
-                        <span className="text-gray-500">
-                          cap {t.capacity || "∞"}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => removeSlot(i)}
-                          className="ml-auto text-gray-400 hover:text-red-600"
-                          title="Remove"
-                        >
-                          <X className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <label className="flex items-center gap-2 text-sm text-gray-700">
-                <input
-                  type="checkbox"
-                  checked={form.is_active}
-                  onChange={(e) =>
-                    setForm((p) => ({ ...p, is_active: e.target.checked }))
-                  }
-                  className="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
-                />
-                Active
-              </label>
-            </div>
-
-            <div className="flex gap-3 border-t border-gray-200 px-5 py-4">
-              <button
-                onClick={() => setShowForm(false)}
-                className="flex-1 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSave}
-                disabled={saving}
-                className="flex-1 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-60"
-              >
-                {saving ? "Saving..." : editing ? "Update" : "Create"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

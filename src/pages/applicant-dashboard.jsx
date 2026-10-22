@@ -402,7 +402,7 @@ const [shopRes, rentRes, appRes, notifRes] = await Promise.all([
     <div className="min-h-screen" style={{ background: CREAM }}>
       {/* Top bar */}
       <header className="sticky top-0 z-20 border-b border-red-100 bg-white/95 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
+        <div className="mx-auto flex max-w-full items-center justify-between px-4 py-3 sm:px-6">
           <div className="flex items-center gap-3">
             <img src="/ambajilogo.png" alt="Ambaji Temple" className="h-10 w-10 object-contain" />
             <div>

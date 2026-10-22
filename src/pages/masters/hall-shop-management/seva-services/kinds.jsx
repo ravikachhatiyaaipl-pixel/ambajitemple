@@ -12,6 +12,7 @@ import {
   XCircle,
   Layers,
 } from "lucide-react";
+import { CrudFormPage } from "../../../../components/crud/crudkit";
 
 const SevaServiceKindMaster = ({ user }) => {
   const [rows, setRows] = useState([]);
@@ -40,7 +41,7 @@ const SevaServiceKindMaster = ({ user }) => {
       const res = await axios.get(`${base}/seva/kinds`, { headers });
       if (res.data?.success) setRows(res.data.data || []);
     } catch (e) {
-      toast.error(e.response?.data?.message || "Failed to load service kinds");
+      toast.error(e.response?.data?.message || "Failed to load Service Types");
     } finally {
       setLoading(false);
     }
@@ -106,10 +107,10 @@ const SevaServiceKindMaster = ({ user }) => {
         await axios.put(`${base}/seva/kinds/${editing.kind_id}`, payload, {
           headers,
         });
-        toast.success("Service kind updated");
+        toast.success("Service Type updated");
       } else {
         await axios.post(`${base}/seva/kinds`, payload, { headers });
-        toast.success("Service kind created");
+        toast.success("Service Type created");
       }
       setShowForm(false);
       fetchAll();
@@ -124,10 +125,10 @@ const SevaServiceKindMaster = ({ user }) => {
   };
 
   const handleDelete = async (r) => {
-    if (!window.confirm(`Delete service kind "${r.name}"?`)) return;
+    if (!window.confirm(`Delete Service Type "${r.name}"?`)) return;
     try {
       await axios.delete(`${base}/seva/kinds/${r.kind_id}`, { headers });
-      toast.success("Service kind deleted");
+      toast.success("Service Type deleted");
       fetchAll();
     } catch (e) {
       toast.error(
@@ -158,16 +159,111 @@ const SevaServiceKindMaster = ({ user }) => {
     );
   }
 
+  if (showForm) {
+    return (
+      <CrudFormPage
+        title={editing ? "Edit Service Type" : "Add Service Type"}
+        onClose={() => setShowForm(false)}
+        onSubmit={handleSave}
+        saving={saving}
+        submitLabel={editing ? "Update" : "Create"}
+      >
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="mb-1 block text-xs font-medium text-gray-700">
+              Code *
+            </label>
+            <input
+              value={form.code}
+              onChange={(e) =>
+                setForm((p) => ({
+                  ...p,
+                  code: e.target.value.toUpperCase(),
+                }))
+              }
+              disabled={!!editing}
+              placeholder="MAHA_YAGNA"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-mono uppercase disabled:bg-gray-100"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-gray-700">
+              Sort order
+            </label>
+            <input
+              type="number"
+              value={form.sort_order}
+              onChange={(e) =>
+                setForm((p) => ({ ...p, sort_order: e.target.value }))
+              }
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="mb-1 block text-xs font-medium text-gray-700">
+            Kind Name *
+          </label>
+          <input
+            value={form.name}
+            onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
+            placeholder="Maha Yagna"
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+          />
+        </div>
+
+        <div>
+          <label className="mb-1 block text-xs font-medium text-gray-700">
+            Description
+          </label>
+          <textarea
+            rows={2}
+            value={form.description}
+            onChange={(e) =>
+              setForm((p) => ({ ...p, description: e.target.value }))
+            }
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+          />
+        </div>
+
+        <div>
+          <label className="mb-1 block text-xs font-medium text-gray-700">
+            Icon (lucide name)
+          </label>
+          <input
+            value={form.icon}
+            onChange={(e) => setForm((p) => ({ ...p, icon: e.target.value }))}
+            placeholder="Flame"
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+          />
+        </div>
+
+        <label className="flex items-center gap-2 text-sm text-gray-700">
+          <input
+            type="checkbox"
+            checked={form.is_active}
+            onChange={(e) =>
+              setForm((p) => ({ ...p, is_active: e.target.checked }))
+            }
+            className="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
+          />
+          Active
+        </label>
+      </CrudFormPage>
+    );
+  }
+
   return (
     <div className="p-6 space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
-            Seva Service Kind Master
+            Seva Service Type Master
           </h1>
           <p className="text-sm text-gray-500">
             Ritual types (Pooja, Yagna, Bhog, Thaal…). Add a new kind here and
-            it appears in the Service Kind dropdown.
+            it appears in the Service Type dropdown.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -250,11 +346,10 @@ const SevaServiceKindMaster = ({ user }) => {
                   <td className="px-4 py-3 text-sm text-gray-600">{r.sort_order}</td>
                   <td className="px-4 py-3">
                     <span
-                      className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
-                        r.services_count > 0
-                          ? "bg-blue-100 text-blue-700"
-                          : "bg-gray-100 text-gray-500"
-                      }`}
+                      className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${r.services_count > 0
+                        ? "bg-blue-100 text-blue-700"
+                        : "bg-gray-100 text-gray-500"
+                        }`}
                     >
                       {r.services_count || 0} service
                       {r.services_count === 1 ? "" : "s"}
@@ -263,11 +358,10 @@ const SevaServiceKindMaster = ({ user }) => {
                   <td className="px-4 py-3">
                     <button
                       onClick={() => toggleActive(r)}
-                      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-medium ${
-                        r.is_active
-                          ? "bg-emerald-100 text-emerald-700"
-                          : "bg-red-100 text-red-700"
-                      }`}
+                      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-medium ${r.is_active
+                        ? "bg-emerald-100 text-emerald-700"
+                        : "bg-red-100 text-red-700"
+                        }`}
                     >
                       {r.is_active ? (
                         <CheckCircle className="h-3 w-3" />
@@ -301,7 +395,7 @@ const SevaServiceKindMaster = ({ user }) => {
                     colSpan={9}
                     className="px-4 py-12 text-center text-sm text-gray-500"
                   >
-                    No service kinds found.
+                    No Service Types found.
                   </td>
                 </tr>
               )}
@@ -310,124 +404,6 @@ const SevaServiceKindMaster = ({ user }) => {
         </div>
       </div>
 
-      {showForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-xl">
-            <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
-              <h3 className="text-base font-semibold text-gray-900">
-                {editing ? "Edit Service Kind" : "Add Service Kind"}
-              </h3>
-              <button
-                onClick={() => setShowForm(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="space-y-3 px-5 py-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-gray-700">
-                    Code *
-                  </label>
-                  <input
-                    value={form.code}
-                    onChange={(e) =>
-                      setForm((p) => ({
-                        ...p,
-                        code: e.target.value.toUpperCase(),
-                      }))
-                    }
-                    disabled={!!editing}
-                    placeholder="MAHA_YAGNA"
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-mono uppercase disabled:bg-gray-100"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-gray-700">
-                    Sort order
-                  </label>
-                  <input
-                    type="number"
-                    value={form.sort_order}
-                    onChange={(e) =>
-                      setForm((p) => ({ ...p, sort_order: e.target.value }))
-                    }
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="mb-1 block text-xs font-medium text-gray-700">
-                  Kind Name *
-                </label>
-                <input
-                  value={form.name}
-                  onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-                  placeholder="Maha Yagna"
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-                />
-              </div>
-
-              <div>
-                <label className="mb-1 block text-xs font-medium text-gray-700">
-                  Description
-                </label>
-                <textarea
-                  rows={2}
-                  value={form.description}
-                  onChange={(e) =>
-                    setForm((p) => ({ ...p, description: e.target.value }))
-                  }
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-                />
-              </div>
-
-              <div>
-                <label className="mb-1 block text-xs font-medium text-gray-700">
-                  Icon (lucide name)
-                </label>
-                <input
-                  value={form.icon}
-                  onChange={(e) => setForm((p) => ({ ...p, icon: e.target.value }))}
-                  placeholder="Flame"
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-                />
-              </div>
-
-              <label className="flex items-center gap-2 text-sm text-gray-700">
-                <input
-                  type="checkbox"
-                  checked={form.is_active}
-                  onChange={(e) =>
-                    setForm((p) => ({ ...p, is_active: e.target.checked }))
-                  }
-                  className="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
-                />
-                Active
-              </label>
-            </div>
-
-            <div className="flex gap-3 border-t border-gray-200 px-5 py-4">
-              <button
-                onClick={() => setShowForm(false)}
-                className="flex-1 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSave}
-                disabled={saving}
-                className="flex-1 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-60"
-              >
-                {saving ? "Saving..." : editing ? "Update" : "Create"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
