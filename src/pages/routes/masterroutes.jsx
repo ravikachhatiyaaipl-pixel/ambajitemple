@@ -14,7 +14,8 @@
 *  
 */
 
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
+
 import { lazy } from "react";
 const DepartmentMaster = lazy(() => import("../masters/organization-management/department-master/departmentmaster"));
 const ZoneList = lazy(() => import("../masters/organization-management/zone-master/list"));
@@ -267,6 +268,10 @@ const SevaDocumentMapping = lazy(() => import("../masters/hall-shop-management/s
 const SevaCategoryMaster = lazy(() => import("../masters/hall-shop-management/seva-services/categories"));
 const SevaBookings = lazy(() => import("../masters/hall-shop-management/seva-services/bookings"));
 const SevaApprovals = lazy(() => import("../masters/hall-shop-management/seva-services/approvals"));
+<<<<<<< HEAD
+=======
+const SevaApprovalView = lazy(() => import("../masters/hall-shop-management/seva-services/approval-view"));
+>>>>>>> 1df1ea3a27d9e1a4d71457bb4c11d39a93d84339
 const SevaActionMaster = lazy(() => import("../masters/hall-shop-management/seva-services/action-master"));
 const SevaPriests = lazy(() => import("../masters/hall-shop-management/seva-services/priests"));
 const SevaOrganizers = lazy(() => import("../masters/hall-shop-management/seva-services/organizers"));
@@ -1662,6 +1667,10 @@ const MasterRoutes = ({ user }) => {
       <Route path="hall-shop-management/seva-document-mapping" element={<SevaDocumentMapping user={user} />} />
       <Route path="hall-shop-management/seva-bookings" element={<SevaBookings user={user} />} />
       <Route path="hall-shop-management/seva-bookings-approval" element={<SevaApprovals user={user} />} />
+<<<<<<< HEAD
+=======
+      <Route path="hall-shop-management/seva-bookings-approval/view/:id" element={<SevaApprovalView user={user} />} />
+>>>>>>> 1df1ea3a27d9e1a4d71457bb4c11d39a93d84339
       <Route path="hall-shop-management/seva-priests" element={<SevaPriests user={user} />} />
       <Route path="hall-shop-management/seva-organizers" element={<SevaOrganizers user={user} />} />
       <Route path="hall-shop-management/seva-action-master" element={<SevaActionMaster user={user} />} />
