@@ -402,7 +402,7 @@ const [shopRes, rentRes, appRes, notifRes] = await Promise.all([
     <div className="min-h-screen" style={{ background: CREAM }}>
       {/* Top bar */}
       <header className="sticky top-0 z-20 border-b border-red-100 bg-white/95 backdrop-blur">
-        <div className="mx-auto flex max-w-full items-center justify-between px-4 py-3 sm:px-6">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
           <div className="flex items-center gap-3">
             <img src="/ambajilogo.png" alt="Ambaji Temple" className="h-10 w-10 object-contain" />
             <div>
@@ -610,7 +610,33 @@ const [shopRes, rentRes, appRes, notifRes] = await Promise.all([
           <StatCard label="Active Rentals" value={rentals.length} sub="Shops allotted" icon={KeyRound} tone="slate" />
         </StatGrid>
 
-        
+        {/* Charts */}
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+          <Panel title="Application Status" subtitle="Where your applications stand">
+            <DonutChart data={stageCounts} centerValue={applications.length} centerLabel="applications" />
+          </Panel>
+          <Panel title="Applications Over Time" subtitle="Last 6 months" className="lg:col-span-2">
+            {applications.length === 0 ? (
+              <EmptyState icon={FileText} text="Submit an application to see your activity" />
+            ) : (
+              <TrendChart data={appsByMonth} money={false} series={[{ key: "value", name: "Applications", color: "#E53935" }]} />
+            )}
+          </Panel>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+          <Panel title="Base Rent vs Security Deposit" subtitle="Available shops with a rental entry" className="lg:col-span-2">
+            <BarsChart data={rentCompare} money
+              bars={[
+                { key: "rent", name: "Base rent", color: "#E53935" },
+                { key: "deposit", name: "Security", color: "#F5B800" },
+              ]} />
+          </Panel>
+          <Panel title="Shops by Building" subtitle="Where space is available">
+            <BarsChart data={shopsByBuilding} bars={[{ key: "value", name: "Shops", color: "#B71C1C" }]} horizontal />
+          </Panel>
+        </div>
+
         <Panel title="Approval Overview">
           <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
             <ProgressRow label="Approved" value={approvedCount} total={applications.length} color="#059669" />
@@ -618,6 +644,139 @@ const [shopRes, rentRes, appRes, notifRes] = await Promise.all([
             <ProgressRow label="Rejected" value={rejectedCount} total={applications.length} color="#B71C1C" />
           </div>
         </Panel>
+
+        {/* Available Shops */}
+        <div id="available-shops">
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">Available Shops</h2>
+              <p className="text-sm text-gray-500">
+                Only shops that are open for application are listed here.
+              </p>
+            </div>
+            <div className="relative w-full sm:w-72">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search by name, code or location"
+                className="w-full rounded-lg border border-gray-300 bg-white py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-1 focus:ring-red-500"
+              />
+            </div>
+          </div>
+
+          {filteredShops.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-gray-300 bg-white py-12 text-center">
+              <Store className="mx-auto h-10 w-10 text-gray-300" />
+              <p className="mt-3 text-sm text-gray-500">
+                {shops.length === 0
+                  ? "No shops are open for application right now. Please check back later."
+                  : "No shops match your search"}
+              </p>
+              {shopMeta.assigned_count > 0 && (
+                <p className="mt-2 text-xs text-gray-400">
+                  ({shopMeta.assigned_count} shop
+                  {shopMeta.assigned_count > 1 ? "s are" : " is"} already assigned)
+                </p>
+              )}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {filteredShops.map((shop) => (
+                <div key={shop.SPM_Id}
+                  className="flex flex-col rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-red-50">
+                        <Store className="h-5 w-5 text-red-600" />
+                      </div>
+                      <h3 className="text-sm font-semibold text-gray-900">{shop.SPM_Name || "Shop"}</h3>
+                    </div>
+                    <Badge kind="neutral">{shop.SPM_Code}</Badge>
+                  </div>
+
+                  <div className="mt-3 space-y-1.5 text-xs text-gray-600">
+                    {shop.SPM_Loca && (
+                      <div className="flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5 text-gray-400" />{shop.SPM_Loca}</div>
+                    )}
+                    {shop.SPM_Bldg && (
+                      <div className="flex items-center gap-1.5">
+                        <Building2 className="h-3.5 w-3.5 text-gray-400" />
+                        {shop.SPM_Bldg}{shop.SPM_Unit ? ` - Unit ${shop.SPM_Unit}` : ""}
+                      </div>
+                    )}
+                    {shop.SPM_SqFt && (
+                      <div className="flex items-center gap-1.5"><Ruler className="h-3.5 w-3.5 text-gray-400" />{shop.SPM_SqFt} sq.ft</div>
+                    )}
+                  </div>
+
+                  {shop.rental && (
+                    <div className="mt-3 mb-4 grid grid-cols-3 gap-2 rounded-xl px-3 py-2 text-center" style={{ background: CREAM }}>
+                      <div><p className="text-[10px] text-gray-500">Base Rent</p><p className="text-xs font-semibold text-gray-900">₹{shop.rental.SPR_BsRnt ?? "0"}</p></div>
+                      <div>
+                          <p className="text-[10px] text-gray-500">Security</p>
+                          <p className="text-xs font-semibold text-gray-900">
+                            ₹{shop.rental.SPR_SDAmt ?? 0}
+                          </p>
+                          {shop.rental.SPR_SDMnt > 0 && (
+                            <p className="text-[9px] text-gray-400">
+                              {shop.rental.SPR_SDMnt} months
+                            </p>
+                          )}
+                        </div>
+                      <div><p className="text-[10px] text-gray-500">Late Fee</p><p className="text-xs font-semibold text-gray-900">₹{shop.rental.SPR_LtFe ?? "0"}</p></div>
+                    </div>
+                  )}
+
+                  <div className="mt-auto space-y-2 border-t border-gray-100 pt-3">
+                    {/* Tenure admin ke rental se (start -> end) */}
+                    {shop.rental?.SPR_Date && (
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-gray-500">Tenure</span>
+                          <span className="font-semibold text-gray-900">
+                            {shop.rental.SPR_EdDt
+                              ? `${fmtDate(shop.rental.SPR_Date)} → ${fmtDate(shop.rental.SPR_EdDt)}`
+                              : fmtDate(shop.rental.SPR_Date)}
+                          </span>
+                        </div>
+                        {shop.rental.SPR_Dura > 0 && (
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-gray-500">Duration</span>
+                            <span className="font-semibold text-gray-900">
+                              {shop.duration_text ||
+                                `${shop.rental.SPR_Dura} Months`}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {shop.already_applied ? (
+                      <div className="rounded-lg bg-gray-100 px-3 py-2.5 text-center">
+                        <div className="flex items-center justify-center gap-2 text-sm font-medium text-gray-700">
+                          <Clock className="h-4 w-4" />
+                          Application Submitted
+                        </div>
+                        <p className="mt-1 text-[11px] text-gray-600">
+                          Your application is under review
+                        </p>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => openApply(shop)}
+                        className="w-full rounded-lg bg-red-600 px-3 py-2 text-sm font-medium text-white hover:bg-red-700"
+                      >
+                        Apply for this Shop
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
         {/* My Applications */}
         <div>
@@ -883,169 +1042,6 @@ const [shopRes, rentRes, appRes, notifRes] = await Promise.all([
             </div>
           )}
         </div>
-
-        
-        {/* Available Shops */}
-        <div id="available-shops">
-          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900">Available Shops</h2>
-              <p className="text-sm text-gray-500">
-                Only shops that are open for application are listed here.
-              </p>
-            </div>
-            <div className="relative w-full sm:w-72">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-              <input
-                type="text"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search by name, code or location"
-                className="w-full rounded-lg border border-gray-300 bg-white py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-1 focus:ring-red-500"
-              />
-            </div>
-          </div>
-
-          {filteredShops.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-gray-300 bg-white py-12 text-center">
-              <Store className="mx-auto h-10 w-10 text-gray-300" />
-              <p className="mt-3 text-sm text-gray-500">
-                {shops.length === 0
-                  ? "No shops are open for application right now. Please check back later."
-                  : "No shops match your search"}
-              </p>
-              {shopMeta.assigned_count > 0 && (
-                <p className="mt-2 text-xs text-gray-400">
-                  ({shopMeta.assigned_count} shop
-                  {shopMeta.assigned_count > 1 ? "s are" : " is"} already assigned)
-                </p>
-              )}
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {filteredShops.map((shop) => (
-                <div key={shop.SPM_Id}
-                  className="flex flex-col rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-red-50">
-                        <Store className="h-5 w-5 text-red-600" />
-                      </div>
-                      <h3 className="text-sm font-semibold text-gray-900">{shop.SPM_Name || "Shop"}</h3>
-                    </div>
-                    <Badge kind="neutral">{shop.SPM_Code}</Badge>
-                  </div>
-
-                  <div className="mt-3 space-y-1.5 text-xs text-gray-600">
-                    {shop.SPM_Loca && (
-                      <div className="flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5 text-gray-400" />{shop.SPM_Loca}</div>
-                    )}
-                    {shop.SPM_Bldg && (
-                      <div className="flex items-center gap-1.5">
-                        <Building2 className="h-3.5 w-3.5 text-gray-400" />
-                        {shop.SPM_Bldg}{shop.SPM_Unit ? ` - Unit ${shop.SPM_Unit}` : ""}
-                      </div>
-                    )}
-                    {shop.SPM_SqFt && (
-                      <div className="flex items-center gap-1.5"><Ruler className="h-3.5 w-3.5 text-gray-400" />{shop.SPM_SqFt} sq.ft</div>
-                    )}
-                  </div>
-
-                  {shop.rental && (
-                    <div className="mt-3 mb-4 grid grid-cols-3 gap-2 rounded-xl px-3 py-2 text-center" style={{ background: CREAM }}>
-                      <div><p className="text-[10px] text-gray-500">Base Rent</p><p className="text-xs font-semibold text-gray-900">₹{shop.rental.SPR_BsRnt ?? "0"}</p></div>
-                      <div>
-                          <p className="text-[10px] text-gray-500">Security</p>
-                          <p className="text-xs font-semibold text-gray-900">
-                            ₹{shop.rental.SPR_SDAmt ?? 0}
-                          </p>
-                          {shop.rental.SPR_SDMnt > 0 && (
-                            <p className="text-[9px] text-gray-400">
-                              {shop.rental.SPR_SDMnt} months
-                            </p>
-                          )}
-                        </div>
-                      <div><p className="text-[10px] text-gray-500">Late Fee</p><p className="text-xs font-semibold text-gray-900">₹{shop.rental.SPR_LtFe ?? "0"}</p></div>
-                    </div>
-                  )}
-
-                  <div className="mt-auto space-y-2 border-t border-gray-100 pt-3">
-                    {/* Tenure admin ke rental se (start -> end) */}
-                    {shop.rental?.SPR_Date && (
-                      <div className="space-y-1">
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="text-gray-500">Tenure</span>
-                          <span className="font-semibold text-gray-900">
-                            {shop.rental.SPR_EdDt
-                              ? `${fmtDate(shop.rental.SPR_Date)} → ${fmtDate(shop.rental.SPR_EdDt)}`
-                              : fmtDate(shop.rental.SPR_Date)}
-                          </span>
-                        </div>
-                        {shop.rental.SPR_Dura > 0 && (
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="text-gray-500">Duration</span>
-                            <span className="font-semibold text-gray-900">
-                              {shop.duration_text ||
-                                `${shop.rental.SPR_Dura} Months`}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {shop.already_applied ? (
-                      <div className="rounded-lg bg-gray-100 px-3 py-2.5 text-center">
-                        <div className="flex items-center justify-center gap-2 text-sm font-medium text-gray-700">
-                          <Clock className="h-4 w-4" />
-                          Application Submitted
-                        </div>
-                        <p className="mt-1 text-[11px] text-gray-600">
-                          Your application is under review
-                        </p>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => openApply(shop)}
-                        className="w-full rounded-lg bg-red-600 px-3 py-2 text-sm font-medium text-white hover:bg-red-700"
-                      >
-                        Apply for this Shop
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Charts */}
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-          <Panel title="Application Status" subtitle="Where your applications stand">
-            <DonutChart data={stageCounts} centerValue={applications.length} centerLabel="applications" />
-          </Panel>
-          <Panel title="Applications Over Time" subtitle="Last 6 months" className="lg:col-span-2">
-            {applications.length === 0 ? (
-              <EmptyState icon={FileText} text="Submit an application to see your activity" />
-            ) : (
-              <TrendChart data={appsByMonth} money={false} series={[{ key: "value", name: "Applications", color: "#E53935" }]} />
-            )}
-          </Panel>
-        </div>
-
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-          <Panel title="Base Rent vs Security Deposit" subtitle="Available shops with a rental entry" className="lg:col-span-2">
-            <BarsChart data={rentCompare} money
-              bars={[
-                { key: "rent", name: "Base rent", color: "#E53935" },
-                { key: "deposit", name: "Security", color: "#F5B800" },
-              ]} />
-          </Panel>
-          <Panel title="Shops by Building" subtitle="Where space is available">
-            <BarsChart data={shopsByBuilding} bars={[{ key: "value", name: "Shops", color: "#B71C1C" }]} horizontal />
-          </Panel>
-        </div>
-
-        
       </PortalPage>
 
       {/* Apply Modal */}

@@ -252,7 +252,7 @@ export const MiniDonut = ({ data = [], height = 220, money = false }) => (
 /* ---------------------------- Dashboard shell --------------------------- */
 export const DashboardShell = ({ title, subtitle, filters, children, loading }) => (
   <div className="min-h-screen bg-gray-100 px-4 py-6">
-    <div className="max-w-full mx-auto">
+    <div className="max-w-7xl mx-auto">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
