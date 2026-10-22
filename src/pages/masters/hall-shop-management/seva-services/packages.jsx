@@ -8,6 +8,7 @@ import {
   Search,
   Loader2,
   X,
+  Check,
   Package,
   IndianRupee,
   Clock,
@@ -15,18 +16,69 @@ import {
   Calendar,
 } from "lucide-react";
 
+/**
+ * Time slots - koi bhi time MANUALLY type kar sakte hain (fixed 30-min
+ * dropdown nahi).
+ *
+ * Accept:  "7:30"  "07:30"  "7:30 AM"  "7:30 pm"  "19:30"  "7"  "7 pm"
+ * Return:  "HH:MM" (24-hour) ya invalid ho to null
+ */
+const parseTimeInput = (raw) => {
+  const s = String(raw || "")
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, "");
+  if (!s) return null;
+
+  const meridiem =
+    s.endsWith("AM") || s.endsWith("PM") ? s.slice(-2) : null;
+  const body = meridiem ? s.slice(0, -2) : s;
+
+  const m = body.match(/^(\d{1,2})(?::(\d{1,2}))?$/);
+  if (!m) return null;
+
+  let hh = parseInt(m[1], 10);
+  const mm = m[2] !== undefined ? parseInt(m[2], 10) : 0;
+  if (mm > 59) return null;
+
+  if (meridiem === "AM") {
+    if (hh < 1 || hh > 12) return null;
+    if (hh === 12) hh = 0;
+  } else if (meridiem === "PM") {
+    if (hh < 1 || hh > 12) return null;
+    if (hh !== 12) hh += 12;
+  } else if (hh > 23) {
+    return null;
+  }
+
+  return `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
+};
+
+/** "07:30" -> "07:30 AM" (display ke liye) */
+const to12Hour = (hhmm) => {
+  if (!hhmm) return "";
+  const [h, m] = String(hhmm).split(":").map(Number);
+  const hh = h % 12 === 0 ? 12 : h % 12;
+  return `${String(hh).padStart(2, "0")}:${String(m).padStart(2, "0")} ${
+    h < 12 ? "AM" : "PM"
+  }`;
+};
+
 const SevaPackages = ({ user }) => {
   const [rows, setRows] = useState([]);
   const [services, setServices] = useState([]);
+  const [kinds, setKinds] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
   const [query, setQuery] = useState("");
   const [svcFilter, setSvcFilter] = useState("");
+  const [kindFilter, setKindFilter] = useState("");
 
   const [form, setForm] = useState({
     service_id: "",
+    service_kind: "",
     name: "",
     description: "",
     includes: [],
@@ -43,11 +95,11 @@ const SevaPackages = ({ user }) => {
   });
 
   const [includeInput, setIncludeInput] = useState("");
+  const [slotError, setSlotError] = useState(false);
   const [slotDraft, setSlotDraft] = useState({
     start: "",
     end: "",
     label: "",
-    capacity: "",
   });
 
   const token = localStorage.getItem("auth_token");
@@ -57,12 +109,16 @@ const SevaPackages = ({ user }) => {
   const fetchAll = async () => {
     try {
       setLoading(true);
-      const [svcRes, pkgRes] = await Promise.all([
+      const [svcRes, pkgRes, kindRes] = await Promise.all([
         axios.get(`${base}/seva/services?per_page=200`, { headers }),
         axios.get(`${base}/seva/packages?per_page=200`, { headers }),
+        axios.get(`${base}/seva/kinds`, { headers }),
       ]);
       if (svcRes.data?.success) {
         setServices(svcRes.data.data?.data || svcRes.data.data || []);
+      }
+      if (kindRes.data?.success) {
+        setKinds(kindRes.data.data?.data || kindRes.data.data || []);
       }
       if (pkgRes.data?.success) {
         const list = pkgRes.data.data?.data || pkgRes.data.data || [];
@@ -89,20 +145,37 @@ const SevaPackages = ({ user }) => {
     () =>
       rows.filter((r) => {
         const bySvc = !svcFilter || r.service_id == svcFilter;
+        const byKind = !kindFilter || r.service_kind == kindFilter;
         const byText = `${r.name} ${r.code || ""} ${r.service_name || ""} ${
           r.description || ""
         }`
           .toLowerCase()
           .includes(query.trim().toLowerCase());
-        return bySvc && byText;
+        return bySvc && byKind && byText;
       }),
-    [rows, query, svcFilter]
+    [rows, query, svcFilter, kindFilter]
   );
+
+  // Service Type code ka naam (POOJA -> Pooja)
+  const kindLabel = (code) =>
+    kinds.find((k) => k.code === code)?.name || code || "â€”";
+
+  // Service Type ke hisaab se Services filter (current service hamesha dikhe)
+  const visibleServices = useMemo(() => {
+    const kind = form.service_kind;
+    if (!kind) return services;
+    return services.filter(
+      (s) => s.service_kind === kind || s.service_id == form.service_id
+    );
+  }, [services, form.service_kind, form.service_id]);
 
   const openCreate = () => {
     setEditing(null);
     setForm({
       service_id: services[0]?.service_id || "",
+      service_kind:
+        services.find((s) => s.service_id == services[0]?.service_id)
+          ?.service_kind || "",
       name: "",
       description: "",
       includes: [],
@@ -118,7 +191,8 @@ const SevaPackages = ({ user }) => {
       is_active: true,
     });
     setIncludeInput("");
-    setSlotDraft({ start: "", end: "", label: "", capacity: "" });
+    setSlotDraft({ start: "", end: "", label: "" });
+    setSlotError(false);
     setShowForm(true);
   };
 
@@ -126,6 +200,10 @@ const SevaPackages = ({ user }) => {
     setEditing(p);
     setForm({
       service_id: p.service_id,
+      service_kind:
+        p.service_kind ||
+        services.find((s) => s.service_id == p.service_id)?.service_kind ||
+        "",
       name: p.name || "",
       description: p.description || "",
       includes: Array.isArray(p.included_list)
@@ -138,14 +216,21 @@ const SevaPackages = ({ user }) => {
       daily_quota: p.daily_quota ?? "",
       max_persons: p.persons_per_booking ?? p.max_persons ?? 1,
       persons_served: p.persons_served_count ?? p.persons_served ?? 1,
-      slot_times: Array.isArray(p.slot_times) ? p.slot_times : [],
+      slot_times: Array.isArray(p.slot_times)
+        ? p.slot_times.map((t) => ({
+            start: t.start,
+            end: t.end,
+            label: t.label || "",
+          }))
+        : [],
       effective_from: p.effective_from || "",
       effective_to: p.effective_to || "",
       sort_order: p.sort_order ?? 0,
       is_active: !!p.is_active,
     });
     setIncludeInput("");
-    setSlotDraft({ start: "", end: "", label: "", capacity: "" });
+    setSlotDraft({ start: "", end: "", label: "" });
+    setSlotError(false);
     setShowForm(true);
   };
 
@@ -177,38 +262,79 @@ const SevaPackages = ({ user }) => {
   };
 
   const addSlot = () => {
-    if (!slotDraft.start) {
-      toast.error("Select the slot start time");
+    const dur = Number(form.duration_minutes) || 60;
+
+    // User ne manually time type kiya hai - parse karo
+    let start = parseTimeInput(slotDraft.start);
+    const endInput = parseTimeInput(slotDraft.end);
+
+    // Sirf END diya ho to START apne aap nikalo (End - duration)
+    if (!start && endInput) {
+      const [eh, em] = endInput.split(":").map(Number);
+      let total = eh * 60 + em - dur;
+      if (total < 0) total += 24 * 60;
+      start = `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(
+        total % 60
+      ).padStart(2, "0")}`;
+    }
+
+    if (!start) {
+      setSlotError(true);
+      toast.error(
+        slotDraft.start
+          ? "Enter a valid START time (e.g. 07:30 AM)"
+          : "Please enter the slot START time"
+      );
       return;
     }
 
-    const dur = Number(form.duration_minutes) || 60;
-    const end = slotDraft.end || addEndTime(slotDraft.start, dur);
+    if (slotDraft.end && !endInput) {
+      toast.error("Enter a valid END time (e.g. 08:30 AM)");
+      return;
+    }
+
+    setSlotError(false);
+
+    let end = endInput;
+    if (!end) {
+      end = addEndTime(start, dur);
+    }
+    // End <= Start ho to raat cross midnight hai (e.g. 11:00 PM - 12:30 AM)
+    // - clock time as it is store hota hai.
 
     setForm((p) => ({
       ...p,
       slot_times: [
         ...p.slot_times,
         {
-          start: slotDraft.start,
+          start,
           end,
           label: slotDraft.label || "",
-          capacity: Number(slotDraft.capacity) || 0,
         },
       ],
     }));
 
-    setSlotDraft({ start: "", end: "", label: "", capacity: "" });
+    setSlotDraft({ start: "", end: "", label: "" });
+    setSlotError(false);
   };
 
-  const removeSlot = (idx) =>
-    setForm((p) => ({
+  // End input ka "Auto" hint - duration hisaab se
+  const autoEndLabel = useMemo(() => {
+    const parsed = parseTimeInput(slotDraft.start);
+    if (!parsed) return "based on duration";
+
+    const dur = Number(form.duration_minutes) || 60;
+    return to12Hour(addEndTime(parsed, dur));
+  }, [slotDraft.start, form.duration_minutes]);
+
+  const removeSlot = (idx) =>    setForm((p) => ({
       ...p,
       slot_times: p.slot_times.filter((_, i) => i !== idx),
     }));
 
   const handleSave = async () => {
     if (!form.service_id) return toast.error("Select a service");
+    if (!form.service_kind) return toast.error("Select a service type");
     if (!form.name.trim()) return toast.error("Package name is required");
     if (form.fee === "" || Number(form.fee) < 0)
       return toast.error("Base fee is required");
@@ -227,6 +353,10 @@ const SevaPackages = ({ user }) => {
       payload.persons_served = Number(form.persons_served) || 1;
       payload.slot_times = form.slot_times;
       payload.sort_order = form.sort_order || 0;
+
+      // Daily limit HAMESHA bhejo (0 = unlimited). Agar ye delete ho gaya to
+      // dusre package me purana limit reh jayega aur portal par old value dikhega.
+      payload.daily_quota = Number(form.daily_quota) || 0;
 
       if (editing) {
         await axios.put(
@@ -302,6 +432,18 @@ const SevaPackages = ({ user }) => {
               </option>
             ))}
           </select>
+          <select
+            value={kindFilter}
+            onChange={(e) => setKindFilter(e.target.value)}
+            className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+          >
+            <option value="">All Service Types</option>
+            {kinds.map((k) => (
+              <option key={k.kind_id ?? k.code} value={k.code}>
+                {k.name}
+              </option>
+            ))}
+          </select>
           <button
             onClick={openCreate}
             className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
@@ -357,6 +499,7 @@ const SevaPackages = ({ user }) => {
                   "#",
                   "Package",
                   "Service",
+                  "Service Type",
                   "Base Fee",
                   "Pooja Duration",
                   "Daily Limit",
@@ -402,13 +545,18 @@ const SevaPackages = ({ user }) => {
                     )}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-700">
-                    {r.service_name || "—"}
+                    {r.service_name || "â€”"}
+                  </td>
+                  <td className="px-4 py-3 text-sm">
+                    <span className="inline-flex rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700">
+                      {kindLabel(r.service_kind)}
+                    </span>
                   </td>
                   <td className="px-4 py-3 text-sm font-semibold text-gray-900">
                     Rs. {Number(r.fee || 0).toFixed(2)}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-700">
-                    {r.duration_minutes ? `${r.duration_minutes} min` : "—"}
+                    {r.duration_minutes ? `${r.duration_minutes} min` : "â€”"}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-700">
                     {r.daily_quota ? `${r.daily_quota} persons` : "Unlimited"}
@@ -502,18 +650,70 @@ const SevaPackages = ({ user }) => {
                   </label>
                   <select
                     value={form.service_id}
-                    onChange={(e) =>
-                      setForm((p) => ({ ...p, service_id: e.target.value }))
-                    }
+                    onChange={(e) => {
+                      const svcId = e.target.value;
+                      const svc = services.find((s) => s.service_id == svcId);
+
+                      // Service Type apne aap service ke type se sync ho jata hai
+                      setForm((p) => ({
+                        ...p,
+                        service_id: svcId,
+                        service_kind: svc?.service_kind || p.service_kind,
+                      }));
+                    }}
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
                   >
-                    <option value="">— select —</option>
-                    {services.map((s) => (
+                    <option value="">â€” select â€”</option>
+                    {visibleServices.length === 0 && (
+                      <option value="" disabled>
+                        No service of this type
+                      </option>
+                    )}
+                    {visibleServices.map((s) => (
                       <option key={s.service_id} value={s.service_id}>
                         {s.name}
                       </option>
                     ))}
                   </select>
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-gray-700">
+                    Service Type *
+                  </label>
+                  <select
+                    value={form.service_kind}
+                    onChange={(e) => {
+                      const kind = e.target.value;
+                      const cur = services.find(
+                        (s) => s.service_id == form.service_id
+                      );
+
+                      // Type change kiya to service match na kare to clear
+                      setForm((p) => ({
+                        ...p,
+                        service_kind: kind,
+                        service_id:
+                          cur && cur.service_kind === kind
+                            ? p.service_id
+                            : kind
+                            ? ""
+                            : p.service_id,
+                      }));
+                    }}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                  >
+                    <option value="">â€” select â€”</option>
+                    {kinds.map((k) => (
+                      <option key={k.kind_id ?? k.code} value={k.code}>
+                        {k.name} ({k.code})
+                      </option>
+                    ))}
+                  </select>
+                  <p className="mt-1 text-[10px] text-gray-500">
+                    Service select karne par type apne aap set ho jata hai. Type
+                    select karne par sirf usi type ke services dikhenge.
+                  </p>
                 </div>
 
                 <div>
@@ -705,105 +905,150 @@ const SevaPackages = ({ user }) => {
               </div>
 
               {/* TIME SLOTS - dynamic (recurring) */}
-              <div>
-                <label className="mb-1 block text-xs font-medium text-gray-700">
-                  Time Slots
-                </label>
-                <p className="mb-2 text-[10px] text-gray-500">
-                  Ye time slots roz repeat honge — har date par automatically
-                  available. Multiple add kar sakte hain.
-                </p>
+              <div className="rounded-xl border border-gray-200 bg-gray-50/60 p-3">
+                <div className="mb-3 flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-red-50 text-red-600">
+                      <Clock className="h-4 w-4" />
+                    </span>
+                    <div>
+                      <p className="text-xs font-semibold text-gray-800">
+                        Time Slots
+                      </p>
+                      <p className="text-[10px] text-gray-500">
+                        Har din repeat hote hain - koi bhi time manually type
+                        karein (7:30 AM, 19:45, 05:15...)
+                      </p>
+                    </div>
+                  </div>
+                  {form.slot_times.length > 0 && (
+                    <span className="shrink-0 rounded-full bg-white px-2.5 py-1 text-[10px] font-medium text-gray-600 ring-1 ring-gray-200">
+                      {form.slot_times.length} slot
+                      {form.slot_times.length > 1 ? "s" : ""} added
+                    </span>
+                  )}
+                </div>
 
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
-                  <div>
-                    <label className="mb-1 block text-[10px] text-gray-500">
-                      Start
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-12">
+                  <div className="sm:col-span-3">
+                    <label className="mb-1 block text-[10px] font-medium text-gray-500">
+                      Start time <span className="text-red-500">*</span>
                     </label>
                     <input
-                      type="time"
+                      type="text"
                       value={slotDraft.start}
                       onChange={(e) =>
                         setSlotDraft((s) => ({ ...s, start: e.target.value }))
                       }
-                      className="w-full rounded-lg border border-gray-300 px-2 py-2 text-sm"
+                      onBlur={() => {
+                        const parsed = parseTimeInput(slotDraft.start);
+                        if (parsed && parsed !== slotDraft.start) {
+                          setSlotDraft((s) => ({
+                            ...s,
+                            start: to12Hour(parsed),
+                          }));
+                        }
+                      }}
+                      placeholder="07:30 AM"
+                      className={`w-full rounded-lg border bg-white px-2.5 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-red-500 ${
+                        slotDraft.start && !parseTimeInput(slotDraft.start)
+                          ? "border-red-400"
+                          : slotError && !slotDraft.start
+                          ? "border-red-400 bg-red-50"
+                          : "border-gray-300"
+                      }`}
                     />
+                    {slotDraft.start && parseTimeInput(slotDraft.start) && (
+                      <p className="mt-1 text-[10px] text-emerald-600">
+                        {to12Hour(parseTimeInput(slotDraft.start))}
+                      </p>
+                    )}
+                    {slotDraft.start && !parseTimeInput(slotDraft.start) && (
+                      <p className="mt-1 text-[10px] text-red-500">
+                        Invalid time
+                      </p>
+                    )}
                   </div>
-                  <div>
-                    <label className="mb-1 block text-[10px] text-gray-500">
-                      End
+                  <div className="sm:col-span-3">
+                    <label className="mb-1 block text-[10px] font-medium text-gray-500">
+                      End time
                     </label>
                     <input
-                      type="time"
+                      type="text"
                       value={slotDraft.end}
                       onChange={(e) =>
                         setSlotDraft((s) => ({ ...s, end: e.target.value }))
                       }
-                      className="w-full rounded-lg border border-gray-300 px-2 py-2 text-sm"
+                      onBlur={() => {
+                        const parsed = parseTimeInput(slotDraft.end);
+                        if (parsed && parsed !== slotDraft.end) {
+                          setSlotDraft((s) => ({ ...s, end: to12Hour(parsed) }));
+                        }
+                      }}
+                      placeholder={`Auto (${slotDraft.start ? autoEndLabel : "based on duration"})`}
+                      className={`w-full rounded-lg border bg-white px-2.5 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-red-500 ${
+                        slotDraft.end && !parseTimeInput(slotDraft.end)
+                          ? "border-red-400"
+                          : "border-gray-300"
+                      }`}
                     />
+                    <p className="mt-1 text-[10px] text-gray-500">
+                      {slotDraft.end
+                        ? parseTimeInput(slotDraft.end)
+                          ? to12Hour(parseTimeInput(slotDraft.end))
+                          : "Invalid time"
+                        : "Leave blank for auto"}
+                    </p>
                   </div>
-                  <div>
-                    <label className="mb-1 block text-[10px] text-gray-500">
+                  <div className="sm:col-span-4">
+                    <label className="mb-1 block text-[10px] font-medium text-gray-500">
                       Label
                     </label>
                     <input
+                      type="text"
                       value={slotDraft.label}
                       onChange={(e) =>
                         setSlotDraft((s) => ({ ...s, label: e.target.value }))
                       }
                       placeholder="Mangala Aarti"
-                      className="w-full rounded-lg border border-gray-300 px-2 py-2 text-sm"
+                      className="w-full rounded-lg border border-gray-300 bg-white px-2.5 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-red-500"
                     />
                   </div>
-                  <div>
-                    <label className="mb-1 block text-[10px] text-gray-500">
-                      Capacity
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={slotDraft.capacity}
-                      onChange={(e) =>
-                        setSlotDraft((s) => ({
-                          ...s,
-                          capacity: e.target.value,
-                        }))
-                      }
-                      className="w-full rounded-lg border border-gray-300 px-2 py-2 text-sm"
-                    />
-                  </div>
-                  <div className="flex items-end">
+                  <div className="flex items-end sm:col-span-2">
                     <button
                       type="button"
                       onClick={addSlot}
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                      className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-gray-800 px-3 py-2 text-sm font-medium text-white hover:bg-gray-900"
                     >
-                      Add Slot
+                      <Plus className="h-4 w-4" /> Add Slot
                     </button>
                   </div>
                 </div>
 
                 {form.slot_times.length > 0 && (
-                  <div className="mt-2 space-y-1.5">
+                  <div className="mt-3 space-y-1.5 border-t border-gray-200 pt-3">
                     {form.slot_times.map((t, i) => (
                       <div
                         key={i}
-                        className="flex items-center gap-2 rounded-lg bg-gray-50 px-2.5 py-1.5 text-xs text-gray-700"
+                        className="flex items-center gap-2.5 rounded-lg bg-white px-3 py-2 text-xs text-gray-700 ring-1 ring-gray-200"
                       >
-                        <Clock className="h-3.5 w-3.5 shrink-0 text-gray-400" />
-                        <span className="font-semibold">
-                          {t.start} – {t.end}
+                        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+                          <Check className="h-3 w-3" />
+                        </span>
+                        <span className="font-semibold text-gray-900">
+                          {to12Hour(t.start)}
+                          {t.end ? ` â€“ ${to12Hour(t.end)}` : ""}
                         </span>
                         {t.label && (
-                          <span className="text-gray-500">({t.label})</span>
+                          <span className="truncate rounded bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-600">
+                            {t.label}
+                          </span>
                         )}
-                        <span className="text-gray-500">
-                          cap {t.capacity || "∞"}
-                        </span>
                         <button
                           type="button"
                           onClick={() => removeSlot(i)}
-                          className="ml-auto text-gray-400 hover:text-red-600"
-                          title="Remove"
+                          className="ml-auto shrink-0 rounded p-0.5 text-gray-400 hover:bg-red-50 hover:text-red-600"
+                          title="Remove slot"
                         >
                           <X className="h-3.5 w-3.5" />
                         </button>

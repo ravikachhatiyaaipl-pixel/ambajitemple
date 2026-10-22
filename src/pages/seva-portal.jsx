@@ -52,6 +52,20 @@ const SevaPortal = ({ user, onLogout }) => {
   const base = import.meta.env.VITE_API_URL;
   const headers = { Authorization: `Bearer ${token}` };
 
+  // ---------- LOCAL date helpers ----------
+  // NOTE: toISOString() UTC deta hai - browser timezone UTC se peeche ho to
+  // date ek din aage dikhta hai. Isliye local date use karte hain.
+  const localDate = (d = new Date()) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+      d.getDate()
+    ).padStart(2, "0")}`;
+
+  const addDays = (d, days) => {
+    const x = new Date(d);
+    x.setDate(x.getDate() + days);
+    return x;
+  };
+
   const [view, setView] = useState("catalogue");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -64,15 +78,15 @@ const SevaPortal = ({ user, onLogout }) => {
 
   const [selectedService, setSelectedService] = useState(null);
   const [selectedPackage, setSelectedPackage] = useState(null);
-  const [performDate, setPerformDate] = useState(() => {
-    const d = new Date();
-    d.setDate(d.getDate() + 1);
-    return d.toISOString().slice(0, 10);
-  });
-  // Catalogue ka daily limit kis date ka dikhana hai (default = aaj)
-  const [quotaDate, setQuotaDate] = useState(() =>
-    new Date().toISOString().slice(0, 10)
+  const [performDate, setPerformDate] = useState(() =>
+    localDate(addDays(new Date(), 1))
   );
+  // Catalogue ka daily limit kis date ka dikhana hai.
+  // Default = SERVER ka aaj (browser timezone se mismatch na ho) -
+  // isliye pehle khali bhejte hain, server quota_date bhejta hai.
+  const [quotaDate, setQuotaDate] = useState("");
+  // User ne khud date change ki hai ya nahi (auto rollover band karne ke liye)
+  const [dateIsAuto, setDateIsAuto] = useState(true);
   const [slots, setSlots] = useState([]);
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [quota, setQuota] = useState(null);
@@ -120,13 +134,28 @@ const SevaPortal = ({ user, onLogout }) => {
       if (!silent) {
         setLoading(true);
       }
+
+      // Date tabhi bhejo jab user ne khud choose ki ho - warna SERVER ka aaj use karo
+      // (browser/server timezone mismatch na ho)
+      const params = {};
+      if (!dateIsAuto && quotaDate) {
+        params.date = quotaDate;
+      }
+
       const res = await axios.get(`${base}/portal/seva/catalogue`, {
         headers,
-        params: { date: quotaDate },
+        params,
       });
+
       if (res.data?.success) {
         setCategories(res.data.data.categories || []);
         setServices(res.data.data.services || []);
+
+        // Server jo date use kar raha hai, wahi humare selector me dikhao
+        const serverDate = res.data.data.quota_date;
+        if (serverDate) {
+          setQuotaDate(serverDate);
+        }
       }
     } catch (e) {
       if (!silent) {
@@ -142,20 +171,22 @@ const SevaPortal = ({ user, onLogout }) => {
   /**
    * REAL-TIME daily limit refresh.
    *
-   * Catalogue har 20 second me silently re-fetch hota hai - isse "X of Y left
-   * today" counter live update hota hai (kisi ke booking karte hi).
-   * Silent refresh user ka scroll/selection disturb nahi karta.
+   * Catalogue har 20 second me silently re-fetch hota hai - isse "X of Y left"
+   * counter live update hota hai (kisi ke booking karte hi).
+   * Din change hone par (midnight rollover) server naya date deta hai aur
+   * counter naye din ka data dikhata hai.
    */
   useEffect(() => {
     const timer = setInterval(() => {
       if (document.hidden) {
         return; // tab background me hai - zaroorat nahi
       }
+
       loadCatalogue(true);
     }, 20000);
 
     return () => clearInterval(timer);
-  }, []);
+  }, [dateIsAuto, quotaDate]);
 
   // Page focus hone par bhi turant refresh
   useEffect(() => {
@@ -605,18 +636,21 @@ const SevaPortal = ({ user, onLogout }) => {
                   <input
                     type="date"
                     value={quotaDate}
-                    min={new Date().toISOString().slice(0, 10)}
+                    min={localDate()}
                     onChange={(e) => {
+                      setDateIsAuto(false);
                       setQuotaDate(e.target.value);
                       setPerformDate(e.target.value);
                     }}
                     className="w-full border-0 p-0 text-xs font-semibold text-gray-900 focus:outline-none focus:ring-0"
                   />
                 </div>
-                <span
-                  className="ml-1 inline-block h-2 w-2 shrink-0 animate-pulse rounded-full bg-emerald-500"
-                  title="Live - updates every 20 seconds"
-                />
+                {dateIsAuto && (
+                  <span
+                    className="ml-1 inline-block h-2 w-2 shrink-0 animate-pulse rounded-full bg-emerald-500"
+                    title="Live - updates every 20 seconds"
+                  />
+                )}
               </div>
 
               <div className="flex flex-wrap gap-2">
@@ -721,25 +755,26 @@ const SevaPortal = ({ user, onLogout }) => {
                     {/* Daily quota status - LIVE */}
                     {!svc.is_quota_unlimited && (
                       <div
-                        className={`mt-3 flex items-center justify-between rounded-lg px-2.5 py-2 text-[11px] font-medium ${
+                        className={`mt-3 rounded-lg px-2.5 py-2 text-[11px] font-medium ${
                           svc.is_quota_full
                             ? "bg-red-50 text-red-700"
                             : "bg-emerald-50 text-emerald-700"
                         }`}
                       >
-                        <span className="flex items-center gap-1.5">
-                          <Users className="h-3.5 w-3.5" />
-                          Daily limit
-                          <span
-                            className="ml-0.5 inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500"
-                            title="Live - updates every 20 seconds"
-                          />
-                        </span>
-                        <span>
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="flex items-center gap-1.5">
+                            <Users className="h-3.5 w-3.5" />
+                            Daily limit
+                          </span>
+                          <span className="whitespace-nowrap text-[10px] font-normal opacity-70">
+                            {svc.quota_date ? fmtDate(svc.quota_date) : ""}
+                          </span>
+                        </div>
+                        <p className="mt-0.5 text-[12px] font-semibold">
                           {svc.is_quota_full
-                            ? `Full (${svc.daily_quota}/${svc.daily_quota} booked)`
-                            : `${svc.quota_remaining} of ${svc.daily_quota} left on ${fmtDate(svc.quota_date)}`}
-                        </span>
+                            ? `Full - ${svc.daily_quota}/${svc.daily_quota} booked`
+                            : `${svc.quota_remaining} of ${svc.daily_quota} left`}
+                        </p>
                       </div>
                     )}
 
@@ -835,7 +870,7 @@ const SevaPortal = ({ user, onLogout }) => {
                     <input
                       type="date"
                       value={performDate}
-                      min={new Date().toISOString().slice(0, 10)}
+                      min={localDate()}
                       onChange={(e) => {
                         setPerformDate(e.target.value);
                         loadSlots(
