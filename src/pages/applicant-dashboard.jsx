@@ -610,32 +610,6 @@ const [shopRes, rentRes, appRes, notifRes] = await Promise.all([
           <StatCard label="Active Rentals" value={rentals.length} sub="Shops allotted" icon={KeyRound} tone="slate" />
         </StatGrid>
 
-        {/* Charts */}
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-          <Panel title="Application Status" subtitle="Where your applications stand">
-            <DonutChart data={stageCounts} centerValue={applications.length} centerLabel="applications" />
-          </Panel>
-          <Panel title="Applications Over Time" subtitle="Last 6 months" className="lg:col-span-2">
-            {applications.length === 0 ? (
-              <EmptyState icon={FileText} text="Submit an application to see your activity" />
-            ) : (
-              <TrendChart data={appsByMonth} money={false} series={[{ key: "value", name: "Applications", color: "#E53935" }]} />
-            )}
-          </Panel>
-        </div>
-
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-          <Panel title="Base Rent vs Security Deposit" subtitle="Available shops with a rental entry" className="lg:col-span-2">
-            <BarsChart data={rentCompare} money
-              bars={[
-                { key: "rent", name: "Base rent", color: "#E53935" },
-                { key: "deposit", name: "Security", color: "#F5B800" },
-              ]} />
-          </Panel>
-          <Panel title="Shops by Building" subtitle="Where space is available">
-            <BarsChart data={shopsByBuilding} bars={[{ key: "value", name: "Shops", color: "#B71C1C" }]} horizontal />
-          </Panel>
-        </div>
 
         <Panel title="Approval Overview">
           <div className="grid grid-cols-1 gap-5 md:grid-cols-3">

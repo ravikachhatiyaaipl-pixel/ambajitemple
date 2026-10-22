@@ -172,25 +172,6 @@ const AdminDashboard = () => {
         </Panel>
       </div>
 
-      {/* HR + estate */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <Panel title="Head-count by Department" subtitle="Top 10" className="lg:col-span-2">
-          <BarsChart data={hr?.byDept} bars={[{ key: "value", name: "Employees", color: "#E53935" }]} horizontal height={280} />
-        </Panel>
-        <Panel title="Employee Type" subtitle="Staff composition">
-          <DonutChart data={hr?.byType} height={280} />
-        </Panel>
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <Panel title="Hall Revenue Trend" subtitle="Estate & bookings" className="lg:col-span-2">
-          <TrendChart data={est?.trend} series={[{ key: "value", name: "Hall Revenue", color: "#F5B800" }]} />
-        </Panel>
-        <Panel title="Department Expenditure" subtitle="Top departments">
-          <BarsChart data={exe?.deptExpense} bars={[{ key: "value", name: "Expenditure", color: "#B71C1C" }]} money horizontal />
-        </Panel>
-      </div>
-
       {hasNewUsers && (
         <Panel title="New Portal Registrations" subtitle="Last 6 months">
           <BarsChart data={newUsers} bars={[{ key: "value", name: "New users", color: "#E53935" }]} height={200} />

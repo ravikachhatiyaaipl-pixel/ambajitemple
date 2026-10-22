@@ -14,7 +14,8 @@
 *  
 */
 
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
+
 import { lazy } from "react";
 const DepartmentMaster = lazy(() => import("../masters/organization-management/department-master/departmentmaster"));
 const ZoneList = lazy(() => import("../masters/organization-management/zone-master/list"));
