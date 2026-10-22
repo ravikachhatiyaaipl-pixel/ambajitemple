@@ -25,6 +25,7 @@ const ReportRoutes = lazy(() => import("./reportroutes"));
 const UserProfile = lazy(() => import("../../pages/auth/user-profile"));
 const EmployeeProfile = lazy(() => import("../auth/employee-profile"));
 const DevoteeDashboard = lazy(() => import("../devotee-dashboard"));
+const SevaPortal = lazy(() => import("../seva-portal"));
 const ApplicantDashboard = lazy(() => import("../applicant-dashboard"));
 const AdminDashboard = lazy(() => import("../admin-dashboard"));
 import { amtAllRoutes } from "./amtallroutes";
@@ -52,6 +53,7 @@ const MainRoutes = ({ user, onLogout }) => {
         <Routes>
           <Route path="/applicant-dashboard" element={<ApplicantDashboard user={user} onLogout={onLogout} />} />
           <Route path="/devotee-dashboard" element={<DevoteeDashboard user={user} onLogout={onLogout} />} />
+          <Route path="/seva-portal" element={<SevaPortal user={user} onLogout={onLogout} />} />
           <Route path="/login" element={<Navigate to={getHomeFor(user)} />} />
           <Route path="/registration" element={<Navigate to={getHomeFor(user)} />} />
           <Route path="*" element={<Navigate to={getHomeFor(user)} />} />
@@ -72,6 +74,7 @@ const MainRoutes = ({ user, onLogout }) => {
       <Routes>
         <Route path="/dashboard" element={<Dashboard user={user} />} />
         <Route path="/devotee-dashboard" element={<DevoteeDashboard user={user} onLogout={onLogout} />} />
+          <Route path="/seva-portal" element={<SevaPortal user={user} onLogout={onLogout} />} />
         <Route path="/applicant-dashboard" element={<ApplicantDashboard user={user} onLogout={onLogout} />} />
         <Route path="/admin-dashboard" element={<AdminDashboard />} />
         <Route path="/user-profile" element={<UserProfile  user={user} />} />

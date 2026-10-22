@@ -160,12 +160,35 @@ const AdminDashboard = () => {
 
       {/* Trend + role split */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <Panel title="Estate Revenue Trend" subtitle="Estate & bookings" className="lg:col-span-2">
-          <TrendChart data={est?.trend} series={[{ key: "value", name: "Hall Revenue", color: "#F5B800" }]} />
+        <Panel title="Receipts vs Payments" subtitle="Monthly trend" className="lg:col-span-2"
+          action={<Link to="/dashboards/finance" className="inline-flex items-center text-xs font-medium text-red-700 hover:underline">Details <ChevronRight className="h-3.5 w-3.5" /></Link>}>
+          <TrendChart data={fin?.trend} series={[
+            { key: "receipts", name: "Receipts", color: "#059669" },
+            { key: "payments", name: "Payments", color: "#B71C1C" },
+          ]} />
         </Panel>
         <Panel title="Users by Role" subtitle="Who uses the portal">
           <DonutChart data={usersByRole} centerValue={users.length} centerLabel="users" />
-        </Panel>        
+        </Panel>
+      </div>
+
+      {/* HR + estate */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <Panel title="Head-count by Department" subtitle="Top 10" className="lg:col-span-2">
+          <BarsChart data={hr?.byDept} bars={[{ key: "value", name: "Employees", color: "#E53935" }]} horizontal height={280} />
+        </Panel>
+        <Panel title="Employee Type" subtitle="Staff composition">
+          <DonutChart data={hr?.byType} height={280} />
+        </Panel>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <Panel title="Hall Revenue Trend" subtitle="Estate & bookings" className="lg:col-span-2">
+          <TrendChart data={est?.trend} series={[{ key: "value", name: "Hall Revenue", color: "#F5B800" }]} />
+        </Panel>
+        <Panel title="Department Expenditure" subtitle="Top departments">
+          <BarsChart data={exe?.deptExpense} bars={[{ key: "value", name: "Expenditure", color: "#B71C1C" }]} money horizontal />
+        </Panel>
       </div>
 
       {hasNewUsers && (
@@ -221,6 +244,43 @@ const AdminDashboard = () => {
         </Panel>
       </div>
 
+      {/* Modules */}
+      <div>
+        <h2 className="text-lg font-semibold text-gray-900">Modules</h2>
+        <p className="mb-4 text-sm text-gray-500">All ERP modules available in the system</p>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {MODULES.map((m) => {
+            const t = TONES[m.tone] || TONES.red;
+            const card = (
+              <div className="h-full rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: t.bg }}>
+                  <m.icon className="h-5 w-5" style={{ color: t.fg }} />
+                </div>
+                <h3 className="mt-4 text-sm font-semibold text-gray-900">{m.name}</h3>
+                <p className="mt-1.5 text-xs leading-relaxed text-gray-500">{m.desc}</p>
+              </div>
+            );
+            return m.to ? <Link key={m.name} to={m.to} className="block">{card}</Link> : <div key={m.name}>{card}</div>;
+          })}
+        </div>
+      </div>
+
+      {/* Departments */}
+      <Panel title="Departments" subtitle={`${departments.length} departments in the temple`}>
+        {departments.length === 0 ? (
+          <EmptyState icon={Building2} text="No departments found" height={100} />
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {departments.map((d) => (
+              <span key={d.Dpt_id} className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-700"
+                style={{ background: "#ffffff" }}>
+                <Building2 className="h-3.5 w-3.5 text-red-500" />
+                {d.Dpt_Name || d.Dpt_Desc}
+              </span>
+            ))}
+          </div>
+        )}
+      </Panel>
     </PortalPage>
   );
 };

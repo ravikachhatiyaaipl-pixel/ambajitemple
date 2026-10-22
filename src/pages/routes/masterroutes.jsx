@@ -259,7 +259,18 @@ const ShopRentApplicationApprovalList = lazy(() => import("../masters/hall-shop-
 const ShopRentApplicationApprovalView = lazy(() => import("../masters/hall-shop-management/shop-rent-application-approval/view"));
 const ShopRentAgreementList = lazy(() => import("../masters/hall-shop-management/shop-rent-agreement/list"));
 const AddEditShopRentAgreement = lazy(() => import("../masters/hall-shop-management/shop-rent-agreement/addedit"));
-const ViewShopRentAgreement = lazy(() => import("../masters/hall-shop-management/shop-rent-agreement/view"));
+const SevaServices = lazy(() => import("../masters/hall-shop-management/seva-services/addedit"));
+const SevaServiceKinds = lazy(() => import("../masters/hall-shop-management/seva-services/kinds"));
+const SevaPackages = lazy(() => import("../masters/hall-shop-management/seva-services/packages"));
+const SevaDocumentMaster = lazy(() => import("../masters/hall-shop-management/seva-services/document-master"));
+const SevaDocumentMapping = lazy(() => import("../masters/hall-shop-management/seva-services/document-mapping"));
+const SevaCategoryMaster = lazy(() => import("../masters/hall-shop-management/seva-services/categories"));
+const SevaBookings = lazy(() => import("../masters/hall-shop-management/seva-services/bookings"));
+const SevaApprovals = lazy(() => import("../masters/hall-shop-management/seva-services/approvals"));
+const SevaApprovalView = lazy(() => import("../masters/hall-shop-management/seva-services/approval-view"));
+const SevaActionMaster = lazy(() => import("../masters/hall-shop-management/seva-services/action-master"));
+const SevaPriests = lazy(() => import("../masters/hall-shop-management/seva-services/priests"));
+const SevaOrganizers = lazy(() => import("../masters/hall-shop-management/seva-services/organizers"));
 const ShopRentTransactionList = lazy(() => import("../masters/hall-shop-management/shop-rent-transaction/list"));
 const AddEditShopRentTransaction = lazy(() => import("../masters/hall-shop-management/shop-rent-transaction/addedit"));
 const ViewShopRentTransaction = lazy(() => import("../masters/hall-shop-management/shop-rent-transaction/view"));
@@ -1644,7 +1655,18 @@ const MasterRoutes = ({ user }) => {
       <Route path="hall-shop-management/shop-rent-agreement" element={<ShopRentAgreementList user={user} />} />
       <Route path="hall-shop-management/shop-rent-agreement/create" element={<AddEditShopRentAgreement user={user} />} />
       <Route path="hall-shop-management/shop-rent-agreement/edit/:id" element={<AddEditShopRentAgreement user={user} />} />
-      <Route path="hall-shop-management/shop-rent-agreement/view/:id" element={<ViewShopRentAgreement user={user} />} />
+      <Route path="hall-shop-management/seva-services" element={<SevaServices user={user} />} />
+      <Route path="hall-shop-management/seva-service-kinds" element={<SevaServiceKinds user={user} />} />
+      <Route path="hall-shop-management/seva-categories" element={<SevaCategoryMaster user={user} />} />
+      <Route path="hall-shop-management/seva-packages" element={<SevaPackages user={user} />} />
+      <Route path="hall-shop-management/seva-document-master" element={<SevaDocumentMaster user={user} />} />
+      <Route path="hall-shop-management/seva-document-mapping" element={<SevaDocumentMapping user={user} />} />
+      <Route path="hall-shop-management/seva-bookings" element={<SevaBookings user={user} />} />
+      <Route path="hall-shop-management/seva-bookings-approval" element={<SevaApprovals user={user} />} />
+      <Route path="hall-shop-management/seva-bookings-approval/view/:id" element={<SevaApprovalView user={user} />} />
+      <Route path="hall-shop-management/seva-priests" element={<SevaPriests user={user} />} />
+      <Route path="hall-shop-management/seva-organizers" element={<SevaOrganizers user={user} />} />
+      <Route path="hall-shop-management/seva-action-master" element={<SevaActionMaster user={user} />} />
 
       <Route path="hall-shop-management/shop-rent-transaction" element={<ShopRentTransactionList user={user} />} />
       <Route path="hall-shop-management/shop-rent-transaction/create" element={<AddEditShopRentTransaction user={user} />} />

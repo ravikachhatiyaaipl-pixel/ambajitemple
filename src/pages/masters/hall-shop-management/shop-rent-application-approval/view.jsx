@@ -13,6 +13,7 @@ import {
   getDesignationId,
   isAdminUser,
   canApproveAction,
+  canPerformAction,
 } from "../../../../utils/approvalPermission";
 
 const ShopRentApplicationApprovalView = ({ user }) => {
@@ -118,21 +119,27 @@ const ShopRentApplicationApprovalView = ({ user }) => {
 
     const currentStatusId = data.SPRA_Status?.toString();
 
+    // CURRENT step (jo perform ho raha hai)
+    const currentAction = actionsList.find(
+      action => action.Act_Id?.toString() === currentStatusId
+    );
+
     const forwardAction = actionsList.find(
       action => action.Previous_Status == currentStatusId && action.Is_Forward == "Y"
     );
 
+    // Authority CURRENT step ki check hoti hai (Seva booking flow jaisa)
+    const allowed = canPerformAction(user, currentAction);
+
     if (forwardAction) {
       setNextAction(forwardAction);
-
-      const allowed = canApproveAction(user, forwardAction);
-      setHasPermission(allowed);
-      setShowApproveButton(allowed);
     } else {
       setNextAction(null);
-      setShowApproveButton(false);
-      setHasPermission(false);
     }
+
+    setHasPermission(allowed);
+    // Approve button sirf tab jab aage koi forward step ho (final step par nahi)
+    setShowApproveButton(allowed && !!forwardAction);
 
     const backwardActionData = actionsList.find(
       action => action.Previous_Status == currentStatusId && action.Is_Forward == "N"
@@ -140,7 +147,7 @@ const ShopRentApplicationApprovalView = ({ user }) => {
 
     if (backwardActionData) {
       setBackwardAction(backwardActionData);
-      setShowQueryButton(true);
+      setShowQueryButton(allowed);
 
       const firstStepStatus = parseInt(backwardActionData.Previous_Status);
       const firstStepAction = actionsList.find(

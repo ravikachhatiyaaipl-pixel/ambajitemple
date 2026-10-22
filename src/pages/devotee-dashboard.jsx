@@ -11,6 +11,7 @@
  *  If the endpoint is missing the sections show friendly empty states.
  */
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import {
   User, Mail, Phone, LogOut, Heart, Clock, Flame, Sun, Sunrise, Moon, Utensils, Lock,
@@ -32,6 +33,7 @@ const DEVOTEE_SUMMARY_ENDPOINT = "/devotee/summary";
 const ICONS = { sunrise: Sunrise, sun: Sun, food: Utensils, flame: Flame, moon: Moon, lock: Lock };
 
 const DevoteeDashboard = ({ user, onLogout }) => {
+  const navigate = useNavigate();
   const clock = useTempleClock();
   const [summary, setSummary] = useState(null);
 
@@ -59,7 +61,7 @@ const DevoteeDashboard = ({ user, onLogout }) => {
     <div className="min-h-screen" style={{ background: CREAM }}>
       {/* Top bar */}
       <header className="sticky top-0 z-20 border-b border-red-100 bg-white/95 backdrop-blur">
-        <div className="mx-auto flex max-w-full items-center justify-between px-4 py-3 sm:px-6">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
           <div className="flex items-center gap-3">
             <img src="/ambajilogo.png" alt="Ambaji Temple" className="h-10 w-10 object-contain" />
             <div>
@@ -72,6 +74,12 @@ const DevoteeDashboard = ({ user, onLogout }) => {
               <p className="text-sm font-medium text-gray-900">{displayName}</p>
               {email && <p className="text-xs text-gray-500">{email}</p>}
             </div>
+            <button
+              onClick={() => navigate("/seva-portal")}
+              className="inline-flex items-center gap-2 rounded-lg bg-amber-600 px-3 py-2 text-sm font-medium text-white hover:bg-amber-700"
+            >
+              <Sparkles className="h-4 w-4" /> Pooja Services
+            </button>
             <button onClick={onLogout}
               className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-3 py-2 text-sm font-medium text-white hover:bg-red-700">
               <LogOut className="h-4 w-4" /> Logout
