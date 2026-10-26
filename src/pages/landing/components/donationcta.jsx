@@ -17,7 +17,7 @@ export default function DonationCTA() {
             Offer your devotion, <span className="text-gold">wherever you are</span>
           </h2>
           <p className="mx-auto mt-5 max-w-xl text-sm leading-relaxed text-white/70 sm:text-base">
-            Your donation supports daily seva, prasad distribution, temple upkeep and outreach — carried out in Maa
+            Your donation supports daily seva, prasad distribution, temple upkeep and outreach - carried out in Maa
             Amba&apos;s name.
           </p>
           <Link

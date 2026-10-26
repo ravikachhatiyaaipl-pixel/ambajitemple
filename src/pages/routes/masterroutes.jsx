@@ -1,4 +1,6 @@
 /***
+export default MasterRoutes;
+/***
 *
 *  Application Name: I3EMS
 *
@@ -14,8 +16,16 @@
 *  
 */
 
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
+
 import { lazy } from "react";
+const DonationCategoryMaster = lazy(() => import("../masters/donation/category"));
+const DocumentMasterScreen = lazy(() => import("../masters/document/document-master"));
+const DocumentMappingScreen = lazy(() => import("../masters/document/document-mapping"));
+const DonationTypeMaster = lazy(() => import("../masters/donation/type"));
+const DonationPurityMaster = lazy(() => import("../masters/donation/purity"));
+const DonationWeightUnitMaster = lazy(() => import("../masters/donation/weight-unit"));
+const DonationReceiptSeriesMaster = lazy(() => import("../masters/donation/receipt-series"));
 const DepartmentMaster = lazy(() => import("../masters/organization-management/department-master/departmentmaster"));
 const ZoneList = lazy(() => import("../masters/organization-management/zone-master/list"));
 const AddEditZone = lazy(() => import("../masters/organization-management/zone-master/addedit"));
@@ -1655,6 +1665,14 @@ const MasterRoutes = ({ user }) => {
       <Route path="hall-shop-management/shop-rent-agreement" element={<ShopRentAgreementList user={user} />} />
       <Route path="hall-shop-management/shop-rent-agreement/create" element={<AddEditShopRentAgreement user={user} />} />
       <Route path="hall-shop-management/shop-rent-agreement/edit/:id" element={<AddEditShopRentAgreement user={user} />} />
+      <Route path="donation/category" element={<DonationCategoryMaster user={user} />} />
+      <Route path="document/document-master" element={<DocumentMasterScreen user={user} />} />
+      <Route path="document/document-mapping" element={<DocumentMappingScreen user={user} />} />
+      <Route path="donation/type" element={<DonationTypeMaster user={user} />} />
+      <Route path="donation/purity" element={<DonationPurityMaster user={user} />} />
+      <Route path="donation/weight-unit" element={<DonationWeightUnitMaster user={user} />} />
+      <Route path="donation/receipt-series" element={<DonationReceiptSeriesMaster user={user} />} />
+
       <Route path="hall-shop-management/seva-services" element={<SevaServices user={user} />} />
       <Route path="hall-shop-management/seva-service-kinds" element={<SevaServiceKinds user={user} />} />
       <Route path="hall-shop-management/seva-categories" element={<SevaCategoryMaster user={user} />} />

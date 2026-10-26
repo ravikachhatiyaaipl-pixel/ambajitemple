@@ -1,6 +1,9 @@
 import React from "react";
-import { Route, Routes } from "react-router-dom";
+import { Route, Routes } from "react-router-dom";
+
 import { lazy } from "react";
+
+const DonationReports = lazy(() => import("../reports/donation"));
 
 // =====================================================================
 // PHASE 2: CASH/BANK & CORE LEDGER
@@ -305,6 +308,8 @@ const ReportRoutes = ({ user }) => {
       <Route path="statutory/summary"  element={<StatutorySummary user={user} />} />
       <Route path="service-events/details" element={<ServiceEventsReport user={user} />} />
        
+      <Route path="donation" element={<DonationReports user={user} />} />
+
     </Routes>
   );
 };

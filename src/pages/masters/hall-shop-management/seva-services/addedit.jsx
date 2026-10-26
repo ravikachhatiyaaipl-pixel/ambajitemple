@@ -124,8 +124,8 @@ const SevaServices = ({ user }) => {
   };
 
   const handleSave = async () => {
-    if (!form.code.trim() || !form.name.trim()) {
-      toast.error("Code and Name are required");
+    if (!form.name.trim()) {
+      toast.error("Name is required");
       return;
     }
     try {
@@ -135,7 +135,8 @@ const SevaServices = ({ user }) => {
       Object.keys(payload).forEach((k) => {
         if (payload[k] === "" || payload[k] === null) delete payload[k];
       });
-      payload.code = form.code.trim();
+      // Code backend se auto-generate hota hai
+      delete payload.code;
       payload.name = form.name.trim();
       payload.permission_approval = form.permission_approval ? 1 : 0;
       payload.sort_order = form.sort_order || 0;
@@ -424,9 +425,6 @@ const SevaServices = ({ user }) => {
                       setForm((p) => ({
                         ...p,
                         category_id: catId,
-                        // Category ka code auto service code me copy
-                        code:
-                          cat && !p.codeTouched ? cat.code || "" : p.code,
                       }));
                     }}
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
@@ -440,30 +438,9 @@ const SevaServices = ({ user }) => {
                   </select>
                   {selectedCategory && (
                     <p className="mt-1 text-[10px] text-gray-500">
-                      Code auto-generated from category:{" "}
-                      <span className="font-mono font-semibold text-gray-700">
-                        {selectedCategory.code}
-                      </span>
+                      Code automatically generate hoga (name se)
                     </p>
                   )}
-                </div>
-
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-gray-700">
-                    Code *
-                  </label>
-                  <input
-                    value={form.code}
-                    onChange={(e) =>
-                      setForm((p) => ({
-                        ...p,
-                        code: e.target.value.toUpperCase(),
-                        codeTouched: true,
-                      }))
-                    }
-                    placeholder="Auto from category"
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-mono uppercase"
-                  />
                 </div>
 
                 <div>

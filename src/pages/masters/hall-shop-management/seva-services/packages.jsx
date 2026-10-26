@@ -86,7 +86,6 @@ const SevaPackages = ({ user }) => {
     duration_minutes: "",
     daily_quota: "",
     max_persons: 1,
-    persons_served: 1,
     slot_times: [],
     effective_from: "",
     effective_to: "",
@@ -158,7 +157,7 @@ const SevaPackages = ({ user }) => {
 
   // Service Type code ka naam (POOJA -> Pooja)
   const kindLabel = (code) =>
-    kinds.find((k) => k.code === code)?.name || code || "â€”";
+    kinds.find((k) => k.code === code)?.name || code || "—";
 
   // Service Type ke hisaab se Services filter (current service hamesha dikhe)
   const visibleServices = useMemo(() => {
@@ -183,7 +182,6 @@ const SevaPackages = ({ user }) => {
       duration_minutes: "",
       daily_quota: "",
       max_persons: 1,
-      persons_served: 1,
       slot_times: [],
       effective_from: "",
       effective_to: "",
@@ -215,7 +213,6 @@ const SevaPackages = ({ user }) => {
       duration_minutes: p.duration_minutes ?? "",
       daily_quota: p.daily_quota ?? "",
       max_persons: p.persons_per_booking ?? p.max_persons ?? 1,
-      persons_served: p.persons_served_count ?? p.persons_served ?? 1,
       slot_times: Array.isArray(p.slot_times)
         ? p.slot_times.map((t) => ({
             start: t.start,
@@ -350,7 +347,6 @@ const SevaPackages = ({ user }) => {
       payload.name = form.name.trim();
       payload.includes = form.includes;
       payload.max_persons = Number(form.max_persons) || 1;
-      payload.persons_served = Number(form.persons_served) || 1;
       payload.slot_times = form.slot_times;
       payload.sort_order = form.sort_order || 0;
 
@@ -545,7 +541,7 @@ const SevaPackages = ({ user }) => {
                     )}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-700">
-                    {r.service_name || "â€”"}
+                    {r.service_name || "—"}
                   </td>
                   <td className="px-4 py-3 text-sm">
                     <span className="inline-flex rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700">
@@ -556,7 +552,7 @@ const SevaPackages = ({ user }) => {
                     Rs. {Number(r.fee || 0).toFixed(2)}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-700">
-                    {r.duration_minutes ? `${r.duration_minutes} min` : "â€”"}
+                    {r.duration_minutes ? `${r.duration_minutes} min` : "—"}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-700">
                     {r.daily_quota ? `${r.daily_quota} persons` : "Unlimited"}
@@ -564,9 +560,6 @@ const SevaPackages = ({ user }) => {
                   <td className="px-4 py-3 text-sm text-gray-700">
                     <p className="font-medium text-gray-800">
                       {r.persons_per_booking ?? r.max_persons ?? 1} per group
-                    </p>
-                    <p className="text-[11px] text-gray-500">
-                      {r.persons_served_count ?? r.persons_served ?? 1} served
                     </p>
                   </td>
                   <td className="px-4 py-3 text-xs text-gray-600">
@@ -663,7 +656,7 @@ const SevaPackages = ({ user }) => {
                     }}
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
                   >
-                    <option value="">â€” select â€”</option>
+                    <option value="">— select —</option>
                     {visibleServices.length === 0 && (
                       <option value="" disabled>
                         No service of this type
@@ -703,7 +696,7 @@ const SevaPackages = ({ user }) => {
                     }}
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
                   >
-                    <option value="">â€” select â€”</option>
+                    <option value="">— select —</option>
                     {kinds.map((k) => (
                       <option key={k.kind_id ?? k.code} value={k.code}>
                         {k.name} ({k.code})
@@ -769,33 +762,13 @@ const SevaPackages = ({ user }) => {
                       setForm((p) => ({
                         ...p,
                         max_persons: e.target.value,
-                        persons_served:
-                          Number(p.persons_served) > Number(e.target.value)
-                            ? e.target.value
-                            : p.persons_served,
                       }))
                     }
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
                   />
-                </div>
-
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-gray-700">
-                    Persons Served
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    max={Number(form.max_persons) || 1}
-                    value={form.persons_served}
-                    onChange={(e) =>
-                      setForm((p) => ({
-                        ...p,
-                        persons_served: e.target.value,
-                      }))
-                    }
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-                  />
+                  <p className="mt-1 text-[10px] text-gray-500">
+                    Group size - jitne persons ek booking me aa sakte hain.
+                  </p>
                 </div>
 
                 <div>
@@ -1037,7 +1010,7 @@ const SevaPackages = ({ user }) => {
                         </span>
                         <span className="font-semibold text-gray-900">
                           {to12Hour(t.start)}
-                          {t.end ? ` â€“ ${to12Hour(t.end)}` : ""}
+                          {t.end ? ` – ${to12Hour(t.end)}` : ""}
                         </span>
                         {t.label && (
                           <span className="truncate rounded bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-600">

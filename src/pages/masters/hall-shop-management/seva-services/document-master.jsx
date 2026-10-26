@@ -96,8 +96,8 @@ const SevaDocumentMaster = ({ user }) => {
   };
 
   const handleSave = async () => {
-    if (!form.code.trim() || !form.name.trim()) {
-      toast.error("Code and Name are required");
+    if (!form.name.trim()) {
+      toast.error("Name is required");
       return;
     }
     try {
@@ -351,23 +351,6 @@ const SevaDocumentMaster = ({ user }) => {
 
             <div className="space-y-3.5 px-5 py-4">
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-gray-700">
-                    Code *
-                  </label>
-                  <input
-                    value={form.code}
-                    onChange={(e) =>
-                      setForm((p) => ({
-                        ...p,
-                        code: e.target.value.toUpperCase(),
-                      }))
-                    }
-                    disabled={!!editing}
-                    placeholder="AADHAAR"
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-mono uppercase disabled:bg-gray-100"
-                  />
-                </div>
                 <div>
                   <label className="mb-1 block text-xs font-medium text-gray-700">
                     Sort order
