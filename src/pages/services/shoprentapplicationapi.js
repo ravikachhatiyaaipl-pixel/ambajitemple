@@ -35,23 +35,6 @@ const ShopRentApplicationApi = {
         }
     },
 
-    // Applications jinka CURRENT step is user ko perform/view karna hai
-    // (Seva booking approvals screen jaisa - authority filtered)
-    getPendingApprovals: async (params = {}) => {
-        try {
-            const response = await axios.get(`${API_BASE_URL}/shop-rent-application/pending-approvals`, {
-                params,
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
-                }
-            });
-            return response.data;
-        } catch (error) {
-            console.error("Error fetching pending approvals:", error);
-            throw error;
-        }
-    },
-
     // Get single application by ID
     getById: async (id) => {
         try {

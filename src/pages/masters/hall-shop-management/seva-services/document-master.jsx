@@ -12,6 +12,7 @@ import {
   CheckCircle,
   AlertCircle,
 } from "lucide-react";
+import { CrudFormPage } from "../../../../components/crud/crudkit";
 
 const SevaDocumentMaster = ({ user }) => {
   const [rows, setRows] = useState([]);
@@ -155,6 +156,132 @@ const SevaDocumentMaster = ({ user }) => {
       <div className="flex min-h-[400px] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-red-600" />
       </div>
+    );
+  }
+
+  if (showForm) {
+    return (
+      <CrudFormPage
+        title={editing ? "Edit Document" : "Add Document"}
+        onClose={() => setShowForm(false)}
+        onSubmit={handleSave}
+        saving={saving}
+        submitLabel={editing ? "Update" : "Create"}
+      >
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="mb-1 block text-xs font-medium text-gray-700">
+                Code *
+              </label>
+              <input
+                value={form.code}
+                onChange={(e) =>
+                  setForm((p) => ({
+                    ...p,
+                    code: e.target.value.toUpperCase(),
+                  }))
+                }
+                disabled={!!editing}
+                placeholder="AADHAAR"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-mono uppercase disabled:bg-gray-100"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-gray-700">
+                Sort order
+              </label>
+              <input
+                type="number"
+                value={form.sort_order}
+                onChange={(e) =>
+                  setForm((p) => ({ ...p, sort_order: e.target.value }))
+                }
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-medium text-gray-700">
+              Document Name *
+            </label>
+            <input
+              value={form.name}
+              onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
+              placeholder="Aadhaar Card"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-medium text-gray-700">
+              Description
+            </label>
+            <textarea
+              rows={2}
+              value={form.description}
+              onChange={(e) =>
+                setForm((p) => ({ ...p, description: e.target.value }))
+              }
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="mb-1 block text-xs font-medium text-gray-700">
+                Allowed file types
+              </label>
+              <input
+                value={form.file_types}
+                onChange={(e) =>
+                  setForm((p) => ({ ...p, file_types: e.target.value }))
+                }
+                placeholder="jpg,jpeg,png,pdf"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-gray-700">
+                Max size (KB)
+              </label>
+              <input
+                type="number"
+                min="1"
+                value={form.max_size_kb}
+                onChange={(e) =>
+                  setForm((p) => ({ ...p, max_size_kb: e.target.value }))
+                }
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+              />
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-gray-200 bg-gray-50 p-3">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              {[
+                ["is_required", "Mandatory (devotee must upload)"],
+                ["accepts_multiple", "Allow multiple files"],
+                ["is_active", "Active"],
+              ].map(([key, label]) => (
+                <label
+                  key={key}
+                  className="flex items-center gap-2 text-xs text-gray-700"
+                >
+                  <input
+                    type="checkbox"
+                    checked={!!form[key]}
+                    onChange={(e) =>
+                      setForm((p) => ({ ...p, [key]: e.target.checked }))
+                    }
+                    className="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
+                  />
+                  {label}
+                </label>
+              ))}
+            </div>
+          </div>
+      </CrudFormPage>
     );
   }
 
@@ -334,6 +461,7 @@ const SevaDocumentMaster = ({ user }) => {
         </div>
       </div>
 
+<<<<<<< HEAD
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-xl">
@@ -466,6 +594,8 @@ const SevaDocumentMaster = ({ user }) => {
           </div>
         </div>
       )}
+=======
+>>>>>>> b4ae7505f0ddd090375ea03a53f7455424394ef7
     </div>
   );
 };

@@ -52,6 +52,8 @@ const SevaPortal = ({ user, onLogout }) => {
   const base = import.meta.env.VITE_API_URL;
   const headers = { Authorization: `Bearer ${token}` };
 
+<<<<<<< HEAD
+=======
   // ---------- LOCAL date helpers ----------
   // NOTE: toISOString() UTC deta hai - browser timezone UTC se peeche ho to
   // date ek din aage dikhta hai. Isliye local date use karte hain.
@@ -66,6 +68,7 @@ const SevaPortal = ({ user, onLogout }) => {
     return x;
   };
 
+>>>>>>> 1df1ea3a27d9e1a4d71457bb4c11d39a93d84339
   const [view, setView] = useState("catalogue");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -78,6 +81,17 @@ const SevaPortal = ({ user, onLogout }) => {
 
   const [selectedService, setSelectedService] = useState(null);
   const [selectedPackage, setSelectedPackage] = useState(null);
+<<<<<<< HEAD
+  const [performDate, setPerformDate] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    return d.toISOString().slice(0, 10);
+  });
+  // Catalogue ka daily limit kis date ka dikhana hai (default = aaj)
+  const [quotaDate, setQuotaDate] = useState(() =>
+    new Date().toISOString().slice(0, 10)
+  );
+=======
   const [performDate, setPerformDate] = useState(() =>
     localDate(addDays(new Date(), 1))
   );
@@ -87,6 +101,7 @@ const SevaPortal = ({ user, onLogout }) => {
   const [quotaDate, setQuotaDate] = useState("");
   // User ne khud date change ki hai ya nahi (auto rollover band karne ke liye)
   const [dateIsAuto, setDateIsAuto] = useState(true);
+>>>>>>> 1df1ea3a27d9e1a4d71457bb4c11d39a93d84339
   const [slots, setSlots] = useState([]);
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [quota, setQuota] = useState(null);
@@ -134,6 +149,15 @@ const SevaPortal = ({ user, onLogout }) => {
       if (!silent) {
         setLoading(true);
       }
+<<<<<<< HEAD
+      const res = await axios.get(`${base}/portal/seva/catalogue`, {
+        headers,
+        params: { date: quotaDate },
+      });
+      if (res.data?.success) {
+        setCategories(res.data.data.categories || []);
+        setServices(res.data.data.services || []);
+=======
 
       // Date tabhi bhejo jab user ne khud choose ki ho - warna SERVER ka aaj use karo
       // (browser/server timezone mismatch na ho)
@@ -156,6 +180,7 @@ const SevaPortal = ({ user, onLogout }) => {
         if (serverDate) {
           setQuotaDate(serverDate);
         }
+>>>>>>> 1df1ea3a27d9e1a4d71457bb4c11d39a93d84339
       }
     } catch (e) {
       if (!silent) {
@@ -171,22 +196,35 @@ const SevaPortal = ({ user, onLogout }) => {
   /**
    * REAL-TIME daily limit refresh.
    *
+<<<<<<< HEAD
+   * Catalogue har 20 second me silently re-fetch hota hai - isse "X of Y left
+   * today" counter live update hota hai (kisi ke booking karte hi).
+   * Silent refresh user ka scroll/selection disturb nahi karta.
+=======
    * Catalogue har 20 second me silently re-fetch hota hai - isse "X of Y left"
    * counter live update hota hai (kisi ke booking karte hi).
    * Din change hone par (midnight rollover) server naya date deta hai aur
    * counter naye din ka data dikhata hai.
+>>>>>>> 1df1ea3a27d9e1a4d71457bb4c11d39a93d84339
    */
   useEffect(() => {
     const timer = setInterval(() => {
       if (document.hidden) {
         return; // tab background me hai - zaroorat nahi
       }
+<<<<<<< HEAD
+=======
 
+>>>>>>> 1df1ea3a27d9e1a4d71457bb4c11d39a93d84339
       loadCatalogue(true);
     }, 20000);
 
     return () => clearInterval(timer);
+<<<<<<< HEAD
+  }, []);
+=======
   }, [dateIsAuto, quotaDate]);
+>>>>>>> 1df1ea3a27d9e1a4d71457bb4c11d39a93d84339
 
   // Page focus hone par bhi turant refresh
   useEffect(() => {
@@ -280,9 +318,8 @@ const SevaPortal = ({ user, onLogout }) => {
   const filteredServices = useMemo(() => {
     return services.filter((s) => {
       const byCat = activeCat === "ALL" || s.category_id == activeCat;
-      const byText = `${s.name} ${s.code} ${s.service_kind} ${
-        s.short_description || ""
-      } ${s.category?.name || ""}`
+      const byText = `${s.name} ${s.code} ${s.service_kind} ${s.short_description || ""
+        } ${s.category?.name || ""}`
         .toLowerCase()
         .includes(query.trim().toLowerCase());
       return byCat && byText;
@@ -311,14 +348,29 @@ const SevaPortal = ({ user, onLogout }) => {
     1,
     Number(
       selectedPackage?.persons_per_booking ??
-        selectedPackage?.max_persons ??
-        selectedService?.max_persons ??
-        1
+      selectedPackage?.max_persons ??
+      selectedService?.max_persons ??
+      1
     ) || 1
   );
 
+<<<<<<< HEAD
   // Persons actually served = GROUP size (alag "Persons Served" field nahi)
   const personsServed = maxGroupSize;
+=======
+  // Persons actually served under the temple (PACKAGE se decide)
+  const personsServed = Math.max(
+    1,
+    Math.min(
+      Number(
+        selectedPackage?.persons_served_count ??
+        selectedPackage?.persons_served ??
+        maxGroupSize
+      ) || 1,
+      maxGroupSize
+    )
+  );
+>>>>>>> b4ae7505f0ddd090375ea03a53f7455424394ef7
 
   // Group size = package ka group size (client input NAHI - sab package se)
   useEffect(() => {
@@ -408,7 +460,7 @@ const SevaPortal = ({ user, onLogout }) => {
 
     if (selectedService.requires_gotra && !gotra.trim())
       return toast.error("Gotra is required for this seva");
-        if (selectedService.slot_required && !selectedSlot)
+    if (selectedService.slot_required && !selectedSlot)
       return toast.error("Please select a time slot");
 
     try {
@@ -490,17 +542,17 @@ const SevaPortal = ({ user, onLogout }) => {
   };
 
   const statusStyle = (s) =>
-    ({
-      PENDING_PAYMENT: "bg-amber-100 text-amber-700",
-      PENDING_APPROVAL: "bg-blue-100 text-blue-700",
-      QUERY_RAISED: "bg-amber-100 text-amber-700",
-      APPROVED: "bg-cyan-100 text-cyan-700",
-      SCHEDULED: "bg-indigo-100 text-indigo-700",
-      PERFORMED: "bg-emerald-100 text-emerald-700",
-      COMPLETED: "bg-green-100 text-green-700",
-      CANCELLED: "bg-gray-200 text-gray-600",
-      REJECTED: "bg-red-100 text-red-700",
-    }[s] || "bg-gray-100 text-gray-700");
+  ({
+    PENDING_PAYMENT: "bg-amber-100 text-amber-700",
+    PENDING_APPROVAL: "bg-blue-100 text-blue-700",
+    QUERY_RAISED: "bg-amber-100 text-amber-700",
+    APPROVED: "bg-cyan-100 text-cyan-700",
+    SCHEDULED: "bg-indigo-100 text-indigo-700",
+    PERFORMED: "bg-emerald-100 text-emerald-700",
+    COMPLETED: "bg-green-100 text-green-700",
+    CANCELLED: "bg-gray-200 text-gray-600",
+    REJECTED: "bg-red-100 text-red-700",
+  }[s] || "bg-gray-100 text-gray-700");
 
   const money = (n) =>
     Number(n || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 });
@@ -555,11 +607,10 @@ const SevaPortal = ({ user, onLogout }) => {
             </div>
             <button
               onClick={() => setView("mybookings")}
-              className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition ${
-                view === "mybookings"
-                  ? "bg-red-600 text-white"
-                  : "border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
-              }`}
+              className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition ${view === "mybookings"
+                ? "bg-red-600 text-white"
+                : "border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+                }`}
             >
               <Receipt className="h-4 w-4" /> My Bookings
             </button>
@@ -626,31 +677,42 @@ const SevaPortal = ({ user, onLogout }) => {
                   <input
                     type="date"
                     value={quotaDate}
+<<<<<<< HEAD
+                    min={new Date().toISOString().slice(0, 10)}
+                    onChange={(e) => {
+=======
                     min={localDate()}
                     onChange={(e) => {
                       setDateIsAuto(false);
+>>>>>>> 1df1ea3a27d9e1a4d71457bb4c11d39a93d84339
                       setQuotaDate(e.target.value);
                       setPerformDate(e.target.value);
                     }}
                     className="w-full border-0 p-0 text-xs font-semibold text-gray-900 focus:outline-none focus:ring-0"
                   />
                 </div>
+<<<<<<< HEAD
+                <span
+                  className="ml-1 inline-block h-2 w-2 shrink-0 animate-pulse rounded-full bg-emerald-500"
+                  title="Live - updates every 20 seconds"
+                />
+=======
                 {dateIsAuto && (
                   <span
                     className="ml-1 inline-block h-2 w-2 shrink-0 animate-pulse rounded-full bg-emerald-500"
                     title="Live - updates every 20 seconds"
                   />
                 )}
+>>>>>>> 1df1ea3a27d9e1a4d71457bb4c11d39a93d84339
               </div>
 
               <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => setActiveCat("ALL")}
-                  className={`rounded-full px-3.5 py-1.5 text-xs font-medium transition ${
-                    activeCat === "ALL"
-                      ? "bg-gray-900 text-white"
-                      : "bg-white text-gray-600 ring-1 ring-gray-200 hover:ring-gray-300"
-                  }`}
+                  className={`rounded-full px-3.5 py-1.5 text-xs font-medium transition ${activeCat === "ALL"
+                    ? "bg-gray-900 text-white"
+                    : "bg-white text-gray-600 ring-1 ring-gray-200 hover:ring-gray-300"
+                    }`}
                 >
                   All
                 </button>
@@ -658,11 +720,10 @@ const SevaPortal = ({ user, onLogout }) => {
                   <button
                     key={c.category_id}
                     onClick={() => setActiveCat(c.category_id)}
-                    className={`rounded-full px-3.5 py-1.5 text-xs font-medium transition ${
-                      activeCat == c.category_id
-                        ? "bg-red-600 text-white"
-                        : "bg-white text-gray-600 ring-1 ring-gray-200 hover:ring-gray-300"
-                    }`}
+                    className={`rounded-full px-3.5 py-1.5 text-xs font-medium transition ${activeCat == c.category_id
+                      ? "bg-red-600 text-white"
+                      : "bg-white text-gray-600 ring-1 ring-gray-200 hover:ring-gray-300"
+                      }`}
                   >
                     {c.name}
                   </button>
@@ -745,6 +806,26 @@ const SevaPortal = ({ user, onLogout }) => {
                     {/* Daily quota status - LIVE */}
                     {!svc.is_quota_unlimited && (
                       <div
+<<<<<<< HEAD
+                        className={`mt-3 flex items-center justify-between rounded-lg px-2.5 py-2 text-[11px] font-medium ${svc.is_quota_full
+                          ? "bg-red-50 text-red-700"
+                          : "bg-emerald-50 text-emerald-700"
+                          }`}
+                      >
+                        <span className="flex items-center gap-1.5">
+                          <Users className="h-3.5 w-3.5" />
+                          Daily limit
+                          <span
+                            className="ml-0.5 inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500"
+                            title="Live - updates every 20 seconds"
+                          />
+                        </span>
+                        <span>
+                          {svc.is_quota_full
+                            ? `Full (${svc.daily_quota}/${svc.daily_quota} booked)`
+                            : `${svc.quota_remaining} of ${svc.daily_quota} left on ${fmtDate(svc.quota_date)}`}
+                        </span>
+=======
                         className={`mt-3 rounded-lg px-2.5 py-2 text-[11px] font-medium ${
                           svc.is_quota_full
                             ? "bg-red-50 text-red-700"
@@ -765,6 +846,7 @@ const SevaPortal = ({ user, onLogout }) => {
                             ? `Full - ${svc.daily_quota}/${svc.daily_quota} booked`
                             : `${svc.quota_remaining} of ${svc.daily_quota} left`}
                         </p>
+>>>>>>> 1df1ea3a27d9e1a4d71457bb4c11d39a93d84339
                       </div>
                     )}
 
@@ -860,7 +942,11 @@ const SevaPortal = ({ user, onLogout }) => {
                     <input
                       type="date"
                       value={performDate}
+<<<<<<< HEAD
+                      min={new Date().toISOString().slice(0, 10)}
+=======
                       min={localDate()}
+>>>>>>> 1df1ea3a27d9e1a4d71457bb4c11d39a93d84339
                       onChange={(e) => {
                         setPerformDate(e.target.value);
                         loadSlots(
@@ -891,13 +977,12 @@ const SevaPortal = ({ user, onLogout }) => {
                               type="button"
                               disabled={!sl.available}
                               onClick={() => setSelectedSlot(sl)}
-                              className={`rounded-xl border px-3 py-2.5 text-left transition ${
-                                selectedSlot?.slot_id === sl.slot_id
-                                  ? "border-red-600 bg-red-50 ring-2 ring-red-100"
-                                  : sl.available
-                                    ? "border-gray-200 bg-white hover:border-red-300 hover:bg-red-50/40"
-                                    : "cursor-not-allowed border-gray-100 bg-gray-50 opacity-60"
-                              }`}
+                              className={`rounded-xl border px-3 py-2.5 text-left transition ${selectedSlot?.slot_id === sl.slot_id
+                                ? "border-red-600 bg-red-50 ring-2 ring-red-100"
+                                : sl.available
+                                  ? "border-gray-200 bg-white hover:border-red-300 hover:bg-red-50/40"
+                                  : "cursor-not-allowed border-gray-100 bg-gray-50 opacity-60"
+                                }`}
                             >
                               <p className="text-sm font-bold text-gray-900">
                                 {sl.start_time}
@@ -930,11 +1015,10 @@ const SevaPortal = ({ user, onLogout }) => {
                             key={pkg.package_id}
                             type="button"
                             onClick={() => selectPackage(pkg)}
-                            className={`rounded-xl border px-3.5 py-3 text-left transition ${
-                              selectedPackage?.package_id === pkg.package_id
-                                ? "border-red-600 bg-red-50 ring-2 ring-red-100"
-                                : "border-gray-200 bg-white hover:border-red-300"
-                            }`}
+                            className={`rounded-xl border px-3.5 py-3 text-left transition ${selectedPackage?.package_id === pkg.package_id
+                              ? "border-red-600 bg-red-50 ring-2 ring-red-100"
+                              : "border-gray-200 bg-white hover:border-red-300"
+                              }`}
                           >
                             <div className="flex items-center justify-between">
                               <p className="text-sm font-bold text-gray-900">
@@ -988,11 +1072,10 @@ const SevaPortal = ({ user, onLogout }) => {
                   {/* Daily quota status for selected date */}
                   {quota && !quota.unlimited && (
                     <div
-                      className={`rounded-xl border px-3.5 py-2.5 text-xs font-medium ${
-                        quota.is_full
-                          ? "border-red-200 bg-red-50 text-red-700"
-                          : "border-emerald-200 bg-emerald-50 text-emerald-700"
-                      }`}
+                      className={`rounded-xl border px-3.5 py-2.5 text-xs font-medium ${quota.is_full
+                        ? "border-red-200 bg-red-50 text-red-700"
+                        : "border-emerald-200 bg-emerald-50 text-emerald-700"
+                        }`}
                     >
                       <div className="flex items-center justify-between">
                         <span className="flex items-center gap-1.5">
@@ -1040,21 +1123,17 @@ const SevaPortal = ({ user, onLogout }) => {
                     </p>
                     {quota && !quota.unlimited && (
                       <p
-                        className={`mt-2 rounded-lg px-2 py-1.5 text-[11px] font-medium ${
-                          quota.remaining < personsServed
-                            ? "bg-red-50 text-red-700"
-                            : "bg-emerald-50 text-emerald-800"
-                        }`}
+                        className={`mt-2 rounded-lg px-2 py-1.5 text-[11px] font-medium ${quota.remaining < personsServed
+                          ? "bg-red-50 text-red-700"
+                          : "bg-emerald-50 text-emerald-800"
+                          }`}
                       >
                         {quota.remaining < personsServed
-                          ? `Only ${quota.remaining} place${
-                              quota.remaining === 1 ? "" : "s"
-                            } left — this booking is not possible right now.`
-                          : `${personsServed} place${
-                              personsServed > 1 ? "s" : ""
-                            } will be reserved (out of ${
-                              quota.remaining
-                            } available).`}
+                          ? `Only ${quota.remaining} place${quota.remaining === 1 ? "" : "s"
+                          } left — this booking is not possible right now.`
+                          : `${personsServed} place${personsServed > 1 ? "s" : ""
+                          } will be reserved (out of ${quota.remaining
+                          } available).`}
                       </p>
                     )}
                   </div>
@@ -1208,11 +1287,10 @@ const SevaPortal = ({ user, onLogout }) => {
                         key={m.id}
                         type="button"
                         onClick={() => setPayMode(String(m.id))}
-                        className={`flex items-center gap-2.5 rounded-xl border px-4 py-3 text-sm font-semibold transition ${
-                          payMode === String(m.id)
-                            ? "border-emerald-600 bg-emerald-600 text-white shadow-md"
-                            : "border-gray-200 bg-white text-gray-700 hover:border-emerald-400"
-                        }`}
+                        className={`flex items-center gap-2.5 rounded-xl border px-4 py-3 text-sm font-semibold transition ${payMode === String(m.id)
+                          ? "border-emerald-600 bg-emerald-600 text-white shadow-md"
+                          : "border-gray-200 bg-white text-gray-700 hover:border-emerald-400"
+                          }`}
                       >
                         {m.is_cash ? (
                           <IndianRupee className="h-4 w-4" />
@@ -1334,8 +1412,8 @@ const SevaPortal = ({ user, onLogout }) => {
                       : quota?.is_full
                         ? "Daily limit reached - booking unavailable"
                         : `Pay Now - Rs. ${money(
-                            pricePreview?.total ?? selectedService.current_fee
-                          )}`}
+                          pricePreview?.total ?? selectedService.current_fee
+                        )}`}
                   </button>
                   <p className="mt-2 text-center text-[11px] text-gray-500">
                     Booking and payment are confirmed together. Receipt is
@@ -1423,11 +1501,10 @@ const SevaPortal = ({ user, onLogout }) => {
                       <div>
                         <p className="text-gray-400">Payment</p>
                         <p
-                          className={`font-semibold ${
-                            b.payment_status === "PAID"
-                              ? "text-emerald-600"
-                              : "text-amber-600"
-                          }`}
+                          className={`font-semibold ${b.payment_status === "PAID"
+                            ? "text-emerald-600"
+                            : "text-amber-600"
+                            }`}
                         >
                           {b.payment_status}
                         </p>
@@ -1588,9 +1665,8 @@ const Field = ({ label, value, onChange, placeholder, required, icon: Icon }) =>
         value={value}
         onChange={(e) => onChange(e && e.target ? e.target.value : e)}
         placeholder={placeholder}
-        className={`w-full rounded-xl border border-gray-200 py-2.5 pr-3 text-sm focus:border-red-400 focus:outline-none focus:ring-2 focus:ring-red-100 ${
-          Icon ? "pl-9" : "pl-3.5"
-        }`}
+        className={`w-full rounded-xl border border-gray-200 py-2.5 pr-3 text-sm focus:border-red-400 focus:outline-none focus:ring-2 focus:ring-red-100 ${Icon ? "pl-9" : "pl-3.5"
+          }`}
       />
     </div>
   </div>
@@ -1602,11 +1678,10 @@ const FileDrop = ({ label, required, file, onChange }) => (
       {label} {required && <span className="text-red-500">*</span>}
     </label>
     <label
-      className={`flex cursor-pointer items-center gap-3 rounded-xl border-2 border-dashed px-4 py-4 transition ${
-        file
-          ? "border-emerald-400 bg-emerald-50"
-          : "border-gray-300 bg-white hover:border-amber-400 hover:bg-amber-50/50"
-      }`}
+      className={`flex cursor-pointer items-center gap-3 rounded-xl border-2 border-dashed px-4 py-4 transition ${file
+        ? "border-emerald-400 bg-emerald-50"
+        : "border-gray-300 bg-white hover:border-amber-400 hover:bg-amber-50/50"
+        }`}
     >
       <input
         type="file"
@@ -1635,9 +1710,8 @@ const FileDrop = ({ label, required, file, onChange }) => (
         }}
       />
       <span
-        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${
-          file ? "bg-emerald-600 text-white" : "bg-amber-100 text-amber-700"
-        }`}
+        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${file ? "bg-emerald-600 text-white" : "bg-amber-100 text-amber-700"
+          }`}
       >
         {file ? (
           <CheckCircle className="h-4 w-4" />

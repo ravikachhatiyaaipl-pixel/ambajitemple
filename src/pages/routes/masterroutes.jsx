@@ -1,6 +1,9 @@
 /***
+<<<<<<< HEAD
 export default MasterRoutes;
 /***
+=======
+>>>>>>> b4ae7505f0ddd090375ea03a53f7455424394ef7
 *
 *  Application Name: I3EMS
 *
@@ -19,6 +22,7 @@ export default MasterRoutes;
 import { Routes, Route } from "react-router-dom";
 
 import { lazy } from "react";
+<<<<<<< HEAD
 const DonationCategoryMaster = lazy(() => import("../masters/donation/category"));
 const DocumentMasterScreen = lazy(() => import("../masters/document/document-master"));
 const DocumentMappingScreen = lazy(() => import("../masters/document/document-mapping"));
@@ -26,6 +30,8 @@ const DonationTypeMaster = lazy(() => import("../masters/donation/type"));
 const DonationPurityMaster = lazy(() => import("../masters/donation/purity"));
 const DonationWeightUnitMaster = lazy(() => import("../masters/donation/weight-unit"));
 const DonationReceiptSeriesMaster = lazy(() => import("../masters/donation/receipt-series"));
+=======
+>>>>>>> b4ae7505f0ddd090375ea03a53f7455424394ef7
 const DepartmentMaster = lazy(() => import("../masters/organization-management/department-master/departmentmaster"));
 const ZoneList = lazy(() => import("../masters/organization-management/zone-master/list"));
 const AddEditZone = lazy(() => import("../masters/organization-management/zone-master/addedit"));
@@ -277,7 +283,14 @@ const SevaDocumentMapping = lazy(() => import("../masters/hall-shop-management/s
 const SevaCategoryMaster = lazy(() => import("../masters/hall-shop-management/seva-services/categories"));
 const SevaBookings = lazy(() => import("../masters/hall-shop-management/seva-services/bookings"));
 const SevaApprovals = lazy(() => import("../masters/hall-shop-management/seva-services/approvals"));
+<<<<<<< HEAD
 const SevaApprovalView = lazy(() => import("../masters/hall-shop-management/seva-services/approval-view"));
+=======
+<<<<<<< HEAD
+=======
+const SevaApprovalView = lazy(() => import("../masters/hall-shop-management/seva-services/approval-view"));
+>>>>>>> 1df1ea3a27d9e1a4d71457bb4c11d39a93d84339
+>>>>>>> b4ae7505f0ddd090375ea03a53f7455424394ef7
 const SevaActionMaster = lazy(() => import("../masters/hall-shop-management/seva-services/action-master"));
 const SevaPriests = lazy(() => import("../masters/hall-shop-management/seva-services/priests"));
 const SevaOrganizers = lazy(() => import("../masters/hall-shop-management/seva-services/organizers"));
@@ -1665,6 +1678,7 @@ const MasterRoutes = ({ user }) => {
       <Route path="hall-shop-management/shop-rent-agreement" element={<ShopRentAgreementList user={user} />} />
       <Route path="hall-shop-management/shop-rent-agreement/create" element={<AddEditShopRentAgreement user={user} />} />
       <Route path="hall-shop-management/shop-rent-agreement/edit/:id" element={<AddEditShopRentAgreement user={user} />} />
+<<<<<<< HEAD
       <Route path="donation/category" element={<DonationCategoryMaster user={user} />} />
       <Route path="document/document-master" element={<DocumentMasterScreen user={user} />} />
       <Route path="document/document-mapping" element={<DocumentMappingScreen user={user} />} />
@@ -1673,6 +1687,8 @@ const MasterRoutes = ({ user }) => {
       <Route path="donation/weight-unit" element={<DonationWeightUnitMaster user={user} />} />
       <Route path="donation/receipt-series" element={<DonationReceiptSeriesMaster user={user} />} />
 
+=======
+>>>>>>> b4ae7505f0ddd090375ea03a53f7455424394ef7
       <Route path="hall-shop-management/seva-services" element={<SevaServices user={user} />} />
       <Route path="hall-shop-management/seva-service-kinds" element={<SevaServiceKinds user={user} />} />
       <Route path="hall-shop-management/seva-categories" element={<SevaCategoryMaster user={user} />} />
@@ -1681,7 +1697,14 @@ const MasterRoutes = ({ user }) => {
       <Route path="hall-shop-management/seva-document-mapping" element={<SevaDocumentMapping user={user} />} />
       <Route path="hall-shop-management/seva-bookings" element={<SevaBookings user={user} />} />
       <Route path="hall-shop-management/seva-bookings-approval" element={<SevaApprovals user={user} />} />
+<<<<<<< HEAD
       <Route path="hall-shop-management/seva-bookings-approval/view/:id" element={<SevaApprovalView user={user} />} />
+=======
+<<<<<<< HEAD
+=======
+      <Route path="hall-shop-management/seva-bookings-approval/view/:id" element={<SevaApprovalView user={user} />} />
+>>>>>>> 1df1ea3a27d9e1a4d71457bb4c11d39a93d84339
+>>>>>>> b4ae7505f0ddd090375ea03a53f7455424394ef7
       <Route path="hall-shop-management/seva-priests" element={<SevaPriests user={user} />} />
       <Route path="hall-shop-management/seva-organizers" element={<SevaOrganizers user={user} />} />
       <Route path="hall-shop-management/seva-action-master" element={<SevaActionMaster user={user} />} />

@@ -18,6 +18,7 @@ import {
   Phone,
   MapPin,
 } from "lucide-react";
+import { CrudViewPage } from "../../../../components/crud/crudkit";
 
 const SevaBookings = ({ user }) => {
   const [bookings, setBookings] = useState([]);
@@ -136,6 +137,161 @@ const SevaBookings = ({ user }) => {
       <div className="flex min-h-[400px] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-red-600" />
       </div>
+    );
+  }
+
+  if (detail) {
+    return (
+      <CrudViewPage
+        title={<>Booking {detail.receipt_no}</>}
+        subtitle={<>{detail.service?.name} · {detail.perform_date}</>}
+        onClose={() => setDetail(null)}
+      >
+          {/* Devotee */}
+          <div className="rounded-xl border border-gray-200 bg-gray-50/60 p-3">
+            <p className="mb-2 text-xs font-semibold text-gray-700">
+              Devotee Details
+            </p>
+            <div className="grid grid-cols-1 gap-2 text-xs sm:grid-cols-2">
+              <div className="flex items-center gap-1.5">
+                <User className="h-3.5 w-3.5 text-gray-400" />
+                <span className="text-gray-600">Name:</span>
+                <span className="font-medium text-gray-900">
+                  {detail.devotee_name}
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <Phone className="h-3.5 w-3.5 text-gray-400" />
+                <span className="text-gray-600">Phone:</span>
+                <span className="font-medium text-gray-900">
+                  {detail.devotee_mobile || "-"}
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <Receipt className="h-3.5 w-3.5 text-gray-400" />
+                <span className="text-gray-600">Email:</span>
+                <span className="font-medium text-gray-900">
+                  {detail.devotee_email || "-"}
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <ShieldCheck className="h-3.5 w-3.5 text-gray-400" />
+                <span className="text-gray-600">Gotra:</span>
+                <span className="font-medium text-gray-900">
+                  {detail.gotra || "-"}
+                </span>
+              </div>
+              {detail.address && (
+                <div className="flex items-start gap-1.5 sm:col-span-2">
+                  <MapPin className="mt-0.5 h-3.5 w-3.5 text-gray-400" />
+                  <span className="text-gray-600">Address:</span>
+                  <span className="font-medium text-gray-900">
+                    {detail.address}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Amounts */}
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {[
+              ["Base Fee", detail.amount],
+              ["Tax", detail.tax_amount],
+              ["Total", detail.total_amount],
+            ].map(([l, v]) => (
+              <div
+                key={l}
+                className="rounded-lg border border-gray-200 bg-white px-3 py-2"
+              >
+                <p className="text-[10px] uppercase tracking-wide text-gray-500">
+                  {l}
+                </p>
+                <p className="text-sm font-semibold text-gray-900">
+                  ₹{Number(v || 0).toFixed(2)}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          {/* Lines */}
+          {detail.lines?.length > 0 && (
+            <div>
+              <p className="mb-1.5 text-xs font-semibold text-gray-700">
+                Items
+              </p>
+              <div className="rounded-lg border border-gray-200">
+                {detail.lines.map((l) => (
+                  <div
+                    key={l.line_id}
+                    className="flex items-center justify-between border-b border-gray-100 px-3 py-2 text-xs last:border-0"
+                  >
+                    <span className="text-gray-700">{l.description}</span>
+                    <span className="font-semibold text-gray-900">
+                      ₹{Number(l.line_total).toFixed(2)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Documents */}
+          {detail.documents?.length > 0 && (
+            <div>
+              <p className="mb-1.5 text-xs font-semibold text-gray-700">
+                Documents
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {detail.documents.map((d) => (
+                  <a
+                    key={d.doc_id}
+                    href={`${import.meta.env.VITE_API_URL.replace("/api", "")}/storage/${d.file_path}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                  >
+                    <FileText className="h-3.5 w-3.5" />
+                    {d.doc_side || d.doc_type} ({d.file_name})
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Workflow */}
+          {detail.workflow?.length > 0 && (
+            <div>
+              <p className="mb-1.5 text-xs font-semibold text-gray-700">
+                Workflow
+              </p>
+              <div className="space-y-1.5">
+                {detail.workflow.map((w) => (
+                  <div
+                    key={w.wf_id}
+                    className="flex items-center gap-2 text-[11px] text-gray-600"
+                  >
+                    <Clock className="h-3 w-3 text-gray-400" />
+                    <span className="font-medium text-gray-800">
+                      {w.action}
+                    </span>
+                    <span>
+                      {w.from_status || "NEW"} → {w.to_status}
+                    </span>
+                    <span className="text-gray-400">
+                      {w.acted_at
+                        ? String(w.acted_at).slice(0, 16).replace("T", " ")
+                        : ""}
+                    </span>
+                    {w.remarks && (
+                      <span className="text-gray-500">({w.remarks})</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+      </CrudViewPage>
     );
   }
 
@@ -343,185 +499,6 @@ const SevaBookings = ({ user }) => {
         </div>
       </div>
 
-      {/* Detail modal */}
-      {detail && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white shadow-xl">
-            <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
-              <div>
-                <h3 className="text-base font-semibold text-gray-900">
-                  Booking {detail.receipt_no}
-                </h3>
-                <p className="text-xs text-gray-500">
-                  {detail.service?.name} · {detail.perform_date}
-                </p>
-              </div>
-              <button
-                onClick={() => setDetail(null)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="space-y-4 px-5 py-4">
-              {/* Devotee */}
-              <div className="rounded-xl border border-gray-200 bg-gray-50/60 p-3">
-                <p className="mb-2 text-xs font-semibold text-gray-700">
-                  Devotee Details
-                </p>
-                <div className="grid grid-cols-1 gap-2 text-xs sm:grid-cols-2">
-                  <div className="flex items-center gap-1.5">
-                    <User className="h-3.5 w-3.5 text-gray-400" />
-                    <span className="text-gray-600">Name:</span>
-                    <span className="font-medium text-gray-900">
-                      {detail.devotee_name}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <Phone className="h-3.5 w-3.5 text-gray-400" />
-                    <span className="text-gray-600">Phone:</span>
-                    <span className="font-medium text-gray-900">
-                      {detail.devotee_mobile || "-"}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <Receipt className="h-3.5 w-3.5 text-gray-400" />
-                    <span className="text-gray-600">Email:</span>
-                    <span className="font-medium text-gray-900">
-                      {detail.devotee_email || "-"}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <ShieldCheck className="h-3.5 w-3.5 text-gray-400" />
-                    <span className="text-gray-600">Gotra:</span>
-                    <span className="font-medium text-gray-900">
-                      {detail.gotra || "-"}
-                    </span>
-                  </div>
-                  {detail.address && (
-                    <div className="flex items-start gap-1.5 sm:col-span-2">
-                      <MapPin className="mt-0.5 h-3.5 w-3.5 text-gray-400" />
-                      <span className="text-gray-600">Address:</span>
-                      <span className="font-medium text-gray-900">
-                        {detail.address}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Amounts */}
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                {[
-                  ["Base Fee", detail.amount],
-                  ["Tax", detail.tax_amount],
-                  ["Total", detail.total_amount],
-                ].map(([l, v]) => (
-                  <div
-                    key={l}
-                    className="rounded-lg border border-gray-200 bg-white px-3 py-2"
-                  >
-                    <p className="text-[10px] uppercase tracking-wide text-gray-500">
-                      {l}
-                    </p>
-                    <p className="text-sm font-semibold text-gray-900">
-                      ₹{Number(v || 0).toFixed(2)}
-                    </p>
-                  </div>
-                ))}
-              </div>
-
-              {/* Lines */}
-              {detail.lines?.length > 0 && (
-                <div>
-                  <p className="mb-1.5 text-xs font-semibold text-gray-700">
-                    Items
-                  </p>
-                  <div className="rounded-lg border border-gray-200">
-                    {detail.lines.map((l) => (
-                      <div
-                        key={l.line_id}
-                        className="flex items-center justify-between border-b border-gray-100 px-3 py-2 text-xs last:border-0"
-                      >
-                        <span className="text-gray-700">{l.description}</span>
-                        <span className="font-semibold text-gray-900">
-                          ₹{Number(l.line_total).toFixed(2)}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Documents */}
-              {detail.documents?.length > 0 && (
-                <div>
-                  <p className="mb-1.5 text-xs font-semibold text-gray-700">
-                    Documents
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {detail.documents.map((d) => (
-                      <a
-                        key={d.doc_id}
-                        href={`${import.meta.env.VITE_API_URL.replace("/api", "")}/storage/${d.file_path}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
-                      >
-                        <FileText className="h-3.5 w-3.5" />
-                        {d.doc_side || d.doc_type} ({d.file_name})
-                      </a>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Workflow */}
-              {detail.workflow?.length > 0 && (
-                <div>
-                  <p className="mb-1.5 text-xs font-semibold text-gray-700">
-                    Workflow
-                  </p>
-                  <div className="space-y-1.5">
-                    {detail.workflow.map((w) => (
-                      <div
-                        key={w.wf_id}
-                        className="flex items-center gap-2 text-[11px] text-gray-600"
-                      >
-                        <Clock className="h-3 w-3 text-gray-400" />
-                        <span className="font-medium text-gray-800">
-                          {w.action}
-                        </span>
-                        <span>
-                          {w.from_status || "NEW"} → {w.to_status}
-                        </span>
-                        <span className="text-gray-400">
-                          {w.acted_at
-                            ? String(w.acted_at).slice(0, 16).replace("T", " ")
-                            : ""}
-                        </span>
-                        {w.remarks && (
-                          <span className="text-gray-500">({w.remarks})</span>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="flex justify-end gap-3 border-t border-gray-200 px-5 py-4">
-              <button
-                onClick={() => setDetail(null)}
-                className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {detailLoading && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40">
