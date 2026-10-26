@@ -142,19 +142,19 @@ export const HIGHLIGHTS = [
 
 /* ---------- Announcement (VERIFY wording before go-live) ---------- */
 export const ANNOUNCEMENT = {
-  tag: "Announcement",
-  title: "Light & Sound Show at Gabbar Hill will resume soon",
-  text: "Due to unavoidable circumstances, the light and sound show held every night at Gabbar Hill is temporarily on hold. Devotees will be informed as soon as it resumes. We regret the inconvenience.",
+  tag: "Events & Celebrations",
+  title: "Light & Sound Show at Gabbar Hill",
+  text: "Experience the divine celebration of Navratri at Ambaji Temple, filled with devotion, traditional Garba, cultural performances, and spiritual festivities. Join devotees in seeking the blessings of Maa Ambe and celebrating this auspicious festival with faith, joy, and enthusiasm.",
   img: "/ambaji1.jpg",
   pos: "center",
 };
 
 /* ---------- Events (VERIFY dates; kept general on purpose) ---------- */
 export const EVENTS = [
-  { title: "Bhadarvi Poonam Fair", period: "Bhadarvo full moon", text: "Lakhs of padyatris walk to Ambaji for the largest fair of the year.", img: "/ambaji1.jpg", pos: "center 30%" },
-  { title: "Navratri Mahotsav", period: "Ashwin Navratri", text: "Nine nights of garba, aarti and special shringar at the temple.", img: "/Ambaji-Temple.jpg", pos: "center" },
-  { title: "Chaitra Navratri", period: "Chaitra Shukla Paksha", text: "Special pooja and havan during the spring Navratri.", img: "/Golden Shikhara.png", pos: "72% 18%" },
-  { title: "Poonam Darshan", period: "Every full moon", text: "A large number of devotees visit on each Poonam for darshan.", img: "/splash.png", pos: "center 35%" },
+  { title: "Bhadarvi Poonam Fair", period: "Bhadarvo full moon", text: "Lakhs of padyatris walk to Ambaji for the largest fair of the year.", img: "Ambaji_poonam.jpeg", pos: "center 30%" },
+  { title: "Navratri Mahotsav", period: "Ashwin Navratri", text: "Nine nights of garba, aarti and special shringar at the temple.", img: "/ambaji1.jpg", pos: "center" },
+  { title: "Chaitra Navratri", period: "Chaitra Shukla Paksha", text: "Special pooja and havan during the spring Navratri.", img: "/chaitra navaratri.jpg", pos: "72% 18%" },
+  { title: "Poonam Darshan", period: "Every full moon", text: "A large number of devotees visit on each Poonam for darshan.", img: "ambaji_bhadarvi_poonam.jpg", pos: "center 35%" },
 ];
 
 /* ---------- Guidelines (VERIFY with temple trust) ---------- */
