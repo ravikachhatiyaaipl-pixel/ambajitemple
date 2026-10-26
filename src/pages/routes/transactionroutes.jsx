@@ -1,3 +1,4 @@
+import { useState, useEffect, lazy } from "react";
 import { Routes, Route } from "react-router-dom";
 const OpeningVoucherList = lazy(() => import("../transactions/bookkeeping-vouchers/opening-balance-entries/list"));
 const CreateOpeningVoucher = lazy(() => import("../transactions/bookkeeping-vouchers/opening-balance-entries/add"));
@@ -29,9 +30,14 @@ const WorkAllocationList = lazy(() => import("../transactions/tender-management/
 const ViewWorkAllocation = lazy(() => import("../transactions/tender-management/workallocation/view"));
 const ProfitLossPage = lazy(() => import("../transactions/profit-loss"));
 const LedgerTransactionPage = lazy(() => import("../transactions/ledgertransaction"));
-import { useState, useEffect, lazy } from "react";
 import axios from "axios";
 const PaymentVoucherList = lazy(() => import("../transactions/bookkeeping-vouchers/payment/list"));
+const DonationEntry = lazy(() => import("../transactions/donation/entry"));
+const DonationApproval = lazy(() => import("../transactions/donation/approval"));
+const DonationApprovalView = lazy(() => import("../transactions/donation/approval-view"));
+const DonationList = lazy(() => import("../transactions/donation/list"));
+const DonationStorageAllocation = lazy(() => import("../transactions/donation/storage-allocation"));
+
 const CreatePaymentVoucher = lazy(() => import("../transactions/bookkeeping-vouchers/payment/add"));
 const PaymentVoucherEdit = lazy(() => import("../transactions/bookkeeping-vouchers/payment/edit"));
 const PaymentVoucherView = lazy(() => import("../transactions/bookkeeping-vouchers/payment/view"));
@@ -1022,6 +1028,12 @@ const TransactionsRoutes = ({ user }) => {
       <Route path="service-events/posting"            element={<Posting user={user} />} />
       <Route path="service-events/health-certificate" element={<HealthCertificate user={user} />} />
       <Route path="service-events/mass-allotment"     element={<MassAllotment user={user} />} />
+
+      <Route path="donation/entry" element={<DonationEntry user={user} />} />
+      <Route path="donation/approval" element={<DonationApproval user={user} />} />
+      <Route path="donation/approval/view/:id" element={<DonationApprovalView user={user} />} />
+      <Route path="donation/list" element={<DonationList user={user} />} />
+      <Route path="donation/storage-allocation" element={<DonationStorageAllocation user={user} />} />
 
     </Routes>
   );

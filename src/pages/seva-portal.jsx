@@ -354,6 +354,10 @@ const SevaPortal = ({ user, onLogout }) => {
     ) || 1
   );
 
+<<<<<<< HEAD
+  // Persons actually served = GROUP size (alag "Persons Served" field nahi)
+  const personsServed = maxGroupSize;
+=======
   // Persons actually served under the temple (PACKAGE se decide)
   const personsServed = Math.max(
     1,
@@ -366,6 +370,7 @@ const SevaPortal = ({ user, onLogout }) => {
       maxGroupSize
     )
   );
+>>>>>>> b4ae7505f0ddd090375ea03a53f7455424394ef7
 
   // Group size = package ka group size (client input NAHI - sab package se)
   useEffect(() => {

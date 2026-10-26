@@ -36,6 +36,7 @@ const DevoteeDashboard = ({ user, onLogout }) => {
   const navigate = useNavigate();
   const clock = useTempleClock();
   const [summary, setSummary] = useState(null);
+  const [myDonations, setMyDonations] = useState([]);
 
   const displayName = user?.name || user?.username || "Devotee";
   const email = user?.email || "";
@@ -48,6 +49,18 @@ const DevoteeDashboard = ({ user, onLogout }) => {
         headers: { Authorization: `Bearer ${localStorage.getItem("auth_token")}` },
       })
       .then((r) => { if (alive && r.data?.success) setSummary(r.data.data); })
+      .catch(() => { });
+    return () => { alive = false; };
+  }, []);
+
+  // Apni donation entries (portal API)
+  useEffect(() => {
+    let alive = true;
+    axios
+      .get(`${import.meta.env.VITE_API_URL}/portal/donation/entries`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("auth_token")}` },
+      })
+      .then((r) => { if (alive && r.data?.success) setMyDonations(r.data.data || []); })
       .catch(() => { });
     return () => { alive = false; };
   }, []);
@@ -79,6 +92,18 @@ const DevoteeDashboard = ({ user, onLogout }) => {
               className="inline-flex items-center gap-2 rounded-lg bg-amber-600 px-3 py-2 text-sm font-medium text-white hover:bg-amber-700"
             >
               <Sparkles className="h-4 w-4" /> Pooja Services
+            </button>
+            <button
+              onClick={() => navigate("/devotee-donation-entry")}
+              className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+            >
+              <IndianRupee className="h-4 w-4" /> Donate
+            </button>
+            <button
+              onClick={() => navigate("/devotee-donations")}
+              className="inline-flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-sm font-medium text-gray-700 ring-1 ring-gray-200 hover:bg-gray-50"
+            >
+              <ReceiptText className="h-4 w-4" /> My Donations
             </button>
             <button onClick={onLogout}
               className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-3 py-2 text-sm font-medium text-white hover:bg-red-700">
@@ -175,8 +200,39 @@ const DevoteeDashboard = ({ user, onLogout }) => {
 
         {/* Activity charts */}
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-          <Panel title="My Donations" subtitle="Month-wise contribution" className="lg:col-span-2">
-            {summary?.donationTrend?.length ? (
+          <Panel title="My Donations" subtitle="Gold / Silver / Diamond contributions" className="lg:col-span-2"
+            action={
+              <button
+                onClick={() => navigate("/devotee-donations")}
+                className="text-xs font-medium text-blue-600 hover:underline"
+              >
+                View all
+              </button>
+            }>
+            {myDonations.length > 0 ? (
+              <div className="divide-y divide-gray-100">
+                {myDonations.slice(0, 5).map((d) => (
+                  <div key={d.transaction_id} className="flex items-center justify-between py-2.5">
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">
+                        {d.category?.category_name || "Donation"} ·{" "}
+                        {Number(d.weight_in_gram || 0).toFixed(3)} g
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {d.receipt_no} ·{" "}
+                        {String(d.donation_date).slice(0, 10)}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-semibold text-gray-900">
+                        {inrShort(d.valuation_amount || 0)}
+                      </p>
+                      <p className="text-xs text-gray-500">{d.status_name || d.status}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : summary?.donationTrend?.length ? (
               <TrendChart data={summary.donationTrend} series={[{ key: "value", name: "Donation", color: "#B71C1C" }]} />
             ) : (
               <EmptyState icon={IndianRupee} text="Your donations will appear here once you contribute" />

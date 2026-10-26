@@ -76,12 +76,15 @@ const AddEditShop = ({ user }) => {
     SPM_SqMt: "",
     SPM_Fclt: "",
     SPM_Active: true,
+    is_donation_storage: false,
     Documents: [],
   });
 
   const [existingDocuments, setExistingDocuments] = useState([]);
   const [newDocuments, setNewDocuments] = useState([]);
   const [documentsToDelete, setDocumentsToDelete] = useState([]);
+  const [estateDocs, setEstateDocs] = useState([]);
+  const [estateUploaded, setEstateUploaded] = useState([]);
 
   // Get Fnc_Id from menu details
   useEffect(() => {
@@ -199,6 +202,7 @@ const AddEditShop = ({ user }) => {
         SPM_SqMt: d.SPM_SqMt || "",
         SPM_Fclt: d.SPM_Fclt || "",
         SPM_Active: d.SPM_Active ?? true,
+        is_donation_storage: !!d.is_donation_storage,
         Documents: [],
       });
 
@@ -209,11 +213,50 @@ const AddEditShop = ({ user }) => {
       setExistingDocuments(d.Documents || []);
       setNewDocuments([]);
       setDocumentsToDelete([]);
+
+      // Estate documents (central document master - module ESTATE)
+      loadEstateDocs(id);
     } catch (error) {
       toast.error("Failed to load data");
       navigate("/masters/hall-shop-management/shop-master");
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Estate documents (central document master - module ESTATE)
+  const loadEstateDocs = async (shopId) => {
+    if (!shopId) return;
+    try {
+      const res = await ShopApi.getEstateDocuments(shopId);
+      setEstateDocs(res?.data?.mapped || []);
+      setEstateUploaded(res?.data?.uploaded || []);
+    } catch (e) {
+      setEstateDocs([]);
+      setEstateUploaded([]);
+    }
+  };
+
+  const handleEstateUpload = async (e, doc) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const fd = new FormData();
+      fd.append("document_id", doc.document_id);
+      fd.append("file", file);
+
+      const res = await ShopApi.uploadEstateDocument(id, fd);
+      if (res?.success === false) {
+        toast.error(res.message || "Upload failed");
+        return;
+      }
+      toast.success(`${doc.name} uploaded`);
+      loadEstateDocs(id);
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Upload failed");
+    } finally {
+      e.target.value = "";
     }
   };
 
@@ -495,6 +538,7 @@ const AddEditShop = ({ user }) => {
         formDataObj.append("SPM_Fclt", formData.SPM_Fclt.trim());
 
       formDataObj.append("SPM_Active", formData.SPM_Active ? "1" : "0");
+  formDataObj.append("is_donation_storage", formData.is_donation_storage ? "1" : "0");
 
       newDocuments.forEach((file) => {
         formDataObj.append("Documents[]", file);
@@ -1003,6 +1047,123 @@ const AddEditShop = ({ user }) => {
                   <AlertCircle className="h-4 w-4 mr-1" />
                   {errors.SPM_Fclt}
                 </p>
+              )}
+            </div>
+
+            {/* Donation Storage Flag (Estate Master se donation storage) */}
+            <div className="flex items-center justify-between pt-1">
+              <div>
+                <label className="text-sm font-medium text-gray-700">
+                  Use as Donation Storage
+                </label>
+                <p className="text-[10px] text-gray-500">
+                  Is estate item ko donation storage ke liye use karna hai
+                </p>
+              </div>
+              <label className="flex cursor-pointer">
+                <input
+                  type="checkbox"
+                  name="is_donation_storage"
+                  checked={!!formData.is_donation_storage}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      is_donation_storage: e.target.checked,
+                    }))
+                  }
+                  className="sr-only"
+                />
+                <div
+                  className={`block w-14 h-8 rounded-full ${
+                    formData.is_donation_storage ? "bg-amber-500" : "bg-gray-300"
+                  } transition-colors duration-200`}
+                ></div>
+                <div
+                  className={`pointer-events-none absolute left-1 top-1 bg-white border-2 border-gray-200 rounded-full h-6 w-6 transition-transform duration-200 ${
+                    formData.is_donation_storage ? "translate-x-6" : ""
+                  }`}
+                ></div>
+              </label>
+            </div>
+
+            {/* Estate Documents (central document master - module ESTATE) */}
+            <div className="rounded-xl border border-gray-200 bg-gray-50/60 p-3 mt-3">
+              <div className="flex items-center justify-between mb-2">
+                <div>
+                  <p className="text-sm font-semibold text-gray-800">
+                    Estate Documents
+                  </p>
+                  <p className="text-[10px] text-gray-500">
+                    Mapped documents (Document Mapping screen se) yahan upload
+                    hote hain
+                  </p>
+                </div>
+                {estateDocs.length > 0 && (
+                  <span className="text-[10px] text-gray-500">
+                    {estateDocs.length} mapped
+                  </span>
+                )}
+              </div>
+
+              {estateDocs.length === 0 ? (
+                <p className="text-xs text-gray-500">
+                  Is estate item ke liye koi document map nahi hai.{" "}
+                  <span className="font-medium text-blue-600">
+                    Document Mapping
+                  </span>{" "}
+                  screen se map karo (module: Estate Master).
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {estateDocs.map((d) => (
+                    <div
+                      key={d.document_id}
+                      className="flex items-center gap-2 rounded-lg bg-white border border-gray-200 px-3 py-2"
+                    >
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                          d.is_required
+                            ? "bg-red-100 text-red-700"
+                            : "bg-gray-100 text-gray-600"
+                        }`}
+                      >
+                        {d.is_required ? "Required" : "Optional"}
+                      </span>
+                      <span className="text-xs font-medium text-gray-800 flex-1">
+                        {d.name}
+                      </span>
+                      <label className="inline-flex items-center gap-1.5 text-[11px] font-medium text-blue-600 hover:underline cursor-pointer">
+                        <Upload className="h-3.5 w-3.5" />
+                        Upload
+                        <input
+                          type="file"
+                          accept=".jpg,.jpeg,.png,.pdf"
+                          className="hidden"
+                          onChange={(e) => handleEstateUpload(e, d)}
+                        />
+                      </label>
+                    </div>
+                  ))}
+
+                  {estateUploaded.length > 0 && (
+                    <div className="pt-1">
+                      <p className="text-[10px] font-medium text-gray-500 mb-1">
+                        Uploaded
+                      </p>
+                      {estateUploaded.map((u) => (
+                        <a
+                          key={u.Doc_Lib}
+                          href={u.Doc_Upload}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block text-[11px] text-blue-600 hover:underline truncate"
+                        >
+                          {u.Description}
+                        </a>
+                      ))}
+                    </div>
+                  )}
+                </div>
               )}
             </div>
 

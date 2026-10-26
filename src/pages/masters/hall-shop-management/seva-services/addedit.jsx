@@ -124,8 +124,8 @@ const SevaServices = ({ user }) => {
   };
 
   const handleSave = async () => {
-    if (!form.code.trim() || !form.name.trim()) {
-      toast.error("Code and Name are required");
+    if (!form.name.trim()) {
+      toast.error("Name is required");
       return;
     }
     try {
@@ -135,7 +135,8 @@ const SevaServices = ({ user }) => {
       Object.keys(payload).forEach((k) => {
         if (payload[k] === "" || payload[k] === null) delete payload[k];
       });
-      payload.code = form.code.trim();
+      // Code backend se auto-generate hota hai
+      delete payload.code;
       payload.name = form.name.trim();
       payload.permission_approval = form.permission_approval ? 1 : 0;
       payload.sort_order = form.sort_order || 0;
@@ -552,6 +553,167 @@ const SevaServices = ({ user }) => {
       </div>
 
       {/* Form modal */}
+<<<<<<< HEAD
+      {showForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white shadow-xl">
+            <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
+              <h3 className="text-base font-semibold text-gray-900">
+                {editing ? "Edit Service" : "Add Service"}
+              </h3>
+              <button
+                onClick={() => setShowForm(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4 px-5 py-4">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-gray-700">
+                    Category
+                  </label>
+                  <select
+                    value={form.category_id}
+                    onChange={(e) => {
+                      const catId = e.target.value;
+                      const cat = categories.find(
+                        (c) => String(c.category_id) === String(catId)
+                      );
+                      setForm((p) => ({
+                        ...p,
+                        category_id: catId,
+                      }));
+                    }}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                  >
+                    <option value="">— none —</option>
+                    {categories.map((c) => (
+                      <option key={c.category_id} value={c.category_id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                  {selectedCategory && (
+                    <p className="mt-1 text-[10px] text-gray-500">
+                      Code automatically generate hoga (name se)
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-gray-700">
+                    Service Name *
+                  </label>
+                  <input
+                    value={form.name}
+                    onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
+                    placeholder="Maha Pooja"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-gray-700">
+                    Service Kind *
+                  </label>
+                  <select
+                    value={form.service_kind}
+                    onChange={(e) =>
+                      setForm((p) => ({ ...p, service_kind: e.target.value }))
+                    }
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                  >
+                    {kinds.map((k) => (
+                      <option key={k.kind_id} value={k.code}>
+                        {k.name} ({k.code})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* PERMISSION APPROVAL = yes/no */}
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-gray-700">
+                    Permission Approval
+                  </label>
+                  <select
+                    value={form.permission_approval ? "1" : "0"}
+                    onChange={(e) =>
+                      setForm((p) => ({
+                        ...p,
+                        permission_approval: e.target.value === "1",
+                      }))
+                    }
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                  >
+                    <option value="0">No — direct booking (no approval)</option>
+                    <option value="1">Yes — Action Master approval required</option>
+                  </select>
+                  <p className="mt-1 text-[10px] text-gray-500">
+                    {form.permission_approval
+                      ? "Yes - bookings will wait for approval (HOD Approved, then Admin Approved) as per the Action Master flow."
+                      : "No - bookings are scheduled directly, no approval needed."}
+                  </p>
+                </div>
+              </div>
+
+              <p className="rounded-lg bg-blue-50 px-3 py-2 text-[11px] text-blue-800">
+                Price, Pooja Duration, daily limit and group size are defined
+                in the <strong> Seva Packages </strong> master. Devotee selects
+                the package at the time of booking.
+              </p>
+
+              <div className="rounded-xl border border-gray-200 bg-gray-50 p-3">
+                <p className="mb-2 text-xs font-semibold text-gray-700">
+                  Visibility
+                </p>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  {[
+                    ["show_on_portal", "Show on portal"],
+                    ["is_active", "Active"],
+                  ].map(([key, label]) => (
+                    <label
+                      key={key}
+                      className="flex items-center gap-2 text-xs text-gray-700"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={!!form[key]}
+                        onChange={(e) =>
+                          setForm((p) => ({ ...p, [key]: e.target.checked }))
+                        }
+                        className="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
+                      />
+                      {label}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-3 border-t border-gray-200 px-5 py-4">
+              <button
+                onClick={() => setShowForm(false)}
+                className="flex-1 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="flex-1 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-60"
+              >
+                {saving ? "Saving..." : editing ? "Update" : "Create"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+=======
+>>>>>>> b4ae7505f0ddd090375ea03a53f7455424394ef7
     </div>
   );
 };
