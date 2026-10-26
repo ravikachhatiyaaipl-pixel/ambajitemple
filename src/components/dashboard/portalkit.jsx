@@ -44,7 +44,7 @@ export const todayLabel = () =>
 /* ------------------------------- Page shell ------------------------------ */
 export const PortalPage = ({ children, narrow = false }) => (
   <div className="min-h-screen" style={{ background: CREAM }}>
-    <div className={`${narrow ? "max-w-full" : "max-w-full"} mx-auto px-4 sm:px-6 py-6 space-y-6`}>
+    <div className={`${narrow ? "max-w-6xl" : "max-w-7xl"} mx-auto px-4 sm:px-6 py-6 space-y-6`}>
       {children}
     </div>
   </div>

@@ -5,7 +5,7 @@ import {
   CheckCircle, AlertCircle, Copy, UserCheck, ShieldAlert,
   MessageSquare, Check, Eye, Scale, FileText, IndianRupee,
   Package, RefreshCw, Loader2, MapPin, Phone, Mail,
-  X,
+  X, Users,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import DonationApi from "../../services/donationapi";
@@ -429,6 +429,26 @@ const DonationApprovalView = ({ user }) => {
                 </div>
               </div>
             </div>
+
+            {/* Co-Donors List */}
+            {((item.co_donors && item.co_donors.length > 0) || (item.co_donors && item.co_donors.length > 0) || (item.coDonors && item.coDonors.length > 0)) && (
+              <div className="mt-4 pt-4 border-t border-gray-100">
+                <p className="text-xs font-semibold text-gray-700 mb-2 flex items-center gap-1.5">
+                  <Users className="h-3.5 w-3.5 text-amber-600" /> Co-Donors (सह-दानदाता)
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {(item.co_donors || item.coDonors || []).map((cd, i) => (
+                    <span
+                      key={i}
+                      className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-800 border border-amber-200"
+                    >
+                      <User className="h-3 w-3 text-amber-600" />
+                      {typeof cd === "object" ? cd.name : cd}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -565,7 +585,7 @@ const DonationApprovalView = ({ user }) => {
         )}
 
         {/* Action Buttons */}
-        {item.can_approve && (forwardAction || queryAction) && (
+        {Boolean(forwardAction || queryAction) && (
           <div className="bg-white rounded-xl shadow-md border border-gray-200 p-4">
             <div className="text-center mb-4">
               <div className="inline-flex items-center justify-center w-10 h-10 bg-blue-100 rounded-full mb-2">
@@ -629,22 +649,22 @@ const DonationApprovalView = ({ user }) => {
           </div>
         )}
 
-        {!item.can_approve && (
+        {!forwardAction && !queryAction && (
           <div className="bg-gray-50 rounded-xl border border-gray-200 p-6 text-center">
-            {forwardAction ? (
+            {item.status === 28 ? (
               <>
-                <AlertCircle className="h-12 w-12 text-amber-500 mx-auto mb-3" />
-                <h3 className="text-lg font-semibold text-gray-900">Waiting for Another Approver</h3>
+                <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-3" />
+                <h3 className="text-lg font-semibold text-gray-900">Approved & Completed</h3>
                 <p className="text-gray-600 text-sm mt-1">
-                  The next step is <strong>{forwardAction.St_Name}</strong>. You do not have permission to perform this action.
+                  This donation has been fully approved and processed.
                 </p>
               </>
             ) : (
               <>
-                <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-3" />
-                <h3 className="text-lg font-semibold text-gray-900">No Action Required</h3>
+                <AlertCircle className="h-12 w-12 text-amber-500 mx-auto mb-3" />
+                <h3 className="text-lg font-semibold text-gray-900">Waiting for Next Approver</h3>
                 <p className="text-gray-600 text-sm mt-1">
-                  This donation has been fully processed and does not require any further approval.
+                  Current stage: <strong>{item.status_name}</strong>. You do not have pending actions on this donation.
                 </p>
               </>
             )}

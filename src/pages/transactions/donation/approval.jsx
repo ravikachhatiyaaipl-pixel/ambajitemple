@@ -219,7 +219,9 @@ const DonationApproval = ({ user }) => {
     return pages;
   };
 
-  const displayItems = onlyMine ? pendingItems : items;
+  const displayItems = onlyMine
+    ? pendingItems.filter((a) => a.can_approve)
+    : items;
 
   return (
     <div className="p-6">
@@ -412,11 +414,7 @@ const DonationApproval = ({ user }) => {
                     </td>
                     <td className="px-6 py-4">
                       <div className="text-sm font-semibold text-gray-900">
-                        -
-                        {Number(item.valuation_amount || 0).toLocaleString(
-                          "en-IN",
-                          { minimumFractionDigits: 2 }
-                        )}
+                        {formatCurrency(item.valuation_amount)}
                       </div>
                     </td>
                     <td className="px-6 py-4">{getStatusBadge(item)}</td>
