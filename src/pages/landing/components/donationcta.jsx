@@ -31,8 +31,13 @@ export default function DonationCTA() {
           <h2 className="font-display mt-3 text-3xl font-semibold leading-tight tracking-wide sm:text-4xl">
             Offer your devotion, wherever you are
           </h2>
+<<<<<<< HEAD
+          <p className="mx-auto mt-5 max-w-xl text-sm leading-relaxed text-white/70 sm:text-base">
+            Your donation supports daily seva, prasad distribution, temple upkeep and outreach - carried out in Maa
+=======
           <p className="mt-5 max-w-lg text-sm leading-relaxed text-white/75 sm:text-base">
             Your donation supports daily seva, prasad distribution, temple upkeep and outreach — carried out in Maa
+>>>>>>> b4ae7505f0ddd090375ea03a53f7455424394ef7
             Amba&apos;s name.
           </p>
           <Link

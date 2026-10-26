@@ -6,15 +6,12 @@ import {
   Loader2,
   X,
   CheckCircle,
-  XCircle,
   Clock,
   IndianRupee,
   FileText,
   Users,
   Calendar,
   Eye,
-  Play,
-  Ban,
   ShieldCheck,
   Receipt,
   User,
@@ -483,66 +480,6 @@ const SevaBookings = ({ user }) => {
                       >
                         <Eye className="h-3.5 w-3.5" />
                       </button>
-
-                      {b.status === "PENDING_APPROVAL" && (
-                        <button
-                          onClick={() => act(b.booking_id, "approve", { remarks: "Approved" })}
-                          disabled={acting}
-                          className="rounded-lg bg-emerald-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-emerald-700 disabled:opacity-60"
-                          title="Approve"
-                        >
-                          <ShieldCheck className="h-3.5 w-3.5" />
-                        </button>
-                      )}
-
-                      {["PAID", "APPROVED"].includes(b.status) && (
-                        <button
-                          onClick={() => act(b.booking_id, "schedule")}
-                          disabled={acting}
-                          className="rounded-lg bg-indigo-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-indigo-700 disabled:opacity-60"
-                          title="Schedule"
-                        >
-                          <Calendar className="h-3.5 w-3.5" />
-                        </button>
-                      )}
-
-                      {b.status === "SCHEDULED" && (
-                        <button
-                          onClick={() => act(b.booking_id, "perform")}
-                          disabled={acting}
-                          className="rounded-lg bg-blue-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-60"
-                          title="Mark performed"
-                        >
-                          <Play className="h-3.5 w-3.5" />
-                        </button>
-                      )}
-
-                      {b.status === "PERFORMED" && (
-                        <button
-                          onClick={() => act(b.booking_id, "complete")}
-                          disabled={acting}
-                          className="rounded-lg bg-emerald-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-emerald-700 disabled:opacity-60"
-                          title="Complete"
-                        >
-                          <CheckCircle className="h-3.5 w-3.5" />
-                        </button>
-                      )}
-
-                      {["PENDING_PAYMENT", "PAID", "APPROVED", "SCHEDULED"].includes(
-                        b.status
-                      ) && (
-                        <button
-                          onClick={() => {
-                            const reason = window.prompt("Reason for cancellation:");
-                            if (reason) act(b.booking_id, "cancel", { reason });
-                          }}
-                          disabled={acting}
-                          className="rounded-lg border border-red-300 px-2.5 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-60"
-                          title="Cancel"
-                        >
-                          <Ban className="h-3.5 w-3.5" />
-                        </button>
-                      )}
                     </div>
                   </td>
                 </tr>
