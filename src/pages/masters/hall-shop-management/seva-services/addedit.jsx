@@ -17,7 +17,6 @@ import {
   Calendar,
   Eye,
 } from "lucide-react";
-import { CrudFormPage } from "../../../../components/crud/crudkit";
 
 const SevaServices = ({ user }) => {
   const [rows, setRows] = useState([]);
@@ -75,8 +74,9 @@ const SevaServices = ({ user }) => {
     () =>
       rows.filter((r) => {
         const byCat = !catFilter || r.category_id == catFilter;
-        const byText = `${r.name} ${r.code} ${r.service_kind} ${r.category?.name || ""
-          }`
+        const byText = `${r.name} ${r.code} ${r.service_kind} ${
+          r.category?.name || ""
+        }`
           .toLowerCase()
           .includes(query.trim().toLowerCase());
         return byCat && byText;
@@ -180,165 +180,6 @@ const SevaServices = ({ user }) => {
       <div className="flex min-h-[400px] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-red-600" />
       </div>
-    );
-  }
-
-  if (showForm) {
-    return (
-      <CrudFormPage
-        title={editing ? "Edit Service" : "Add Service"}
-        onClose={() => setShowForm(false)}
-        onSubmit={handleSave}
-        saving={saving}
-        submitLabel={editing ? "Update" : "Create"}
-      >
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div>
-              <label className="mb-1 block text-xs font-medium text-gray-700">
-                Category
-              </label>
-              <select
-                value={form.category_id}
-                onChange={(e) => {
-                  const catId = e.target.value;
-                  const cat = categories.find(
-                    (c) => String(c.category_id) === String(catId)
-                  );
-                  setForm((p) => ({
-                    ...p,
-                    category_id: catId,
-                    // Category ka code auto service code me copy
-                    code:
-                      cat && !p.codeTouched ? cat.code || "" : p.code,
-                  }));
-                }}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-              >
-                <option value="">— none —</option>
-                {categories.map((c) => (
-                  <option key={c.category_id} value={c.category_id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-              {selectedCategory && (
-                <p className="mt-1 text-[10px] text-gray-500">
-                  Code auto-generated from category:{" "}
-                  <span className="font-mono font-semibold text-gray-700">
-                    {selectedCategory.code}
-                  </span>
-                </p>
-              )}
-            </div>
-            
-            <div>
-              <label className="mb-1 block text-xs font-medium text-gray-700">
-                Service Name *
-              </label>
-              <input
-                value={form.name}
-                onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-                placeholder="Maha Pooja"
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-              />
-            </div>
-
-            <div>
-              <label className="mb-1 block text-xs font-medium text-gray-700">
-                Code *
-              </label>
-              <input
-                value={form.code}
-                onChange={(e) =>
-                  setForm((p) => ({
-                    ...p,
-                    code: e.target.value.toUpperCase(),
-                    codeTouched: true,
-                  }))
-                }
-                placeholder="Auto from category"
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-mono uppercase"
-              />
-            </div>
-
-            <div>
-              <label className="mb-1 block text-xs font-medium text-gray-700">
-                Service Type*
-              </label>
-              <select
-                value={form.service_kind}
-                onChange={(e) =>
-                  setForm((p) => ({ ...p, service_kind: e.target.value }))
-                }
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-              >
-                {kinds.map((k) => (
-                  <option key={k.kind_id} value={k.code}>
-                    {k.name} ({k.code})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* PERMISSION APPROVAL = yes/no */}
-            <div>
-              <label className="mb-1 block text-xs font-medium text-gray-700">
-                Permission Approval
-              </label>
-              <select
-                value={form.permission_approval ? "1" : "0"}
-                onChange={(e) =>
-                  setForm((p) => ({
-                    ...p,
-                    permission_approval: e.target.value === "1",
-                  }))
-                }
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-              >
-                <option value="0">No — direct booking (no approval)</option>
-                <option value="1">Yes — Action Master approval required</option>
-              </select>
-              <p className="mt-1 text-[10px] text-gray-500">
-                {form.permission_approval
-                  ? "Yes - bookings will wait for approval (HOD Approved, then Admin Approved) as per the Action Master flow."
-                  : "No - bookings are scheduled directly, no approval needed."}
-              </p>
-            </div>
-          </div>
-
-          <p className="rounded-lg bg-blue-50 px-3 py-2 text-[11px] text-blue-800">
-            Price, Pooja Duration, daily limit and group size are defined
-            in the <strong> Seva Packages </strong> master. Devotee selects
-            the package at the time of booking.
-          </p>
-
-          <div className="rounded-xl border border-gray-200 bg-gray-50 p-3">
-            <p className="mb-2 text-xs font-semibold text-gray-700">
-              Visibility
-            </p>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-              {[
-                ["show_on_portal", "Show on portal"],
-                ["is_active", "Active"],
-              ].map(([key, label]) => (
-                <label
-                  key={key}
-                  className="flex items-center gap-2 text-xs text-gray-700"
-                >
-                  <input
-                    type="checkbox"
-                    checked={!!form[key]}
-                    onChange={(e) =>
-                      setForm((p) => ({ ...p, [key]: e.target.checked }))
-                    }
-                    className="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
-                  />
-                  {label}
-                </label>
-              ))}
-            </div>
-          </div>
-      </CrudFormPage>
     );
   }
 
@@ -553,7 +394,6 @@ const SevaServices = ({ user }) => {
       </div>
 
       {/* Form modal */}
-<<<<<<< HEAD
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white shadow-xl">
@@ -712,8 +552,6 @@ const SevaServices = ({ user }) => {
           </div>
         </div>
       )}
-=======
->>>>>>> b4ae7505f0ddd090375ea03a53f7455424394ef7
     </div>
   );
 };

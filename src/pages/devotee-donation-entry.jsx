@@ -12,12 +12,64 @@ import {
   Heart,
   ExternalLink,
   UploadCloud,
+  Plus,
+  Users,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import DonationApi from "./services/donationapi";
 
 const DevoteeDonationEntry = ({ user }) => {
   const navigate = useNavigate();
+
+  const getInitialUser = () => {
+    try {
+      const storedAmt = localStorage.getItem("amt_user");
+      const storedUserData = localStorage.getItem("user_data");
+      const parsedAmt = storedAmt ? JSON.parse(storedAmt) : {};
+      const parsedUser = storedUserData ? JSON.parse(storedUserData) : {};
+      return {
+        name:
+          user?.name ||
+          user?.username ||
+          user?.apiUserData?.Usr_Name ||
+          parsedAmt?.name ||
+          parsedAmt?.username ||
+          parsedAmt?.Usr_Name ||
+          parsedUser?.Usr_Name ||
+          "",
+        email:
+          user?.email ||
+          user?.apiUserData?.Usr_Email ||
+          parsedAmt?.email ||
+          parsedAmt?.Usr_Email ||
+          parsedUser?.Usr_Email ||
+          "",
+        phone:
+          user?.phone ||
+          user?.mobile ||
+          user?.apiUserData?.Usr_Mobile ||
+          parsedAmt?.phone ||
+          parsedAmt?.mobile ||
+          parsedAmt?.Usr_Mobile ||
+          parsedUser?.Usr_Mobile ||
+          "",
+        address:
+          user?.address ||
+          user?.apiUserData?.Usr_Address ||
+          parsedAmt?.address ||
+          parsedAmt?.Usr_Address ||
+          parsedUser?.Usr_Address ||
+          "",
+      };
+    } catch (e) {
+      return {
+        name: user?.name || user?.username || "",
+        email: user?.email || "",
+        phone: user?.phone || user?.mobile || "",
+        address: user?.address || "",
+      };
+    }
+  };
 
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -30,22 +82,59 @@ const DevoteeDonationEntry = ({ user }) => {
   const [units, setUnits] = useState([]);
   const [docMappingsByCategory, setDocMappingsByCategory] = useState({});
 
-  const [form, setForm] = useState({
-    donation_date: new Date().toISOString().slice(0, 10),
-    category_id: "",
-    type_id: "",
-    purity_id: "",
-    weight: "",
-    unit_id: "",
-    purchase_bill_no: "",
-    purchase_bill_date: new Date().toISOString().slice(0, 10),
-    purchase_price: "",
-    donor_name: "",
-    donor_phone: "",
-    donor_email: "",
-    donor_address: "",
-    donor_pan: "",
+  const [form, setForm] = useState(() => {
+    const u = getInitialUser();
+    return {
+      donation_date: new Date().toISOString().slice(0, 10),
+      category_id: "",
+      type_id: "",
+      purity_id: "",
+      weight: "",
+      unit_id: "",
+      purchase_bill_no: "",
+      purchase_bill_date: new Date().toISOString().slice(0, 10),
+      purchase_price: "",
+      donor_name: u.name,
+      donor_phone: u.phone,
+      donor_email: u.email,
+      donor_address: u.address,
+      co_donors: [],
+    };
   });
+
+  useEffect(() => {
+    const u = getInitialUser();
+    setForm((prev) => ({
+      ...prev,
+      donor_name: prev.donor_name || u.name,
+      donor_email: prev.donor_email || u.email,
+      donor_phone: prev.donor_phone || u.phone,
+      donor_address: prev.donor_address || u.address,
+    }));
+  }, [user]);
+
+  const addCoDonor = () => {
+    setForm((p) => ({
+      ...p,
+      co_donors: [...(p.co_donors || []), { name: "" }],
+    }));
+  };
+
+  const updateCoDonor = (index, value) => {
+    setForm((p) => {
+      const updated = [...(p.co_donors || [])];
+      updated[index] = { ...updated[index], name: value };
+      return { ...p, co_donors: updated };
+    });
+  };
+
+  const removeCoDonor = (index) => {
+    setForm((p) => {
+      const updated = [...(p.co_donors || [])];
+      updated.splice(index, 1);
+      return { ...p, co_donors: updated };
+    });
+  };
 
   // Server par uploaded documents (txn create hone ke baad)
   const [documents, setDocuments] = useState([]);
@@ -76,6 +165,11 @@ const DevoteeDonationEntry = ({ user }) => {
       const mappings = res?.data || [];
       const grouped = {};
       mappings.forEach((m) => {
+        // Devotee portal se PAN document remove hai
+        const docName = (m.document_name || "").toLowerCase();
+        if (docName.includes("pan") || Number(m.document_id) === 3) {
+          return;
+        }
         if (!grouped[m.ref_id]) grouped[m.ref_id] = [];
         grouped[m.ref_id].push({
           document_id: m.document_id,
@@ -130,9 +224,7 @@ const DevoteeDonationEntry = ({ user }) => {
     if (!form.purity_id) return "Purity is required";
     if (!form.weight || Number(form.weight) <= 0) return "Weight is required";
     if (!form.unit_id) return "Weight unit is required";
-    if (!form.purchase_bill_no) return "Purchase bill number is required";
-    if (!form.purchase_bill_date) return "Purchase bill date is required";
-    if (form.purchase_price === "") return "Purchase price is required";
+    // Purchase bill fields are now optional
     if (!form.donor_name.trim()) return "Your name is required";
     if (!form.donor_phone.trim()) return "Your mobile number is required";
     return null;
@@ -179,8 +271,13 @@ const DevoteeDonationEntry = ({ user }) => {
     setSaving(true);
     setFormError("");
     try {
+      const validCoDonors = (form.co_donors || [])
+        .map((c) => ({ name: (c.name || "").trim() }))
+        .filter((c) => c.name.length > 0);
+
       const res = await DonationApi.createPortalDonation({
         ...form,
+        co_donors: validCoDonors,
         creator_type: "devotee",
       });
       if (res?.success === false) {
@@ -416,18 +513,19 @@ const DevoteeDonationEntry = ({ user }) => {
               </select>
             </div>
             <div>
-              <label className={labelCls}>Purchase Bill No</label>
+              <label className={labelCls}>Purchase Bill No (Optional)</label>
               <input
                 value={form.purchase_bill_no}
                 onChange={(e) =>
                   setForm((p) => ({ ...p, purchase_bill_no: e.target.value }))
                 }
+                placeholder="Optional"
                 className={inputCls}
                 disabled={!!txn}
               />
             </div>
             <div>
-              <label className={labelCls}>Purchase Bill Date</label>
+              <label className={labelCls}>Purchase Bill Date (Optional)</label>
               <input
                 type="date"
                 value={form.purchase_bill_date}
@@ -442,7 +540,7 @@ const DevoteeDonationEntry = ({ user }) => {
               />
             </div>
             <div>
-              <label className={labelCls}>Purchase Price (Rs.)</label>
+              <label className={labelCls}>Purchase Price (Rs.) (Optional)</label>
               <input
                 type="number"
                 step="0.01"
@@ -451,6 +549,7 @@ const DevoteeDonationEntry = ({ user }) => {
                 onChange={(e) =>
                   setForm((p) => ({ ...p, purchase_price: e.target.value }))
                 }
+                placeholder="Optional"
                 className={inputCls}
                 disabled={!!txn}
               />
@@ -466,12 +565,15 @@ const DevoteeDonationEntry = ({ user }) => {
 
         {/* B. Donor details */}
         <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
-          <div className="px-5 py-3 border-b bg-gradient-to-r from-gray-50 to-gray-100">
+          <div className="px-5 py-3 border-b bg-gradient-to-r from-gray-50 to-gray-100 flex items-center justify-between">
             <h2 className="text-base font-semibold text-gray-900">
               B. Your Details
             </h2>
+            <span className="text-xs text-gray-500 font-normal">
+              Logged-in devotee details auto-filled
+            </span>
           </div>
-          <div className="grid grid-cols-1 gap-4 px-5 py-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-4 px-5 py-4 sm:grid-cols-3">
             <div>
               <label className={labelCls}>
                 Name <span className="text-red-500">*</span>
@@ -510,21 +612,7 @@ const DevoteeDonationEntry = ({ user }) => {
                 disabled={!!txn}
               />
             </div>
-            <div>
-              <label className={labelCls}>PAN</label>
-              <input
-                value={form.donor_pan}
-                onChange={(e) =>
-                  setForm((p) => ({
-                    ...p,
-                    donor_pan: e.target.value.toUpperCase(),
-                  }))
-                }
-                className={`${inputCls} font-mono`}
-                disabled={!!txn}
-              />
-            </div>
-            <div className="sm:col-span-2 lg:col-span-4">
+            <div className="sm:col-span-3">
               <label className={labelCls}>Address</label>
               <textarea
                 rows={2}
@@ -535,6 +623,67 @@ const DevoteeDonationEntry = ({ user }) => {
                 className={inputCls}
                 disabled={!!txn}
               />
+            </div>
+
+            {/* Co-Donors (Multiple) */}
+            <div className="sm:col-span-3 border-t border-gray-200 pt-4 mt-2">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-1.5">
+                    <Users className="h-4 w-4 text-amber-600" />
+                    Co-Donors (सह-दानदाता)
+                  </h3>
+                  <p className="text-xs text-gray-500">
+                    Add family members or joint co-donor names
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={addCoDonor}
+                  disabled={!!txn}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-lg transition-colors disabled:opacity-50 shadow-sm"
+                >
+                  <Plus className="h-3.5 w-3.5" /> Add Co-Donor
+                </button>
+              </div>
+
+              {(form.co_donors || []).length === 0 ? (
+                <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50 p-3 text-center">
+                  <p className="text-xs text-gray-400 italic">
+                    No co-donors added. Click "+ Add Co-Donor" to add joint donor names.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {form.co_donors.map((cd, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-center gap-2 bg-gray-50 p-2 rounded-lg border border-gray-200"
+                    >
+                      <span className="text-xs font-semibold text-gray-500 w-6 text-center">
+                        #{idx + 1}
+                      </span>
+                      <input
+                        type="text"
+                        placeholder="Enter co-donor full name"
+                        value={cd.name}
+                        onChange={(e) => updateCoDonor(idx, e.target.value)}
+                        className={`${inputCls} flex-1 bg-white`}
+                        disabled={!!txn}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeCoDonor(idx)}
+                        disabled={!!txn}
+                        className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg disabled:opacity-50 transition-colors"
+                        title="Remove co-donor"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>

@@ -27,6 +27,18 @@ import DonationApi from "../../services/donationapi";
 const DonationList = ({ user }) => {
   const navigate = useNavigate();
 
+  // Intl formatter - source me literal rupee sign nahi (encoding-safe)
+  const formatCurrency = (amount) => {
+    let val = Number(amount || 0);
+    if (!isFinite(val) || val < 0) val = 0;
+    return new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(val);
+  };
+
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -322,10 +334,7 @@ const DonationList = ({ user }) => {
                     </td>
                     <td className="px-6 py-4">
                       <div className="text-sm font-semibold text-gray-900">
-                        -
-                        {Number(r.valuation_amount || 0).toLocaleString("en-IN", {
-                          minimumFractionDigits: 2,
-                        })}
+                        {formatCurrency(r.valuation_amount)}
                       </div>
                     </td>
                     <td className="px-6 py-4">{statusBadge(r)}</td>

@@ -1,22 +1,19 @@
 import { useState, useEffect, useMemo } from "react";
 import { toast } from "react-hot-toast";
 import axios from "axios";
-import { Layers } from "lucide-react";
 import {
-  usePageTitle,
-  useClientPagination,
-  confirmDelete,
-  CrudPageHeader,
-  CrudActionBar,
-  CrudTable,
-  CrudPagination,
-  CrudFormPage,
-  NameCell,
-  RowActions,
-  StatusBadge,
-  Field,
-  inputCls,
-} from "../../../../components/crud/crudkit";
+  Plus,
+  Edit,
+  Trash2,
+  Search,
+  Loader2,
+  X,
+  Layers,
+  CheckCircle,
+  XCircle,
+  ChevronDown,
+  ChevronUp,
+} from "lucide-react";
 
 const SevaCategoryMaster = ({ user }) => {
   const [rows, setRows] = useState([]);
@@ -25,11 +22,8 @@ const SevaCategoryMaster = ({ user }) => {
   const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
-  const [searchTerm, setSearchTerm] = useState("");
-  const pageTitle = usePageTitle(
-    "/masters/hall-shop-management/seva-categories",
-    "Seva Categories"
-  );
+  const [query, setQuery] = useState("");
+  const [expanded, setExpanded] = useState(null);
 
   const [form, setForm] = useState({
     code: "",
@@ -70,17 +64,10 @@ const SevaCategoryMaster = ({ user }) => {
       rows.filter((r) =>
         `${r.code} ${r.name} ${r.service_kind || ""} ${r.description || ""}`
           .toLowerCase()
-          .includes(searchTerm.trim().toLowerCase())
+          .includes(query.trim().toLowerCase())
       ),
-    [rows, searchTerm]
+    [rows, query]
   );
-
-  const { setPage, pageItems, pagination } = useClientPagination(filtered, 10);
-
-  const handleSearch = (v) => {
-    setSearchTerm(v);
-    setPage(1);
-  };
 
   const openCreate = () => {
     setEditing(null);
@@ -116,7 +103,7 @@ const SevaCategoryMaster = ({ user }) => {
       return;
     }
     if (!form.service_kind) {
-      toast.error("Select a Service Type");
+      toast.error("Select a Service Kind");
       return;
     }
     try {
@@ -153,7 +140,7 @@ const SevaCategoryMaster = ({ user }) => {
   };
 
   const handleDelete = async (r) => {
-    if (!(await confirmDelete({ title: "Delete Category?", text: `Are you sure you want to delete "${r.name}"?` }))) return;
+    if (!window.confirm(`Delete category "${r.name}"?`)) return;
     try {
       await axios.delete(`${base}/seva/categories/${r.category_id}`, { headers });
       toast.success("Category deleted");
@@ -179,139 +166,167 @@ const SevaCategoryMaster = ({ user }) => {
     }
   };
 
-  if (showForm) {
+  if (loading) {
     return (
-      <CrudFormPage
-        title={editing ? "Edit Category" : "Add Category"}
-        onClose={() => setShowForm(false)}
-        onSubmit={handleSave}
-        saving={saving}
-        submitLabel={editing ? "Update" : "Create"}
-      >
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Service Type" required>
-            <select
-              value={form.service_kind}
-              onChange={(e) => setForm((p) => ({ ...p, service_kind: e.target.value }))}
-              className={inputCls}
-            >
-              <option value="">— select —</option>
-              {kinds.map((k) => (
-                <option key={k.kind_id} value={k.code}>
-                  {k.name} ({k.code})
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label="Category Name" required>
-            <input
-              value={form.name}
-              onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-              placeholder="Maha Pooja"
-              className={inputCls}
-            />
-          </Field>
-
-        </div>
-        <Field label="Code" required>
-          <input
-            value={form.code}
-            onChange={(e) => setForm((p) => ({ ...p, code: e.target.value.toUpperCase() }))}
-            disabled={!!editing}
-            placeholder="MAHAPOOJA"
-            className={`${inputCls} font-mono uppercase`}
-          />
-        </Field>
-
-        <Field label="Description">
-          <textarea
-            rows={2}
-            value={form.description}
-            onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
-            className={inputCls}
-          />
-        </Field>
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Icon (lucide name)">
-            <input
-              value={form.icon}
-              onChange={(e) => setForm((p) => ({ ...p, icon: e.target.value }))}
-              placeholder="Flame"
-              className={inputCls}
-            />
-          </Field>
-          <Field label="Sort order">
-            <input
-              type="number"
-              value={form.sort_order}
-              onChange={(e) => setForm((p) => ({ ...p, sort_order: e.target.value }))}
-              className={inputCls}
-            />
-          </Field>
-        </div>
-        <label className="flex items-center gap-2 text-sm text-gray-700">
-          <input
-            type="checkbox"
-            checked={form.is_active}
-            onChange={(e) => setForm((p) => ({ ...p, is_active: e.target.checked }))}
-            className="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
-          />
-          Active
-        </label>
-      </CrudFormPage>
+      <div className="flex min-h-[400px] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-red-600" />
+      </div>
     );
   }
 
   return (
-    <div className="p-6">
-      <CrudPageHeader
-        title={pageTitle}
-        subtitle="Group seva services into categories (Maha Pooja, Yagna, Bhog, Thaal…)"
-        addLabel="Add Category"
-        onAdd={openCreate}
-      />
+    <div className="p-6 space-y-5">
+      {/* Header */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Seva Category Master</h1>
+          <p className="text-sm text-gray-500">
+            Group seva services into categories (Maha Pooja, Yagna, Bhog, Thaal…)
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search categories"
+              className="w-56 rounded-lg border border-gray-300 py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-1 focus:ring-red-500"
+            />
+          </div>
+          <button
+            onClick={openCreate}
+            className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+          >
+            <Plus className="h-4 w-4" /> Add Category
+          </button>
+        </div>
+      </div>
 
-      <CrudActionBar
-        value={searchTerm}
-        onChange={handleSearch}
-        onClear={() => handleSearch("")}
-        onRefresh={fetchAll}
-        placeholder="Search by code, name, Service Type..."
-      />
-
-      <CrudTable
-        columns={["Category", "Service Type", "Icon", "Sort", "Used By", "Status", "Actions"]}
-        loading={loading}
-        isEmpty={pageItems.length === 0}
-        searching={!!searchTerm}
-        emptyNoun="categories"
-        addLabel="Add Category"
-        onAdd={openCreate}
-      >
-        {pageItems.map((r) => (
-          <tr key={r.category_id} className="hover:bg-gray-50 transition-colors duration-150 group">
-            <td className="px-6 py-4">
-              <NameCell icon={Layers} title={r.name} sub={r.code} />
-            </td>
-            <td className="px-6 py-4 text-sm text-gray-700">{r.service_kind || "N/A"}</td>
-            <td className="px-6 py-4 text-sm text-gray-700">{r.icon || "N/A"}</td>
-            <td className="px-6 py-4 text-sm text-gray-700">{r.sort_order}</td>
-            <td className="px-6 py-4 text-sm text-gray-700">
-              {r.services_count || 0} service{r.services_count === 1 ? "" : "s"}
-            </td>
-            <td className="px-6 py-4">
-              <StatusBadge active={!!r.is_active} onClick={() => toggleActive(r)} />
-            </td>
-            <td className="px-6 py-4">
-              <RowActions onEdit={() => openEdit(r)} onDelete={() => handleDelete(r)} />
-            </td>
-          </tr>
+      {/* Stats */}
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        {[
+          ["Total Categories", rows.length, "text-gray-900"],
+          ["Active", rows.filter((r) => r.is_active).length, "text-emerald-600"],
+          ["Inactive", rows.filter((r) => !r.is_active).length, "text-red-600"],
+          ["Service Kinds", kinds.length, "text-blue-600"],
+        ].map(([label, value, color]) => (
+          <div
+            key={label}
+            className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm"
+          >
+            <p className="text-xs text-gray-500">{label}</p>
+            <p className={`mt-1 text-2xl font-bold ${color}`}>{value}</p>
+          </div>
         ))}
-      </CrudTable>
+      </div>
 
-      <CrudPagination pagination={pagination} onPage={setPage} />
+      {/* Table */}
+      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                {["#", "Code", "Category Name", "Service Kind", "Icon", "Sort", "Used By", "Status", "Actions"].map(
+                  (h) => (
+                    <th
+                      key={h}
+                      className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600"
+                    >
+                      {h}
+                    </th>
+                  )
+                )}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {filtered.map((r, idx) => (
+                <tr key={r.category_id} className="hover:bg-gray-50">
+                  <td className="px-4 py-3 text-sm text-gray-500">{idx + 1}</td>
+                  <td className="px-4 py-3">
+                    <span className="font-mono text-xs font-semibold text-gray-800">
+                      {r.code}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <p className="text-sm font-semibold text-gray-900">{r.name}</p>
+                    {r.description && (
+                      <p className="max-w-xs truncate text-xs text-gray-500">
+                        {r.description}
+                      </p>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700">
+                      {r.service_kind || "—"}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-600">
+                    {r.icon || "—"}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-600">{r.sort_order}</td>
+                  <td className="px-4 py-3">
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                        r.services_count > 0
+                          ? "bg-blue-100 text-blue-700"
+                          : "bg-gray-100 text-gray-500"
+                      }`}
+                    >
+                      {r.services_count || 0} service
+                      {r.services_count === 1 ? "" : "s"}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <button
+                      onClick={() => toggleActive(r)}
+                      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-medium ${
+                        r.is_active
+                          ? "bg-emerald-100 text-emerald-700"
+                          : "bg-red-100 text-red-700"
+                      }`}
+                    >
+                      {r.is_active ? (
+                        <CheckCircle className="h-3 w-3" />
+                      ) : (
+                        <XCircle className="h-3 w-3" />
+                      )}
+                      {r.is_active ? "Active" : "Inactive"}
+                    </button>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => openEdit(r)}
+                        className="rounded-lg border border-gray-300 px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                      >
+                        <Edit className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(r)}
+                        className="rounded-lg border border-red-300 px-2.5 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {filtered.length === 0 && (
+                <tr>
+                  <td
+                    colSpan={9}
+                    className="px-4 py-12 text-center text-sm text-gray-500"
+                  >
+                    No categories found.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
 
-<<<<<<< HEAD
       {/* Form modal */}
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
@@ -435,8 +450,6 @@ const SevaCategoryMaster = ({ user }) => {
           </div>
         </div>
       )}
-=======
->>>>>>> b4ae7505f0ddd090375ea03a53f7455424394ef7
     </div>
   );
 };

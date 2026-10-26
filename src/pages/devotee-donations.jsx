@@ -20,6 +20,7 @@ import {
   MapPin,
   IndianRupee,
   ExternalLink,
+  Users,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import DonationApi from "./services/donationapi";
@@ -511,6 +512,24 @@ const DevoteeDonations = ({ user }) => {
                       <span className="text-xs text-gray-700">
                         {detail.donor.donor_address}
                       </span>
+                    </div>
+                  )}
+                  {((detail.co_donors && detail.co_donors.length > 0) || (detail.coDonors && detail.coDonors.length > 0)) && (
+                    <div className="col-span-2 pt-2 border-t border-gray-100">
+                      <p className="text-[11px] font-semibold text-gray-600 mb-1 flex items-center gap-1">
+                        <Users className="h-3 w-3 text-amber-600" /> Co-Donors (सह-दानदाता):
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {(detail.co_donors || detail.coDonors || []).map((cd, i) => (
+                          <span
+                            key={i}
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-amber-50 text-amber-800 border border-amber-200"
+                          >
+                            <User className="h-2.5 w-2.5 text-amber-600" />
+                            {typeof cd === "object" ? cd.name : cd}
+                          </span>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>
