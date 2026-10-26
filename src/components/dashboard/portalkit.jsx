@@ -113,8 +113,12 @@ export const StatCard = ({ label, value, sub, icon: Icon, tone = "red", to }) =>
 };
 
 export const StatGrid = ({ children, cols = 4 }) => {
-  const map = { 2: "lg:grid-cols-2", 3: "lg:grid-cols-3", 4: "lg:grid-cols-4", 5: "lg:grid-cols-5", 6: "lg:grid-cols-6" };
-  return <div className={`grid grid-cols-1 sm:grid-cols-2 ${map[cols] || map[4]} gap-4`}>{children}</div>;
+  // Use only as many columns as there are cards, so a hidden card never leaves an empty slot.
+  const count = React.Children.toArray(children).length;
+  const n = Math.min(cols, Math.max(count, 1));
+  const lg = { 1: "lg:grid-cols-1", 2: "lg:grid-cols-2", 3: "lg:grid-cols-3", 4: "lg:grid-cols-4", 5: "lg:grid-cols-5", 6: "lg:grid-cols-6" };
+  const sm = count > 1 ? "sm:grid-cols-2" : "sm:grid-cols-1";
+  return <div className={`grid grid-cols-1 ${sm} ${lg[n]} gap-4`}>{children}</div>;
 };
 
 /* --------------------------------- Panel --------------------------------- */
