@@ -1,13 +1,11 @@
 import React from "react";
-import { Route, Routes } from "react-router-dom";
-
+import { Route, Routes } from "react-router-dom";
 import { lazy } from "react";
-
-const DonationReports = lazy(() => import("../reports/donation"));
 
 // =====================================================================
 // PHASE 2: CASH/BANK & CORE LEDGER
 // =====================================================================
+const DonationReports = lazy(() => import("../reports/donation"));
 const ChequeRegister = lazy(() => import("../reports/cash-bank/cheque-register"));
 const BankReconciliation = lazy(() => import("../reports/cash-bank/bank-reconciliation"));
 const VendorTds = lazy(() => import("../reports/core-ledger/vendor-tds-summary"));
@@ -309,7 +307,6 @@ const ReportRoutes = ({ user }) => {
       <Route path="service-events/details" element={<ServiceEventsReport user={user} />} />
        
       <Route path="donation" element={<DonationReports user={user} />} />
-
     </Routes>
   );
 };

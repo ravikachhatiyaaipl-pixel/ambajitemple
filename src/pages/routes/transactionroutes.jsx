@@ -1,5 +1,6 @@
-import { useState, useEffect, lazy } from "react";
 import { Routes, Route } from "react-router-dom";
+import { useState, useEffect, lazy } from "react";
+import axios from "axios";
 const OpeningVoucherList = lazy(() => import("../transactions/bookkeeping-vouchers/opening-balance-entries/list"));
 const CreateOpeningVoucher = lazy(() => import("../transactions/bookkeeping-vouchers/opening-balance-entries/add"));
 const OpeningVoucherEdit = lazy(() => import("../transactions/bookkeeping-vouchers/opening-balance-entries/edit"));
@@ -30,14 +31,17 @@ const WorkAllocationList = lazy(() => import("../transactions/tender-management/
 const ViewWorkAllocation = lazy(() => import("../transactions/tender-management/workallocation/view"));
 const ProfitLossPage = lazy(() => import("../transactions/profit-loss"));
 const LedgerTransactionPage = lazy(() => import("../transactions/ledgertransaction"));
-import axios from "axios";
-const PaymentVoucherList = lazy(() => import("../transactions/bookkeeping-vouchers/payment/list"));
 const DonationEntry = lazy(() => import("../transactions/donation/entry"));
 const DonationApproval = lazy(() => import("../transactions/donation/approval"));
 const DonationApprovalView = lazy(() => import("../transactions/donation/approval-view"));
 const DonationList = lazy(() => import("../transactions/donation/list"));
 const DonationStorageAllocation = lazy(() => import("../transactions/donation/storage-allocation"));
-
+const ArticleDonationEntry = lazy(() => import("../transactions/article-donation/entry"));
+const ArticleDonationList = lazy(() => import("../transactions/article-donation/list"));
+const ArticleDonationApproval = lazy(() => import("../transactions/article-donation/approval"));
+const ArticleDonationApprovalView = lazy(() => import("../transactions/article-donation/approval-view"));
+const ArticleDonationReport = lazy(() => import("../transactions/article-donation/report"));
+const PaymentVoucherList = lazy(() => import("../transactions/bookkeeping-vouchers/payment/list"));
 const CreatePaymentVoucher = lazy(() => import("../transactions/bookkeeping-vouchers/payment/add"));
 const PaymentVoucherEdit = lazy(() => import("../transactions/bookkeeping-vouchers/payment/edit"));
 const PaymentVoucherView = lazy(() => import("../transactions/bookkeeping-vouchers/payment/view"));
@@ -1034,6 +1038,12 @@ const TransactionsRoutes = ({ user }) => {
       <Route path="donation/approval/view/:id" element={<DonationApprovalView user={user} />} />
       <Route path="donation/list" element={<DonationList user={user} />} />
       <Route path="donation/storage-allocation" element={<DonationStorageAllocation user={user} />} />
+
+      <Route path="article-donation/entry" element={<ArticleDonationEntry user={user} />} />
+      <Route path="article-donation/list" element={<ArticleDonationList user={user} />} />
+      <Route path="article-donation/approval" element={<ArticleDonationApproval user={user} />} />
+      <Route path="article-donation/approval/view/:id" element={<ArticleDonationApprovalView user={user} />} />
+      <Route path="article-donation/report" element={<ArticleDonationReport user={user} />} />
 
     </Routes>
   );
