@@ -105,30 +105,7 @@ const ShopApi = {
             console.error("Error fetching categories:", error);
             throw error;
         }
-    },
-
-    // ---------------- DOCUMENTS (central document master - module ESTATE) ----------------
-    getEstateDocuments: async (id) => {
-        const r = await axios.get(`${API_BASE_URL}/document/estate/${id}/documents`, {
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
-            },
-        });
-        return r.data;
-    },
-
-    uploadEstateDocument: async (id, formData) => {
-        const r = await axios.post(
-            `${API_BASE_URL}/document/estate/${id}/documents`,
-            formData,
-            {
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
-                }
-            }
-        );
-        return r.data;
-    },
+    }
 };
 
 export default ShopApi;

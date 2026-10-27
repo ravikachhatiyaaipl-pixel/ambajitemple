@@ -10,7 +10,7 @@ export default function Services() {
   return (
     <section>
       {/* <div className="mx-auto max-w-7xl px-5 sm:px-8">
-        <Reveal>
+        <Reveal> id="services" className="scroll-mt-20 bg-white py-20 sm:py-28"
           <SectionHeading
             tag="What You Can Do Here"
             title="Every temple service, one portal"
@@ -46,7 +46,6 @@ export default function Services() {
           })}
         </div>
       </div> */}
-    {/* id="services" className="scroll-mt-20 bg-white py-20 sm:py-28" */}
-     </section>
+    </section>
   );
 }

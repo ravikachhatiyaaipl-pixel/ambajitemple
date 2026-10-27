@@ -44,7 +44,7 @@ export const todayLabel = () =>
 /* ------------------------------- Page shell ------------------------------ */
 export const PortalPage = ({ children, narrow = false }) => (
   <div className="min-h-screen" style={{ background: CREAM }}>
-    <div className={`${narrow ? "max-w-6xl" : "max-w-7xl"} mx-auto px-4 sm:px-6 py-6 space-y-6`}>
+    <div className={`${narrow ? "max-w-full" : "max-w-full"} mx-auto px-4 sm:px-6 py-6 space-y-6`}>
       {children}
     </div>
   </div>
@@ -113,12 +113,8 @@ export const StatCard = ({ label, value, sub, icon: Icon, tone = "red", to }) =>
 };
 
 export const StatGrid = ({ children, cols = 4 }) => {
-  // Use only as many columns as there are cards, so a hidden card never leaves an empty slot.
-  const count = React.Children.toArray(children).length;
-  const n = Math.min(cols, Math.max(count, 1));
-  const lg = { 1: "lg:grid-cols-1", 2: "lg:grid-cols-2", 3: "lg:grid-cols-3", 4: "lg:grid-cols-4", 5: "lg:grid-cols-5", 6: "lg:grid-cols-6" };
-  const sm = count > 1 ? "sm:grid-cols-2" : "sm:grid-cols-1";
-  return <div className={`grid grid-cols-1 ${sm} ${lg[n]} gap-4`}>{children}</div>;
+  const map = { 2: "lg:grid-cols-2", 3: "lg:grid-cols-3", 4: "lg:grid-cols-4", 5: "lg:grid-cols-5", 6: "lg:grid-cols-6" };
+  return <div className={`grid grid-cols-1 sm:grid-cols-2 ${map[cols] || map[4]} gap-4`}>{children}</div>;
 };
 
 /* --------------------------------- Panel --------------------------------- */

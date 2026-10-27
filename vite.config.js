@@ -12,13 +12,6 @@ export default defineConfig(({ mode }) => {
     define: {
       'process.env': env
     },
-    server: {
-      host: '0.0.0.0',
-      port: 5172,
-      hmr: {
-        host: '192.168.0.7'
-      }
-    },
     build: {
       sourcemap: false,
       chunkSizeWarningLimit: 1000,

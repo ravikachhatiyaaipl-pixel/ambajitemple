@@ -233,16 +233,9 @@ const ShopList = ({ user }) => {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="flex flex-col gap-1">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${item.SPM_Active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                          {item.SPM_Active ? 'Active' : 'Inactive'}
-                        </span>
-                        {item.is_donation_storage && (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
-                            Donation Storage
-                          </span>
-                        )}
-                      </div>
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${item.SPM_Active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                        {item.SPM_Active ? 'Active' : 'Inactive'}
+                      </span>
                     </td>
                     <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center space-x-1">
