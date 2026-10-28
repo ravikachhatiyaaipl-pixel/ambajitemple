@@ -261,7 +261,7 @@ const ProfitLossPage = ({ ledgerGroupData = [] }) => {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      <div className="max-w-7xl mx-auto">
+      <div className="w-full">
         <div className="bg-white rounded-lg shadow-xl">
           <div className="flex justify-between items-center border-b p-4">
             <button

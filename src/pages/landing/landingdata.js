@@ -173,6 +173,52 @@ export const GUIDELINES = {
   ],
 };
 
+/* ---------- Devotee portal (post-login dashboard) ----------
+ * Everything the devotee dashboard shows that is not user data lives here.
+ * VERIFY: contact numbers / email / trust name below are taken from the approved design - confirm before go-live.
+ * `to` = route inside the portal. Items without `to` are shown as plain text. */
+export const DEVOTEE_PORTAL = {
+  badge: "Shaktipeeth",
+  subtitleGu: "\u0aaf\u0abe\u0aa4\u0acd\u0ab0\u0abe\u0ab3\u0ac1 \u0ab8\u0ac7\u0ab5\u0abe \u0aaa\u0acb\u0ab0\u0acd\u0a9f\u0ab2",
+  subtitleEn: "Devotee Portal",
+  location: "Ambaji, Banaskantha, Gujarat",
+  liveDarshan: "Live Darshan Online",
+  crowdFlow: "Normal (Minor Queue)",
+  trustName: "Shree Arasuri Ambaji Mata Devasthan Trust",
+  managementLine: "Shree Arasuri Ambaji Mata Devasthan Trust (SKDT) Management",
+};
+
+export const DEVOTEE_SERVICES = [
+  { id: "pooja", icon: "pooja", tone: "orange", title: "Pooja Services", tag: { text: "Sacred", tone: "amber" },
+    text: "Book daily rituals, Abhishek, Archana & Special Sevas.", foot: "Instant confirmation", cta: "Book Pooja", to: "/seva-portal" },
+  { id: "donation", icon: "donate", tone: "red", title: "Donation", tag: { text: "80G Benefit", tone: "green" },
+    text: "General temple fund, Gaushala & Annadan with 80G exemption.", foot: "Tax exemption receipt", cta: "Donate Now", to: "/devotee-donation-entry" },
+  { id: "gold", icon: "gold", tone: "amber", title: "Gold Donation", tag: { text: "SKDT Verified", tone: "amber" },
+    text: "Offer pure bullion with SKDT digital treasury verification.", foot: "SKDT Treasury", cta: "Offer Gold", to: "/devotee-donation-entry" },
+  { id: "article", icon: "article", tone: "purple", title: "Article Donation", tag: { text: "\u0ab5\u0ab8\u0acd\u0aa4\u0ac1 \u0aa6\u0abe\u0aa8", tone: "purple" },
+    text: "Offer vastra, grains, brassware & temple materials.", foot: "In-kind offerings", cta: "Donate Articles", to: "/devotee-article-donation-entry" },
+  { id: "bhojan", icon: "food", tone: "amber", title: "Annakshetra & Bhojan Booking", tag: { text: "\u0a85\u0aa8\u0acd\u0aa8\u0a95\u0acd\u0ab7\u0ac7\u0aa4\u0acd\u0ab0", tone: "amber" },
+    text: "Reserve dining slots & Bhojanalaya coupons.", foot: "Free & Seva coupons", cta: "Book Bhojan", to: "/seva-portal" },
+  { id: "receipts", icon: "receipt", tone: "blue", title: "My Donations", tag: { text: "80G Tax", tone: "blue" },
+    text: "View donation history & download official tax receipts.", foot: "Download PDFs", cta: "View Receipts", to: "/devotee-donations", soft: true },
+];
+
+export const DEVOTEE_FOOTER = {
+  about: "One of the 51 celebrated Shaktipeeths of Bharat. Worship the sacred Vishwa Yantra in the holy Arasur hills.",
+  columns: [
+    { title: "Quick Access", links: [
+      { label: "Online Prasad Delivery" }, { label: "Live Darshan 24\u00d77" },
+      { label: "Bhojanalaya Timings" }, { label: "Gabbar Hill Ropeway" },
+    ] },
+    { title: "Devotee Support", links: [
+      { label: "Wheelchair & Senior Citizens" }, { label: "Lost & Found Center" },
+      { label: "Donation Tax Exemption (80G)" }, { label: "Security & Cloakroom Facilities" },
+    ] },
+  ],
+  emergency: { title: "Emergency Contacts", helpdesk: "Devasthan Trust Helpdesk:", phones: "+91 02749 262136 / 262623", email: "info@ambajitemple.in" },
+  legal: ["Privacy Policy", "Terms of Seva", "Audit Reports"],
+};
+
 /* ---------- time helpers (temple time = IST) ---------- */
 export const toMinutes = (t) => {
   const [h, m] = t.split(":").map(Number);

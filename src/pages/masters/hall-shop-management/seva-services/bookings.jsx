@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { toast } from "react-hot-toast";
 import axios from "axios";
+import BackButton from "../../../../components/backbutton";
 import {
   Search,
   Loader2,
@@ -301,11 +302,14 @@ const SevaBookings = ({ user }) => {
   return (
     <div className="p-6 space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
+        <div className="flex items-center">
+          <BackButton fallback="/dashboard" className="mr-4" />
+          <div>
           <h1 className="text-2xl font-bold text-gray-900">Seva Bookings</h1>
           <p className="text-sm text-gray-500">
             All pooja / seva bookings by devotees with approval and scheduling
           </p>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <div className="relative">
@@ -314,13 +318,13 @@ const SevaBookings = ({ user }) => {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search receipt, devotee, mobile"
-              className="w-64 rounded-lg border border-gray-300 py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-1 focus:ring-red-500"
+              className="h-[38px] w-64 rounded-lg border border-gray-300 py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-1 focus:ring-red-500"
             />
           </div>
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+            className="h-[38px] rounded-lg border border-gray-300 bg-white px-3 text-sm"
           >
             <option value="">All Status</option>
             {[
