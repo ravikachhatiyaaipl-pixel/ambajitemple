@@ -216,7 +216,7 @@ export const DEVOTEE_FOOTER = {
     ] },
   ],
   emergency: { title: "Emergency Contacts", helpdesk: "Devasthan Trust Helpdesk:", phones: "+91 02749 262136 / 262623", email: "info@ambajitemple.in" },
-  legal: ["Privacy Policy", "Terms of Seva", "Audit Reports"],
+  legal: ["Designed & Developed by Aark InfoSoft Pvt. Ltd."],
 };
 
 /* ---------- time helpers (temple time = IST) ---------- */
