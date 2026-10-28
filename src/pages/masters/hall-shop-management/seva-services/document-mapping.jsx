@@ -318,13 +318,13 @@ const SevaDocumentMapping = ({ user }) => {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search mappings"
-              className="w-56 rounded-lg border border-gray-300 py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-1 focus:ring-red-500"
+              className="h-[38px] w-56 rounded-lg border border-gray-300 py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-1 focus:ring-red-500"
             />
           </div>
           <select
             value={svcFilter}
             onChange={(e) => setSvcFilter(e.target.value)}
-            className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+            className="h-[38px] rounded-lg border border-gray-300 bg-white px-3 text-sm"
           >
             <option value="">All Services</option>
             {services.map((s) => (
@@ -335,7 +335,7 @@ const SevaDocumentMapping = ({ user }) => {
           </select>
           <button
             onClick={openCreate}
-            className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+            className="inline-flex h-[38px] items-center gap-2 rounded-lg bg-red-600 px-4 text-sm font-medium text-white hover:bg-red-700"
           >
             <Plus className="h-4 w-4" /> Add Mapping
           </button>

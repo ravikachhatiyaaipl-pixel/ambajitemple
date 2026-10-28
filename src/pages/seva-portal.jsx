@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef, Fragment } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import axios from "axios";
@@ -32,7 +32,9 @@ import {
   Handshake,
   HandCoins,
   CalendarCheck,
+  Printer,
 } from "lucide-react";
+import BackButton from "../components/backbutton";
 
 const KIND_META = {
   POOJA: { label: "Pooja", cls: "bg-orange-100 text-orange-700", Icon: Sparkles },
@@ -45,6 +47,19 @@ const KIND_META = {
   TITHI_BHOJAN: { label: "Tithi Bhojan", cls: "bg-teal-100 text-teal-700", Icon: Utensils },
   SPONSORSHIP: { label: "Sponsorship", cls: "bg-gray-100 text-gray-700", Icon: Handshake },
 };
+
+const BOOKINGS_PER_PAGE = 10;
+const BOOKING_STATUSES = [
+  "PENDING_PAYMENT",
+  "PENDING_APPROVAL",
+  "QUERY_RAISED",
+  "APPROVED",
+  "SCHEDULED",
+  "PERFORMED",
+  "COMPLETED",
+  "CANCELLED",
+  "REJECTED",
+];
 
 const SevaPortal = ({ user, onLogout }) => {
   const navigate = useNavigate();
@@ -73,6 +88,8 @@ const SevaPortal = ({ user, onLogout }) => {
   const [quotaDate, setQuotaDate] = useState(() =>
     new Date().toISOString().slice(0, 10)
   );
+  const quotaDateRef = useRef(quotaDate);
+  quotaDateRef.current = quotaDate;
   const [slots, setSlots] = useState([]);
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [quota, setQuota] = useState(null);
@@ -108,6 +125,11 @@ const SevaPortal = ({ user, onLogout }) => {
   const [activeBooking, setActiveBooking] = useState(null);
   const [paying, setPaying] = useState(false);
   const [payAmount, setPayAmount] = useState("");
+  const [bookingQuery, setBookingQuery] = useState("");
+  const [bookingStatus, setBookingStatus] = useState("ALL");
+  const [bookingPage, setBookingPage] = useState(1);
+  const [receiptBooking, setReceiptBooking] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     loadCatalogue();
@@ -122,7 +144,7 @@ const SevaPortal = ({ user, onLogout }) => {
       }
       const res = await axios.get(`${base}/portal/seva/catalogue`, {
         headers,
-        params: { date: quotaDate },
+        params: { date: quotaDateRef.current },
       });
       if (res.data?.success) {
         setCategories(res.data.data.categories || []);
@@ -495,6 +517,59 @@ const SevaPortal = ({ user, onLogout }) => {
   };
 
 
+  const refreshBookings = async () => {
+    setRefreshing(true);
+    await loadMyBookings();
+    setRefreshing(false);
+  };
+
+  const filteredBookings = useMemo(() => {
+    const q = bookingQuery.trim().toLowerCase();
+    return myBookings.filter((b) => {
+      const byStatus = bookingStatus === "ALL" || b.status === bookingStatus;
+      const byText =
+        !q ||
+        `${b.receipt_no || ""} ${b.service?.name || ""} ${b.package?.name || ""}`
+          .toLowerCase()
+          .includes(q);
+      return byStatus && byText;
+    });
+  }, [myBookings, bookingQuery, bookingStatus]);
+
+  const bookingPages = Math.max(
+    1,
+    Math.ceil(filteredBookings.length / BOOKINGS_PER_PAGE)
+  );
+
+  useEffect(() => {
+    setBookingPage(1);
+  }, [bookingQuery, bookingStatus]);
+
+  const pagedBookings = useMemo(
+    () =>
+      filteredBookings.slice(
+        (bookingPage - 1) * BOOKINGS_PER_PAGE,
+        bookingPage * BOOKINGS_PER_PAGE
+      ),
+    [filteredBookings, bookingPage]
+  );
+
+  const bookingStats = useMemo(
+    () => ({
+      total: myBookings.length,
+      active: myBookings.filter((b) =>
+        ["PENDING_APPROVAL", "QUERY_RAISED", "APPROVED", "SCHEDULED"].includes(
+          b.status
+        )
+      ).length,
+      done: myBookings.filter((b) =>
+        ["PERFORMED", "COMPLETED"].includes(b.status)
+      ).length,
+      due: myBookings.filter((b) => b.status === "PENDING_PAYMENT").length,
+    }),
+    [myBookings]
+  );
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-amber-50/40">
@@ -507,7 +582,7 @@ const SevaPortal = ({ user, onLogout }) => {
     <div className="min-h-screen bg-amber-50/40">
       {/* ===== HEADER ===== */}
       <header className="sticky top-0 z-20 border-b border-red-100 bg-white/95 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
+        <div className="flex w-full items-center justify-between gap-3 px-4 py-3 sm:px-6">
           <div className="flex min-w-0 items-center gap-3">
             <img
               src="/ambajilogo.png"
@@ -551,10 +626,16 @@ const SevaPortal = ({ user, onLogout }) => {
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
+      <main className="w-full px-4 py-6 sm:px-6">
         {/* ================= CATALOGUE ================= */}
         {view === "catalogue" && (
           <>
+            <div className="mb-4">
+              <BackButton
+                to={user?.isApplicant ? "/applicant-dashboard" : "/devotee-dashboard"}
+                label="Back to dashboard"
+              />
+            </div>
             <div
               className="relative overflow-hidden rounded-2xl px-6 py-7 text-white shadow-md sm:px-8"
               style={{
@@ -786,12 +867,12 @@ const SevaPortal = ({ user, onLogout }) => {
         {view === "booking" && selectedService && (
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
             <div className="lg:col-span-2">
-              <button
-                onClick={() => setView("catalogue")}
-                className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-gray-600 hover:text-red-600"
-              >
-                <ChevronLeft className="h-4 w-4" /> Back to catalogue
-              </button>
+              <div className="mb-4">
+                <BackButton
+                  onClick={() => setView("catalogue")}
+                  label="Back to catalogue"
+                />
+              </div>
 
               <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
                 <div className="flex items-start gap-3">
@@ -1311,156 +1392,303 @@ const SevaPortal = ({ user, onLogout }) => {
 
         {/* ================= MY BOOKINGS ================= */}
         {view === "mybookings" && (
-          <div>
-            <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">My Bookings</h1>
-                <p className="text-sm text-gray-500">
-                  Your seva bookings, payments and receipts
-                </p>
+          <div className="w-full space-y-5">
+            {/* Page header: back + title + primary action */}
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div className="flex items-center">
+                <BackButton
+                  onClick={() => setView("catalogue")}
+                  title="Back to catalogue"
+                  className="mr-4"
+                />
+                <div>
+                  <h1 className="text-2xl font-bold text-gray-900">My Bookings</h1>
+                  <p className="mt-0.5 text-sm text-gray-500">
+                    Your seva bookings, payments and receipts
+                  </p>
+                </div>
               </div>
               <button
                 onClick={() => setView("catalogue")}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-red-600 to-red-700 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:from-red-700 hover:to-red-800"
               >
                 <Sparkles className="h-4 w-4" /> Book New Seva
               </button>
             </div>
 
-            {myBookings.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-gray-300 bg-white py-16 text-center">
-                <CalendarCheck className="mx-auto h-10 w-10 text-gray-300" />
-                <p className="mt-3 text-sm font-medium text-gray-600">
-                  No bookings yet
-                </p>
-                <button
-                  onClick={() => setView("catalogue")}
-                  className="mt-3 text-sm font-semibold text-red-600 hover:underline"
+            {/* Stats */}
+            <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+              {[
+                ["Total Bookings", bookingStats.total, "text-gray-900", "bg-gray-100", Receipt],
+                ["In Progress", bookingStats.active, "text-blue-700", "bg-blue-50", Clock],
+                ["Completed", bookingStats.done, "text-emerald-700", "bg-emerald-50", CheckCircle],
+                ["Payment Due", bookingStats.due, "text-amber-700", "bg-amber-50", IndianRupee],
+              ].map(([label, value, color, bg, Icon]) => (
+                <div
+                  key={label}
+                  className="flex items-center justify-between rounded-xl border border-gray-200 bg-white p-4 shadow-sm"
                 >
-                  Browse seva services
+                  <div>
+                    <p className="text-xs font-medium text-gray-500">{label}</p>
+                    <p className={`mt-1 text-2xl font-bold ${color}`}>{value}</p>
+                  </div>
+                  <span className={`flex h-11 w-11 items-center justify-center rounded-xl ${bg} ${color}`}>
+                    <Icon className="h-5 w-5" />
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            {/* Action bar: search + status + refresh */}
+            <div className="rounded-xl border border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100 p-4">
+              <div className="flex flex-col gap-3 md:flex-row md:items-center">
+                <div className="relative flex-1">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
+                  <input
+                    value={bookingQuery}
+                    onChange={(e) => setBookingQuery(e.target.value)}
+                    placeholder="Search by receipt no, seva or package..."
+                    className="w-full rounded-lg border border-gray-300 bg-white py-2.5 pl-10 pr-10 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-red-500"
+                  />
+                  {bookingQuery && (
+                    <button
+                      onClick={() => setBookingQuery("")}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+                <select
+                  value={bookingStatus}
+                  onChange={(e) => setBookingStatus(e.target.value)}
+                  className="rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                >
+                  <option value="ALL">All status</option>
+                  {BOOKING_STATUSES.map((s) => (
+                    <option key={s} value={s}>
+                      {s.replace(/_/g, " ")}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  onClick={refreshBookings}
+                  className="group inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-700 transition hover:bg-gray-50"
+                >
+                  <RefreshCw
+                    className={`mr-2 h-4 w-4 transition-transform duration-500 group-hover:rotate-180 ${refreshing ? "animate-spin" : ""
+                      }`}
+                  />
+                  Refresh
                 </button>
               </div>
-            ) : (
-              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                {myBookings.map((b) => (
-                  <div
-                    key={b.booking_id}
-                    className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="text-base font-bold text-gray-900">
-                          {b.service?.name}
-                        </p>
-                        <p className="mt-0.5 font-mono text-[11px] text-gray-500">
-                          {b.receipt_no}
-                        </p>
-                      </div>
-                      <span
-                        className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold ${statusStyle(
-                          b.status
-                        )}`}
-                      >
-                        {b.status?.replace(/_/g, " ")}
-                      </span>
-                    </div>
+            </div>
 
-                    <div className="mt-3 grid grid-cols-2 gap-2.5 text-xs">
-                      <div>
-                        <p className="text-gray-400">Perform date</p>
-                        <p className="font-semibold text-gray-900">
-                          {b.perform_date}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-gray-400">Persons</p>
-                        <p className="font-semibold text-gray-900">{b.persons}</p>
-                      </div>
-                      <div>
-                        <p className="text-gray-400">Total</p>
-                        <p className="font-semibold text-gray-900">
-                          Rs. {money(b.total_amount)}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-gray-400">Payment</p>
-                        <p
-                          className={`font-semibold ${b.payment_status === "PAID"
-                            ? "text-emerald-600"
-                            : "text-amber-600"
-                            }`}
+            {/* Table */}
+            <div className="overflow-hidden rounded-xl border bg-white shadow-sm">
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
+                    <tr>
+                      {["Receipt", "Seva", "Perform Date", "Persons", "Amount", "Payment", "Status", "Actions"].map((h) => (
+                        <th
+                          key={h}
+                          className="whitespace-nowrap px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-gray-700"
                         >
-                          {b.payment_status}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* QUERY - devotee se clarification maangi gayi */}
-                    {b.status === "QUERY_RAISED" && (
-                      <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-3">
-                        <p className="text-xs font-semibold text-amber-800">
-                          Query from the temple
-                        </p>
-                        {b.remarks && (
-                          <p className="mt-1 text-[12px] leading-relaxed text-amber-900">
-                            {b.remarks}
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 bg-white">
+                    {pagedBookings.length === 0 ? (
+                      <tr>
+                        <td colSpan={8} className="px-6 py-14 text-center">
+                          <CalendarCheck className="mx-auto h-10 w-10 text-gray-300" />
+                          <p className="mt-3 text-sm font-medium text-gray-700">
+                            {myBookings.length === 0
+                              ? "No bookings yet"
+                              : "No matching bookings found"}
                           </p>
-                        )}
-                        <div className="mt-2.5">
-                          <textarea
-                            rows={2}
-                            value={queryResponses[b.booking_id] || ""}
-                            onChange={(e) =>
-                              setQueryResponses((p) => ({
-                                ...p,
-                                [b.booking_id]: e.target.value,
-                              }))
-                            }
-                            placeholder="Type your clarification / response"
-                            className="w-full rounded-lg border border-amber-200 bg-white px-3 py-2 text-xs focus:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-100"
-                          />
-                          <button
-                            onClick={() => handleRespondQuery(b)}
-                            disabled={
-                              submitting ||
-                              !(queryResponses[b.booking_id] || "").trim()
-                            }
-                            className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-amber-700 disabled:opacity-50"
-                          >
-                            <RefreshCw className="h-3.5 w-3.5" /> Submit Response
-                          </button>
-                        </div>
-                      </div>
+                          <p className="mt-1 text-xs text-gray-500">
+                            {myBookings.length === 0
+                              ? "Book your first seva to see it here."
+                              : "Try adjusting your search or status filter."}
+                          </p>
+                          {myBookings.length === 0 && (
+                            <button
+                              onClick={() => setView("catalogue")}
+                              className="mt-3 text-sm font-semibold text-red-600 hover:underline"
+                            >
+                              Browse seva services
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ) : (
+                      pagedBookings.map((b) => (
+                        <Fragment key={b.booking_id}>
+                          <tr className="transition-colors hover:bg-gray-50">
+                            <td className="whitespace-nowrap px-5 py-4">
+                              <p className="font-mono text-xs font-semibold text-gray-900">
+                                {b.receipt_no}
+                              </p>
+                              {b.created_at && (
+                                <p className="mt-0.5 text-[11px] text-gray-500">
+                                  {fmtDate(b.created_at)}
+                                </p>
+                              )}
+                            </td>
+                            <td className="px-5 py-4">
+                              <p className="text-sm font-semibold text-gray-900">
+                                {b.service?.name || "-"}
+                              </p>
+                              {b.package?.name && (
+                                <p className="text-[11px] text-gray-500">{b.package.name}</p>
+                              )}
+                            </td>
+                            <td className="whitespace-nowrap px-5 py-4 text-sm text-gray-700">
+                              {fmtDate(b.perform_date)}
+                              {b.slot?.start_time && (
+                                <p className="text-[11px] text-gray-500">
+                                  {String(b.slot.start_time).slice(0, 5)}
+                                </p>
+                              )}
+                            </td>
+                            <td className="px-5 py-4 text-sm text-gray-700">{b.persons}</td>
+                            <td className="whitespace-nowrap px-5 py-4">
+                              <p className="text-sm font-semibold text-gray-900">
+                                Rs. {money(b.total_amount)}
+                              </p>
+                              {Number(b.balance_amount) > 0 && (
+                                <p className="text-[11px] text-amber-600">
+                                  Due Rs. {money(b.balance_amount)}
+                                </p>
+                              )}
+                            </td>
+                            <td className="px-5 py-4">
+                              <span
+                                className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${b.payment_status === "PAID"
+                                    ? "bg-emerald-100 text-emerald-700"
+                                    : b.payment_status === "PARTIAL"
+                                      ? "bg-amber-100 text-amber-700"
+                                      : "bg-red-100 text-red-700"
+                                  }`}
+                              >
+                                {b.payment_status}
+                              </span>
+                            </td>
+                            <td className="px-5 py-4">
+                              <span
+                                className={`inline-flex whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${statusStyle(
+                                  b.status
+                                )}`}
+                              >
+                                {b.status?.replace(/_/g, " ")}
+                              </span>
+                            </td>
+                            <td className="px-5 py-4">
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={() => setReceiptBooking(b)}
+                                  className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition hover:bg-gray-50"
+                                  title="View & print receipt"
+                                >
+                                  <Printer className="h-3.5 w-3.5" /> Receipt
+                                </button>
+                                {b.status === "PENDING_PAYMENT" && (
+                                  <button
+                                    onClick={() => {
+                                      setActiveBooking(b);
+                                      setPayAmount(b.balance_amount);
+                                    }}
+                                    className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-emerald-700"
+                                  >
+                                    <IndianRupee className="h-3.5 w-3.5" /> Pay Rs. {money(b.balance_amount)}
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+
+                          {/* QUERY - temple ne clarification maangi */}
+                          {b.status === "QUERY_RAISED" && (
+                            <tr className="bg-amber-50/60">
+                              <td colSpan={8} className="px-5 py-4">
+                                <p className="text-xs font-semibold text-amber-800">
+                                  Query from the temple
+                                </p>
+                                {b.remarks && (
+                                  <p className="mt-1 text-[12px] leading-relaxed text-amber-900">
+                                    {b.remarks}
+                                  </p>
+                                )}
+                                <div className="mt-2.5 flex flex-col gap-2 sm:flex-row sm:items-start">
+                                  <textarea
+                                    rows={2}
+                                    value={queryResponses[b.booking_id] || ""}
+                                    onChange={(e) =>
+                                      setQueryResponses((p) => ({
+                                        ...p,
+                                        [b.booking_id]: e.target.value,
+                                      }))
+                                    }
+                                    placeholder="Type your clarification / response"
+                                    className="w-full flex-1 rounded-lg border border-amber-200 bg-white px-3 py-2 text-xs focus:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-100"
+                                  />
+                                  <button
+                                    onClick={() => handleRespondQuery(b)}
+                                    disabled={
+                                      submitting ||
+                                      !(queryResponses[b.booking_id] || "").trim()
+                                    }
+                                    className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg bg-amber-600 px-4 py-2 text-xs font-medium text-white transition hover:bg-amber-700 disabled:opacity-50"
+                                  >
+                                    <RefreshCw className="h-3.5 w-3.5" /> Submit Response
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </Fragment>
+                      ))
                     )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
 
-                    <div className="mt-4 flex flex-wrap gap-2 border-t border-gray-100 pt-3">
-                      <a
-                        href={`${base}/portal/seva/bookings/${b.booking_id}/receipt`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 transition hover:bg-gray-50"
-                      >
-                        <Receipt className="h-3.5 w-3.5" /> Receipt
-                      </a>
-
-                      {b.status === "PENDING_PAYMENT" && (
-                        <button
-                          onClick={() => {
-                            setActiveBooking(b);
-                            setPayAmount(b.balance_amount);
-                          }}
-                          className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-emerald-700"
-                        >
-                          <IndianRupee className="h-3.5 w-3.5" /> Pay Rs.{" "}
-                          {money(b.balance_amount)}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                ))}
+            {/* Pagination */}
+            {filteredBookings.length > BOOKINGS_PER_PAGE && (
+              <div className="flex flex-col items-center justify-between gap-3 md:flex-row">
+                <p className="text-sm text-gray-700">
+                  Showing {(bookingPage - 1) * BOOKINGS_PER_PAGE + 1} to{" "}
+                  {Math.min(bookingPage * BOOKINGS_PER_PAGE, filteredBookings.length)} of{" "}
+                  {filteredBookings.length} entries
+                </p>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => setBookingPage((p) => Math.max(1, p - 1))}
+                    disabled={bookingPage === 1}
+                    className="inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <ChevronLeft className="mr-1 h-4 w-4" /> Previous
+                  </button>
+                  <span className="rounded-lg bg-red-600 px-4 py-2 text-sm text-white">
+                    {bookingPage} / {bookingPages}
+                  </span>
+                  <button
+                    onClick={() => setBookingPage((p) => Math.min(bookingPages, p + 1))}
+                    disabled={bookingPage === bookingPages}
+                    className="inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Next <ChevronRight className="ml-1 h-4 w-4" />
+                  </button>
+                </div>
               </div>
             )}
 
+            {/* Pay modal */}
             {activeBooking && (
               <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
                 <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-xl">
@@ -1517,9 +1745,174 @@ const SevaPortal = ({ user, onLogout }) => {
                 </div>
               </div>
             )}
+
+            {/* Receipt preview + print */}
+            {receiptBooking && (
+              <ReceiptModal
+                booking={receiptBooking}
+                orgName="Ambaji Temple"
+                onClose={() => setReceiptBooking(null)}
+              />
+            )}
           </div>
         )}
       </main>
+    </div>
+  );
+};
+
+/* ---------- Receipt (preview + print) ---------- */
+
+const esc = (v) =>
+  String(v ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+
+const rMoney = (n) =>
+  Number(n || 0).toLocaleString("en-IN", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+
+const rDate = (d) => {
+  if (!d) return "-";
+  const dt = new Date(d);
+  if (Number.isNaN(dt.getTime())) return esc(d);
+  return dt.toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+};
+
+// Ek hi receipt HTML - preview aur print dono isi se banta hai
+const buildReceiptHtml = (b, orgName = "Ambaji Temple") => {
+  const logo = `${window.location.origin}/ambajilogo.png`;
+  const paid = Number(b.amount_paid ?? 0);
+  const total = Number(b.total_amount ?? 0);
+  const balance = Number(b.balance_amount ?? Math.max(0, total - paid));
+  const rows = [
+    ["Receipt No", b.receipt_no],
+    ["Booking Date", b.created_at ? rDate(b.created_at) : null],
+    ["Devotee Name", b.devotee_name],
+    ["Mobile", b.devotee_mobile],
+    ["Gotra", b.gotra],
+    ["Seva / Pooja", b.service?.name],
+    ["Package", b.package?.name],
+    ["Perform Date", rDate(b.perform_date)],
+    ["Time Slot", b.slot?.start_time ? String(b.slot.start_time).slice(0, 5) : null],
+    ["Persons", b.persons],
+  ].filter(([, v]) => v !== null && v !== undefined && v !== "");
+
+  const tax = Number(b.tax_amount ?? 0);
+  const base = Number(b.amount ?? total - tax);
+  const statusPaid = b.payment_status === "PAID";
+
+  return `<!doctype html>
+<html><head><meta charset="utf-8"><title>Receipt ${esc(b.receipt_no)}</title>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;padding:24px;font-family:"Segoe UI",Arial,sans-serif;color:#1f2937;background:#fff}
+  .sheet{max-width:720px;margin:0 auto;border:1.5px solid #B71C1C;border-radius:10px;overflow:hidden}
+  .head{display:flex;align-items:center;gap:14px;padding:16px 20px;background:#FDECEC;border-bottom:1.5px solid #B71C1C}
+  .head img{height:56px;width:56px;object-fit:contain}
+  .head h1{margin:0;font-size:20px;color:#B71C1C}
+  .head p{margin:2px 0 0;font-size:12px;color:#6b7280}
+  .title{display:flex;justify-content:space-between;align-items:center;padding:12px 20px;border-bottom:1px solid #e5e7eb}
+  .title h2{margin:0;font-size:15px;letter-spacing:.08em;text-transform:uppercase}
+  .badge{font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;border:1px solid}
+  .paid{color:#047857;background:#E6F8F0;border-color:#6ee7b7}
+  .due{color:#b45309;background:#FEF6D8;border-color:#fcd34d}
+  table{width:100%;border-collapse:collapse}
+  .info td{padding:8px 20px;font-size:13px;border-bottom:1px solid #f1f5f9}
+  .info td:first-child{width:36%;color:#6b7280}
+  .info td:last-child{font-weight:600}
+  .amt{margin:14px 20px;width:calc(100% - 40px);border:1px solid #e5e7eb;border-radius:8px;overflow:hidden}
+  .amt td{padding:8px 12px;font-size:13px;border-bottom:1px solid #f1f5f9}
+  .amt td:last-child{text-align:right;font-weight:600}
+  .amt tr.total td{background:#f9fafb;font-size:14px;font-weight:700;color:#B71C1C}
+  .foot{display:flex;justify-content:space-between;align-items:flex-end;padding:18px 20px 16px;font-size:11px;color:#6b7280}
+  .sign{text-align:center;min-width:160px;border-top:1px solid #9ca3af;padding-top:4px}
+  @page{size:A4;margin:12mm}
+  @media print{body{padding:0}.sheet{border-radius:0}}
+</style></head><body>
+<div class="sheet">
+  <div class="head">
+    <img src="${logo}" alt="" onerror="this.style.display='none'">
+    <div><h1>${esc(orgName)}</h1><p>Seva / Pooja Booking Receipt</p></div>
+  </div>
+  <div class="title">
+    <h2>Payment Receipt</h2>
+    <span class="badge ${statusPaid ? "paid" : "due"}">${esc(b.payment_status || "")}</span>
+  </div>
+  <table class="info">
+    ${rows.map(([k, v]) => `<tr><td>${esc(k)}</td><td>${esc(v)}</td></tr>`).join("")}
+  </table>
+  <table class="amt">
+    <tr><td>Base Fee</td><td>Rs. ${rMoney(base)}</td></tr>
+    <tr><td>Tax</td><td>Rs. ${rMoney(tax)}</td></tr>
+    <tr class="total"><td>Total</td><td>Rs. ${rMoney(total)}</td></tr>
+    <tr><td>Amount Paid</td><td>Rs. ${rMoney(paid)}</td></tr>
+    <tr><td>Balance</td><td>Rs. ${rMoney(balance)}</td></tr>
+  </table>
+  <div class="foot">
+    <div>Printed on ${new Date().toLocaleString("en-IN")}<br>This is a computer generated receipt.</div>
+    <div class="sign">Authorised Signatory</div>
+  </div>
+</div>
+</body></html>`;
+};
+
+const ReceiptModal = ({ booking, orgName, onClose }) => {
+  const frameRef = useRef(null);
+  const html = useMemo(() => buildReceiptHtml(booking, orgName), [booking, orgName]);
+
+  useEffect(() => {
+    const onKey = (e) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  const handlePrint = () => {
+    const w = frameRef.current?.contentWindow;
+    if (!w) return;
+    w.focus();
+    w.print();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="flex min-h-full w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-xl">
+        <div className="flex items-center justify-between border-b border-gray-200 px-5 py-3">
+          <div>
+            <h3 className="text-base font-bold text-gray-900">Receipt</h3>
+            <p className="font-mono text-[11px] text-gray-500">{booking.receipt_no}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handlePrint}
+              className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-red-600 to-red-700 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:from-red-700 hover:to-red-800"
+            >
+              <Printer className="h-4 w-4" /> Print
+            </button>
+            <button
+              onClick={onClose}
+              className="rounded-lg border border-gray-300 p-2 text-gray-500 hover:bg-gray-50 hover:text-gray-700"
+              title="Close"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+        <iframe
+          ref={frameRef}
+          title={`Receipt ${booking.receipt_no}`}
+          srcDoc={html}
+          className="h-[70vh] w-full flex-1 bg-gray-100"
+        />
+      </div>
     </div>
   );
 };

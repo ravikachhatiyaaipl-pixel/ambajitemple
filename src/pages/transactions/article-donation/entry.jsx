@@ -13,6 +13,8 @@ import {
   ExternalLink,
   CheckCircle2,
   Package,
+  UploadCloud,
+  Image as ImageIcon,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import ArticleDonationApi from "../../services/articleDonationApi";
@@ -185,7 +187,7 @@ const ArticleDonationEntry = ({ user }) => {
   };
 
   return (
-    <div className="p-6">
+    <div className="p-6 bg-[#f8f9fa] min-h-screen">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
         <div className="flex items-center">
@@ -193,7 +195,7 @@ const ArticleDonationEntry = ({ user }) => {
             onClick={() => navigate("/dashboard")}
             className="mr-4 text-gray-500 hover:text-gray-700"
           >
-            <ArrowLeft className="h-5 w-5 rotate-180" />
+            <ArrowLeft className="h-5 w-5" />
           </button>
           <div>
             <h1 className="text-2xl font-bold text-gray-900">
@@ -419,7 +421,7 @@ const ArticleDonationEntry = ({ user }) => {
           </div>
         </div>
 
-        {/* SECTION C - DOCUMENTS */}
+        {/* SECTION C - DOCUMENTS (UPDATED DESIGN) */}
         <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
           <div className="px-5 py-3 border-b bg-gradient-to-r from-gray-50 to-gray-100">
             <h2 className="text-base font-semibold text-gray-900">
@@ -428,78 +430,109 @@ const ArticleDonationEntry = ({ user }) => {
           </div>
           <div className="px-5 py-4">
             {docMaster.length > 0 ? (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <h4 className="font-semibold text-blue-900">
-                    Article Documents
-                  </h4>
-                  <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
-                    {docMaster.length} document
-                    {docMaster.length !== 1 ? "s" : ""}
-                  </span>
-                </div>
-                <div className="space-y-3">
-                  {docMaster.map((d) => {
-                    const selected = docFiles[d.document_id];
-                    const alreadyUploaded = uploadedDocs.find(
-                      (ud) => Number(ud.doctype_id) === Number(d.document_id)
-                    );
-                    return (
-                      <div
-                        key={d.document_id}
-                        className="bg-white border border-gray-200 rounded-lg p-4"
-                      >
-                        <div className="flex items-start justify-between gap-4 mb-2">
-                          <div className="flex-1">
-                            <span className="font-medium text-gray-900">
-                              {d.name}
-                            </span>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {docMaster.map((d) => {
+                  const selected = docFiles[d.document_id];
+                  const alreadyUploaded = uploadedDocs.find(
+                    (ud) => Number(ud.doctype_id) === Number(d.document_id)
+                  );
+                  
+                  return (
+                    <div
+                      key={d.document_id}
+                      className="flex flex-col justify-between rounded-xl border border-gray-200 bg-white p-4 shadow-sm hover:shadow-md transition-shadow"
+                    >
+                      {/* Card Header */}
+                      <div className="flex items-start gap-3 mb-4">
+                        <div className="p-2 bg-gray-50 rounded-lg border border-gray-100 shrink-0">
+                          <FileText className="h-6 w-6 text-gray-500" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-sm font-semibold text-gray-900 truncate">
+                            {d.name}
+                          </h4>
+                          <div className="flex items-center gap-2 mt-1">
                             {Boolean(d.is_required) && (
-                              <span className="ml-2 text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">
+                              <span className="text-[10px] bg-red-50 text-red-600 px-1.5 py-0.5 rounded border border-red-100 font-medium">
                                 Required
                               </span>
                             )}
+                            {alreadyUploaded && (
+                              <span className="text-[10px] text-green-600 flex items-center gap-0.5 font-medium">
+                                <CheckCircle2 className="h-3 w-3" /> Uploaded
+                              </span>
+                            )}
                           </div>
-                          {alreadyUploaded ? (
-                            <span className="text-xs text-green-600 font-medium flex items-center gap-1">
-                              <CheckCircle2 className="h-3.5 w-3.5" /> Uploaded
-                            </span>
-                          ) : selected ? (
-                            <span className="text-xs text-green-600 font-medium flex items-center gap-1">
-                              <CheckCircle2 className="h-3.5 w-3.5" /> Selected
-                            </span>
-                          ) : null}
                         </div>
-                        {!alreadyUploaded && (
-                          <input
-                            type="file"
-                            accept=".jpg,.jpeg,.png,.pdf"
-                            onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (file) {
-                                setDocFiles((prev) => ({
-                                  ...prev,
-                                  [d.document_id]: file,
-                                }));
-                              }
-                            }}
-                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm file:mr-3 file:rounded-md file:border-0 file:bg-blue-50 file:px-3 file:py-1 file:text-blue-700 file:font-medium"
-                            disabled={uploading || saving || !!txn}
-                          />
-                        )}
-                        <p className="mt-1 text-[10px] text-gray-500">
-                          JPG / PNG / PDF - max 5 MB
-                          {selected && (
-                            <span className="ml-2 text-blue-600">
-                              | {selected.name} ({(selected.size / 1024).toFixed(1)}{" "}
-                              KB)
+                      </div>
+
+                      {/* Card Body / Upload Area */}
+                      <div className="mt-auto">
+                        {alreadyUploaded ? (
+                          <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+                            <span className="text-xs font-medium text-green-800 truncate pr-2">
+                              Document uploaded
                             </span>
-                          )}
+                            <div className="flex items-center gap-1 shrink-0">
+                              <a
+                                href={`${import.meta.env.VITE_API_URL}/article-donation/documents/${alreadyUploaded.doc_id}/view`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="p-1.5 text-blue-600 hover:bg-blue-100 rounded-md transition-colors"
+                                title="View Document"
+                              >
+                                <ExternalLink className="h-3.5 w-3.5" />
+                              </a>
+                              <button
+                                onClick={() => handleDeleteDoc(alreadyUploaded)}
+                                className="p-1.5 text-red-600 hover:bg-red-100 rounded-md transition-colors"
+                                title="Delete Document"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="relative">
+                            <input
+                              type="file"
+                              accept=".jpg,.jpeg,.png,.pdf"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  setDocFiles((prev) => ({
+                                    ...prev,
+                                    [d.document_id]: file,
+                                  }));
+                                }
+                              }}
+                              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                              disabled={uploading || saving || !!txn}
+                              title=""
+                            />
+                            <div className={`flex items-center justify-between rounded-lg border px-3 py-2 text-sm transition-colors ${
+                              selected 
+                                ? "border-blue-300 bg-blue-50" 
+                                : "border-gray-300 bg-white hover:bg-gray-50"
+                            }`}>
+                              <span className={`truncate pr-2 ${selected ? "text-blue-700 font-medium" : "text-gray-500"}`}>
+                                {selected ? selected.name : "Upload file"}
+                              </span>
+                              {selected ? (
+                                <CheckCircle2 className="h-4 w-4 text-blue-600 shrink-0" />
+                              ) : (
+                                <UploadCloud className="h-4 w-4 text-gray-400 shrink-0" />
+                              )}
+                            </div>
+                          </div>
+                        )}
+                        <p className="mt-1.5 text-[10px] text-gray-400">
+                          JPG / PNG / PDF - max 5 MB
                         </p>
                       </div>
-                    );
-                  })}
-                </div>
+                    </div>
+                  );
+                })}
               </div>
             ) : (
               <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 text-center">
@@ -512,7 +545,7 @@ const ArticleDonationEntry = ({ user }) => {
             )}
 
             {missingMandatory.length > 0 && (
-              <div className="mt-3 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-800">
+              <div className="mt-4 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-800">
                 <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
                 <div>
                   <p className="font-medium">Documents pending for upload</p>
@@ -604,60 +637,6 @@ const ArticleDonationEntry = ({ user }) => {
             )}
           </button>
         </div>
-
-        {/* Uploaded Documents list */}
-        {txn && (
-          <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
-            <div className="px-5 py-3 border-b bg-gradient-to-r from-gray-50 to-gray-100">
-              <h2 className="text-base font-semibold text-gray-900">
-                Uploaded Documents ({uploadedDocs.length})
-              </h2>
-            </div>
-            <div className="px-5 py-4">
-              {uploadedDocs.length === 0 ? (
-                <p className="py-6 text-center text-sm text-gray-500">
-                  No documents uploaded yet.
-                </p>
-              ) : (
-                <div className="space-y-2">
-                  {uploadedDocs.map((d) => (
-                    <div
-                      key={d.doc_id}
-                      className="flex items-center gap-3 rounded-lg border border-gray-200 px-3 py-2"
-                    >
-                      <FileText className="h-4 w-4 shrink-0 text-gray-400" />
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium text-gray-900">
-                          {d.doc_name || `Doc #${d.doctype_id}`}
-                        </p>
-                        <p className="truncate text-xs text-gray-500">
-                          {d.doc_size_kb
-                            ? `${Number(d.doc_size_kb).toFixed(0)} KB`
-                            : ""}
-                        </p>
-                      </div>
-                      <a
-                        href={`${import.meta.env.VITE_API_URL}/article-donation/documents/${d.doc_id}/view`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:underline"
-                      >
-                        <ExternalLink className="h-3 w-3" /> View
-                      </a>
-                      <button
-                        onClick={() => handleDeleteDoc(d)}
-                        className="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600"
-                        title="Delete"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

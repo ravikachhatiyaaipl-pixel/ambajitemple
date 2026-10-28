@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { toast } from "react-hot-toast";
 import axios from "axios";
+import BackButton from "../../../../components/backbutton";
 import {
   ShieldCheck,
   Loader2,
@@ -172,12 +173,15 @@ const SevaApprovals = ({ user }) => {
     <div className="p-6 space-y-5">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
+        <div className="flex items-center">
+          <BackButton fallback="/dashboard" className="mr-4" />
+          <div>
           <h1 className="text-2xl font-bold text-gray-900">Seva Approvals</h1>
           <p className="text-sm text-gray-500">
             Approval flow is driven by Action Master (stage SEV) - change the
             flow there and this screen updates automatically
           </p>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <div className="relative">

@@ -33,6 +33,7 @@ import {
   FiChevronRight,
   FiAlertTriangle,
 } from "react-icons/fi";
+import BackButton from "../backbutton";
 
 /* Accessible, consistent categorical palette (color-blind safe) */
 export const PALETTE = [
@@ -252,11 +253,14 @@ export const MiniDonut = ({ data = [], height = 220, money = false }) => (
 /* ---------------------------- Dashboard shell --------------------------- */
 export const DashboardShell = ({ title, subtitle, filters, children, loading }) => (
   <div className="min-h-screen bg-gray-100 px-4 py-6">
-    <div className="max-w-full mx-auto">
+    <div className="w-full">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
-          {subtitle && <p className="text-sm text-gray-500 mt-1">{subtitle}</p>}
+        <div className="flex items-center">
+          <BackButton fallback="/dashboard" className="mr-4" />
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
+            {subtitle && <p className="text-sm text-gray-500 mt-1">{subtitle}</p>}
+          </div>
         </div>
         {filters && <div className="flex items-end gap-3">{filters}</div>}
       </div>
