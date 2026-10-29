@@ -1,4 +1,9 @@
 import { useState, useEffect, useMemo } from "react";
+import BackButton from "../../../../components/backbutton";
+import DonationFormPage, {
+  donationInputCls,
+  donationLabelCls,
+} from "../../donation/DonationFormPage";
 import { toast } from "react-hot-toast";
 import axios from "axios";
 import {
@@ -7,7 +12,6 @@ import {
   Trash2,
   Search,
   Loader2,
-  X,
   Layers,
   CheckCircle,
   XCircle,
@@ -174,15 +178,117 @@ const SevaCategoryMaster = ({ user }) => {
     );
   }
 
+  if (showForm) {
+    return (
+      <DonationFormPage
+        title={editing ? "Edit Category" : "Add Category"}
+        subtitle={
+          editing
+            ? "Update the record details"
+            : "Fill in the details to create a new record"
+        }
+        detailsTitle="Category Details"
+        onBack={() => setShowForm(false)}
+        onSubmit={handleSave}
+        saving={saving}
+        submitLabel={editing ? "Update Category" : "Save Category"}
+      >
+        <div>
+          <label className={donationLabelCls}>
+            Service Kind *
+          </label>
+          <select
+            value={form.service_kind}
+            onChange={(e) =>
+              setForm((p) => ({ ...p, service_kind: e.target.value }))
+            }
+            className={donationInputCls}
+          >
+            <option value="">— select —</option>
+            {kinds.map((k) => (
+              <option key={k.kind_id} value={k.code}>
+                {k.name} ({k.code})
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className={donationLabelCls}>
+            Category Name *
+          </label>
+          <input
+            value={form.name}
+            onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
+            placeholder="Maha Pooja"
+            className={donationInputCls}
+          />
+        </div>
+        <div className="md:col-span-2">
+          <label className={donationLabelCls}>
+            Description
+          </label>
+          <textarea
+            rows={2}
+            value={form.description}
+            onChange={(e) =>
+              setForm((p) => ({ ...p, description: e.target.value }))
+            }
+            className={donationInputCls}
+          />
+        </div>
+        <div>
+          <label className={donationLabelCls}>
+            Icon (lucide name)
+          </label>
+          <input
+            value={form.icon}
+            onChange={(e) => setForm((p) => ({ ...p, icon: e.target.value }))}
+            placeholder="Flame"
+            className={donationInputCls}
+          />
+        </div>
+        <div>
+          <label className={donationLabelCls}>
+            Sort order
+          </label>
+          <input
+            type="number"
+            value={form.sort_order}
+            onChange={(e) =>
+              setForm((p) => ({ ...p, sort_order: e.target.value }))
+            }
+            className={donationInputCls}
+          />
+        </div>
+        <div className="md:col-span-2">
+          <label className="flex items-center gap-2 text-sm text-gray-700">
+            <input
+              type="checkbox"
+              checked={form.is_active}
+              onChange={(e) =>
+                setForm((p) => ({ ...p, is_active: e.target.checked }))
+              }
+              className="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
+            />
+            Active
+          </label>
+        </div>
+      </DonationFormPage>
+    );
+  }
+
   return (
-    <div className="p-6 space-y-5">
+    <div className="p-6 space-y-5 bg-[#f8f9fa] min-h-screen">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Seva Category Master</h1>
-          <p className="text-sm text-gray-500">
-            Group seva services into categories (Maha Pooja, Yagna, Bhog, Thaal…)
-          </p>
+        <div className="flex items-center">
+          <BackButton fallback="/dashboard" className="mr-4" />
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Seva Category Master</h1>
+            <p className="text-sm text-gray-500">
+              Group seva services into categories (Maha Pooja, Yagna, Bhog, Thaal…)
+            </p>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <div className="relative">
@@ -225,7 +331,7 @@ const SevaCategoryMaster = ({ user }) => {
       <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+            <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
               <tr>
                 {["#", "Code", "Category Name", "Service Kind", "Icon", "Sort", "Used By", "Status", "Actions"].map(
                   (h) => (
@@ -327,129 +433,6 @@ const SevaCategoryMaster = ({ user }) => {
         </div>
       </div>
 
-      {/* Form modal */}
-      {showForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-xl">
-            <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
-              <h3 className="text-base font-semibold text-gray-900">
-                {editing ? "Edit Category" : "Add Category"}
-              </h3>
-              <button
-                onClick={() => setShowForm(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="space-y-3 px-5 py-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-gray-700">
-                    Service Kind *
-                  </label>
-                  <select
-                    value={form.service_kind}
-                    onChange={(e) =>
-                      setForm((p) => ({ ...p, service_kind: e.target.value }))
-                    }
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-                  >
-                    <option value="">— select —</option>
-                    {kinds.map((k) => (
-                      <option key={k.kind_id} value={k.code}>
-                        {k.name} ({k.code})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="mb-1 block text-xs font-medium text-gray-700">
-                  Category Name *
-                </label>
-                <input
-                  value={form.name}
-                  onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-                  placeholder="Maha Pooja"
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-                />
-              </div>
-
-              <div>
-                <label className="mb-1 block text-xs font-medium text-gray-700">
-                  Description
-                </label>
-                <textarea
-                  rows={2}
-                  value={form.description}
-                  onChange={(e) =>
-                    setForm((p) => ({ ...p, description: e.target.value }))
-                  }
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-gray-700">
-                    Icon (lucide name)
-                  </label>
-                  <input
-                    value={form.icon}
-                    onChange={(e) => setForm((p) => ({ ...p, icon: e.target.value }))}
-                    placeholder="Flame"
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-gray-700">
-                    Sort order
-                  </label>
-                  <input
-                    type="number"
-                    value={form.sort_order}
-                    onChange={(e) =>
-                      setForm((p) => ({ ...p, sort_order: e.target.value }))
-                    }
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-                  />
-                </div>
-              </div>
-
-              <label className="flex items-center gap-2 text-sm text-gray-700">
-                <input
-                  type="checkbox"
-                  checked={form.is_active}
-                  onChange={(e) =>
-                    setForm((p) => ({ ...p, is_active: e.target.checked }))
-                  }
-                  className="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
-                />
-                Active
-              </label>
-            </div>
-
-            <div className="flex gap-3 border-t border-gray-200 px-5 py-4">
-              <button
-                onClick={() => setShowForm(false)}
-                className="flex-1 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSave}
-                disabled={saving}
-                className="flex-1 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-60"
-              >
-                {saving ? "Saving..." : editing ? "Update" : "Create"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

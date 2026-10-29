@@ -297,7 +297,7 @@ const DonationEntry = ({ user }) => {
   const labelCls = "mb-1 block text-xs font-medium text-gray-700";
 
   return (
-    <div className="p-6">
+    <div className="p-6 bg-[#f8f9fa] min-h-screen">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
         <div className="flex items-center">
@@ -305,7 +305,7 @@ const DonationEntry = ({ user }) => {
             onClick={() => navigate("/dashboard")}
             className="mr-4 text-gray-500 hover:text-gray-700"
           >
-            <ArrowLeft className="h-5 w-5 rotate-180" />
+            <ArrowLeft className="h-5 w-5" />
           </button>
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Donation Entry</h1>

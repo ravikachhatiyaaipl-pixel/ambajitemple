@@ -53,7 +53,7 @@ export default function AnnakshetraReport() {
   const periodLabel = { day: "Daily", week: "Weekly", month: "Monthly", year: "Yearly" }[period];
 
   return (
-    <div className="space-y-5 p-6">
+    <div className="space-y-5 p-6 bg-[#f8f9fa] min-h-screen">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Annakshetra Report</h1>
         <p className="text-sm text-gray-500">Annakshetra sponsorship donations — how many devotees donated, the amount promised, and the amount collected.</p>
