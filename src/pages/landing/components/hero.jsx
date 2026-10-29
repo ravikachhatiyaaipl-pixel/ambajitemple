@@ -80,7 +80,7 @@ export default function Hero() {
         {/* Photo card + next aarti */}
         <div className="relative mx-auto w-full max-w-sm lg:max-w-md">
           <div className="relative aspect-[4/5] overflow-hidden rounded-3xl border border-white/20 shadow-2xl shadow-black/40">
-            <img src="/ambajimata.jpg" alt="Shree Ambaji Mata Temple" className="h-full w-full object-cover object-[center_35%]" />
+            <img src="/splash.png" alt="Shree Ambaji Mata Temple" className="h-full w-full object-cover object-[center_35%]" />
             <div className="absolute inset-0 bg-gradient-to-t from-temple-950/50 via-transparent to-transparent"></div>
           </div>
           <div className="absolute -bottom-6 left-4 right-4 sm:left-auto sm:right-[-1.5rem] sm:w-60 rounded-xl bg-white p-4 text-temple-900 shadow-xl">

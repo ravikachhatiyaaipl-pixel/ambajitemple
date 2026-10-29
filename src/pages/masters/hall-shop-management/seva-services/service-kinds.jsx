@@ -41,7 +41,7 @@ const SevaServiceKindMaster = ({ user }) => {
       const res = await axios.get(`${base}/seva/kinds`, { headers });
       if (res.data?.success) setRows(res.data.data || []);
     } catch (e) {
-      toast.error(e.response?.data?.message || "Failed to load service kinds");
+      toast.error(e.response?.data?.message || "Failed to load Service Types");
     } finally {
       setLoading(false);
     }
@@ -162,94 +162,94 @@ const SevaServiceKindMaster = ({ user }) => {
   if (showForm) {
     return (
       <CrudFormPage
-        title={editing ? "Edit Service Kind" : "Add Service Kind"}
+        title={editing ? "Edit Service Type" : "Add Service Type"}
         onClose={() => setShowForm(false)}
         onSubmit={handleSave}
         saving={saving}
         submitLabel={editing ? "Update" : "Create"}
       >
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="mb-1 block text-xs font-medium text-gray-700">
-                Code *
-              </label>
-              <input
-                value={form.code}
-                onChange={(e) =>
-                  setForm((p) => ({
-                    ...p,
-                    code: e.target.value.toUpperCase(),
-                  }))
-                }
-                disabled={!!editing}
-                placeholder="MAHA_YAGNA"
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-mono uppercase disabled:bg-gray-100"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-gray-700">
-                Sort order
-              </label>
-              <input
-                type="number"
-                value={form.sort_order}
-                onChange={(e) =>
-                  setForm((p) => ({ ...p, sort_order: e.target.value }))
-                }
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-              />
-            </div>
-          </div>
-
+        <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="mb-1 block text-xs font-medium text-gray-700">
-              Kind Name *
+              Code *
             </label>
             <input
-              value={form.name}
-              onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-              placeholder="Maha Yagna"
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+              value={form.code}
+              onChange={(e) =>
+                setForm((p) => ({
+                  ...p,
+                  code: e.target.value.toUpperCase(),
+                }))
+              }
+              disabled={!!editing}
+              placeholder="MAHA_YAGNA"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-mono uppercase disabled:bg-gray-100"
             />
           </div>
-
           <div>
             <label className="mb-1 block text-xs font-medium text-gray-700">
-              Description
+              Sort order
             </label>
-            <textarea
-              rows={2}
-              value={form.description}
+            <input
+              type="number"
+              value={form.sort_order}
               onChange={(e) =>
-                setForm((p) => ({ ...p, description: e.target.value }))
+                setForm((p) => ({ ...p, sort_order: e.target.value }))
               }
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
             />
           </div>
+        </div>
 
-          <div>
-            <label className="mb-1 block text-xs font-medium text-gray-700">
-              Icon (lucide name)
-            </label>
-            <input
-              value={form.icon}
-              onChange={(e) => setForm((p) => ({ ...p, icon: e.target.value }))}
-              placeholder="Flame"
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-            />
-          </div>
-
-          <label className="flex items-center gap-2 text-sm text-gray-700">
-            <input
-              type="checkbox"
-              checked={form.is_active}
-              onChange={(e) =>
-                setForm((p) => ({ ...p, is_active: e.target.checked }))
-              }
-              className="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
-            />
-            Active
+        <div>
+          <label className="mb-1 block text-xs font-medium text-gray-700">
+            Kind Name *
           </label>
+          <input
+            value={form.name}
+            onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
+            placeholder="Maha Yagna"
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+          />
+        </div>
+
+        <div>
+          <label className="mb-1 block text-xs font-medium text-gray-700">
+            Description
+          </label>
+          <textarea
+            rows={2}
+            value={form.description}
+            onChange={(e) =>
+              setForm((p) => ({ ...p, description: e.target.value }))
+            }
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+          />
+        </div>
+
+        <div>
+          <label className="mb-1 block text-xs font-medium text-gray-700">
+            Icon (lucide name)
+          </label>
+          <input
+            value={form.icon}
+            onChange={(e) => setForm((p) => ({ ...p, icon: e.target.value }))}
+            placeholder="Flame"
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+          />
+        </div>
+
+        <label className="flex items-center gap-2 text-sm text-gray-700">
+          <input
+            type="checkbox"
+            checked={form.is_active}
+            onChange={(e) =>
+              setForm((p) => ({ ...p, is_active: e.target.checked }))
+            }
+            className="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
+          />
+          Active
+        </label>
       </CrudFormPage>
     );
   }
@@ -382,7 +382,7 @@ const SevaServiceKindMaster = ({ user }) => {
                     colSpan={8}
                     className="px-4 py-12 text-center text-sm text-gray-500"
                   >
-                    No service kinds found.
+                    No Service Types found.
                   </td>
                 </tr>
               )}

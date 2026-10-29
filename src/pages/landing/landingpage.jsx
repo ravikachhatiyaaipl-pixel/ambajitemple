@@ -21,10 +21,6 @@ import DonationCTA from "./components/donationcta";
 import Testimonials from "./components/testimonials";
 import Gallery from "./components/gallery";
 import FAQ from "./components/faq";
-import Highlights from "./components/highlights";
-import Announcement from "./components/announcement";
-import Events from "./components/events";
-import Guidelines from "./components/guidelines";
 import FinalCTA from "./components/finalcta";
 import Footer from "./components/footer";
 
@@ -37,12 +33,8 @@ export default function LandingPage() {
         <TrustStrip />
         <About />
         <DarshanTimings />
-        <Highlights />
         <Services />
-        <Announcement />
         <DonationCTA />
-        <Events />
-        <Guidelines />
         <Testimonials />
         <Gallery />
         <FAQ />
