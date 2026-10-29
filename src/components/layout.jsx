@@ -43,7 +43,6 @@ import axios from "axios";
 import SettingsInitializer from "./settingsinitializer";
 import { findRelevantKnowledge, quickSuggestions } from "../utils/ai-knowledge";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { AutoBackGuard } from "./backbutton";
 
 let toggleChatGlobal = null;
 
@@ -1653,7 +1652,7 @@ const Layout = ({ user, onLogout, children }) => {
       {MobileNavigation}
 
       <main className="flex-1 w-full overflow-y-auto">
-        <AutoBackGuard>{children}</AutoBackGuard>
+        <div className="w-full">{children}</div>
       </main>
 
       {/* Footer - With Larger Help Button - Hidden on Dashboard */}

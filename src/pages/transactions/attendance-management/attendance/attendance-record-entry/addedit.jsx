@@ -75,24 +75,6 @@ const AddAttendanceRecord = () => {
     [selectedMonth, selectedYear]
   );
 
-  /**
-   * Calculate week-off dates for a given month/year from a woff_pattern.
-   *
-   * API response shape:  woffPattern.weeks  — array of 6 arrays, each with 7 values.
-   * Day column order: Mon=0, Tue=1, Wed=2, Thu=3, Fri=4, Sat=5, Sun=6
-   * Value 1 = week-off, 0 = working day.
-   *
-   * Week-of-month mapping (pattern repeats same template every month):
-   *   Week 1 → calendar days  1–7
-   *   Week 2 → calendar days  8–14
-   *   Week 3 → calendar days 15–21
-   *   Week 4 → calendar days 22–28
-   *   Week 5 → calendar days 29–35  (if month has them)
-   *   Week 6 → calendar days 36–42  (if month has them)
-   *
-   * JS Date.getDay(): Sun=0, Mon=1 … Sat=6
-   * Convert to Mon-based index: (jsDay + 6) % 7  →  Mon=0 … Sun=6
-   */
   const calculateWeekOffDatesFromPattern = (woffPattern, month, year) => {
     // Resolve the weeks array — handle all possible shapes the API might return
     let weeks = null;
@@ -167,34 +149,34 @@ const AddAttendanceRecord = () => {
   const calculateLeaveDates = (leavesList, month, year) => {
   const monthIndex = months.indexOf(month);
   const leaveMap = {};
-  
+
   leavesList.forEach((leave) => {
     const empId = leave.Emp_Id;
     // API response se exact Fr_Date aur To_Date
     const fromDate = new Date(leave.Fr_Date);
     const toDate = new Date(leave.To_Date);
-    
+
     // Selected month ki first aur last date (time component hatao)
     const firstDayOfMonth = new Date(year, monthIndex, 1);
     const lastDayOfMonth = new Date(year, monthIndex + 1, 0);
-    
+
     // Remove time component for accurate comparison
     fromDate.setHours(0, 0, 0, 0);
     toDate.setHours(0, 0, 0, 0);
-    
+
     // Check if leave overlaps with selected month
     if (fromDate <= lastDayOfMonth && toDate >= firstDayOfMonth) {
       // Month ke saare days check karo
       const daysCount = lastDayOfMonth.getDate();
-      
+
       for (let day = 1; day <= daysCount; day++) {
         const currentDate = new Date(year, monthIndex, day);
         currentDate.setHours(0, 0, 0, 0);
-        
+
         // Exact Fr_Date se To_Date tak ke beech mein hai?
         if (currentDate >= fromDate && currentDate <= toDate) {
           if (!leaveMap[empId]) leaveMap[empId] = {};
-          
+
           leaveMap[empId][day] = {
             status: "L",
             leaveType: leave.leave_type?.LT_name || "Leave",
@@ -208,7 +190,7 @@ const AddAttendanceRecord = () => {
       }
     }
   });
-  
+
   return leaveMap;
 };
 
@@ -223,7 +205,7 @@ const fetchEmployeesAndAttendance = useCallback(async (prbId) => {
 
     // ✅ NEW: Use payroll report API (gives employees + week-offs in one call)
     const payrollReport = await AttendanceEntryApi.getEmployeesByPayrollBill(prbId);
-    
+
     // Get saved attendance separately (existing API)
     const monthAttendanceResponse = await AttendanceEntryApi.getAttendanceList(monthNumber, year);
 
@@ -234,23 +216,23 @@ const fetchEmployeesAndAttendance = useCallback(async (prbId) => {
 
     employeesList.forEach(employee => {
       const empId = employee.Emp_Id;
-      
+
       // ✅ NEW: Extract week-off pattern from payroll report
       const weekOffPattern = employee.week_off_pattern;
-      
+
       if (weekOffPattern && weekOffPattern.pattern_data) {
         rawPatterns[empId] = weekOffPattern;
-        
+
         // ✅ NEW: Use pre-calculated week-off dates from API
         const weekOffDatesList = weekOffPattern.week_off_dates || [];
         const weekOffMapForEmployee = {};
-        
+
         weekOffDatesList.forEach(dateStr => {
           const date = new Date(dateStr);
           const day = date.getDate();
           weekOffMapForEmployee[day] = "WO";
         });
-        
+
         weekOffMap[empId] = weekOffMapForEmployee;
       } else {
         weekOffMap[empId] = {};
@@ -267,7 +249,7 @@ const fetchEmployeesAndAttendance = useCallback(async (prbId) => {
     };
 
     const monthRecords = toRecords(monthAttendanceResponse);
-    
+
     monthRecords
       .filter(record => record.PRB_id == parseInt(prbId))
       .forEach(record => {
@@ -284,7 +266,7 @@ const fetchEmployeesAndAttendance = useCallback(async (prbId) => {
     setEmployeeWeekOffDates(weekOffMap);
     setExistingAttendanceMap(attendanceMap);
     setEmployees(employeesList);
-    
+
   } catch (err) {
     console.error("Error fetching employees/attendance:", err);
     toast.error("Error loading employees: " + (err.message || "Unknown error"));
@@ -304,7 +286,7 @@ const fetchEmployeesAndAttendance = useCallback(async (prbId) => {
       setLoadingFinancialYears(true);
       setLoadingHolidays(true);
       setLoadingLeaves(true);
-      
+
       try {
         const years = await AttendanceEntryApi.getFinancialYears();
         setFinancialYears(years);
@@ -314,16 +296,16 @@ const fetchEmployeesAndAttendance = useCallback(async (prbId) => {
         } else if (years.length > 0) {
           setSelectedYear(years[0].FY_Code.split("-")[0]);
         }
-        
+
         const bills = await AttendanceEntryApi.getPayrollBills();
         setPayrollBills(bills);
-        
+
         const holidaysList = await AttendanceEntryApi.getHolidays();
         setHolidays(holidaysList);
-        
+
         const leavesList = await AttendanceEntryApi.getLeaveApplications();
         setLeaveApplications(leavesList);
-        
+
       } catch (err) {
         console.error("Error loading master data:", err);
         setError("Error loading master data");
@@ -334,7 +316,7 @@ const fetchEmployeesAndAttendance = useCallback(async (prbId) => {
         setLoadingLeaves(false);
       }
     };
-    
+
     loadMasterData();
   }, []);
 
@@ -431,7 +413,7 @@ const fetchEmployeesAndAttendance = useCallback(async (prbId) => {
 
   const getAttendanceStatus = (employeeId, date) => {
     const overrideKey = `${employeeId}_${date}`;
-  
+
     if (attendanceOverrides[overrideKey]) {
       const status = attendanceOverrides[overrideKey];
       return {
@@ -441,7 +423,7 @@ const fetchEmployeesAndAttendance = useCallback(async (prbId) => {
         isEditable: status != "H" && status != "WO",
       };
     }
-  
+
     if (holidayDates[date]) {
       return {
         status: "H",
@@ -450,7 +432,7 @@ const fetchEmployeesAndAttendance = useCallback(async (prbId) => {
         isEditable: false,
       };
     }
-  
+
     if (employeeWeekOffDates[employeeId] && employeeWeekOffDates[employeeId][date]) {
       return {
         status: "WO",
@@ -459,7 +441,7 @@ const fetchEmployeesAndAttendance = useCallback(async (prbId) => {
         isEditable: false,
       };
     }
-  
+
     if (leaveDates[employeeId] && leaveDates[employeeId][date]) {
       return {
         status: "L",
@@ -468,7 +450,7 @@ const fetchEmployeesAndAttendance = useCallback(async (prbId) => {
         isEditable: true,
       };
     }
-  
+
     if (existingAttendanceMap[overrideKey]) {
       return {
         status: existingAttendanceMap[overrideKey],
@@ -477,7 +459,7 @@ const fetchEmployeesAndAttendance = useCallback(async (prbId) => {
         isEditable: true,
       };
     }
-  
+
     return {
       status: "-",
       holidayInfo: null,
@@ -672,9 +654,9 @@ const fetchEmployeesAndAttendance = useCallback(async (prbId) => {
     for (let rowIndex = 0; rowIndex < data.length; rowIndex++) {
       const row = data[rowIndex];
       if (!row || row.length == 0) continue;
-      
+
       const firstCell = row[0] ? String(row[0]).toLowerCase().trim() : "";
-      
+
       if (firstCell == "status") {
         let empId = null;
         for (let i = rowIndex - 1; i >= Math.max(0, rowIndex - 15); i--) {
@@ -692,7 +674,7 @@ const fetchEmployeesAndAttendance = useCallback(async (prbId) => {
             }
           }
         }
-        
+
         if (empId) {
           const attendanceData = [];
           for (let day = 0; day < daysCount; day++) {
@@ -700,7 +682,7 @@ const fetchEmployeesAndAttendance = useCallback(async (prbId) => {
             let cellValue = colIndex < row.length ? row[colIndex] : "";
             let cleanValue = cellValue != undefined && cellValue != null && cellValue != "" ? String(cellValue).trim() : "";
             let status = null;
-            
+
             if (cleanValue == "P" || cleanValue == "WOP") {
               status = "P";
             } else if (cleanValue == "") {
@@ -714,7 +696,7 @@ const fetchEmployeesAndAttendance = useCallback(async (prbId) => {
         }
       }
     }
-    
+
     return attendanceRecords;
   };
 
@@ -725,26 +707,26 @@ const fetchEmployeesAndAttendance = useCallback(async (prbId) => {
     input.onchange = async (e) => {
       const file = e.target.files[0];
       if (!file) return;
-      
+
       setImporting(true);
-      
+
       try {
         const fileData = await file.arrayBuffer();
         const workbook = XLSX.read(fileData);
         const worksheet = workbook.Sheets[workbook.SheetNames[0]];
         const attendanceRecords = parseExcelAttendance(worksheet);
-        
+
         if (attendanceRecords.length == 0) {
           toast.error(`No attendance data found in the file. Selected: ${selectedMonth} ${selectedYear}`);
           setImporting(false);
           return;
         }
-        
+
         const newOverrides = {};
-        
+
         attendanceRecords.forEach((record) => {
           const matchedEmployee = employees.find((emp) => emp.Emp_Id == record.empId);
-          
+
           if (matchedEmployee) {
             record.attendance.forEach(({ day, status }) => {
               if (!holidayDates[day] && !(employeeWeekOffDates[record.empId] && employeeWeekOffDates[record.empId][day])) {
@@ -754,7 +736,7 @@ const fetchEmployeesAndAttendance = useCallback(async (prbId) => {
             });
           }
         });
-        
+
         setAttendanceOverrides((prev) => ({ ...prev, ...newOverrides }));
         toast.success("Import complete! Click 'Save Changes' to store the data.");
       } catch (error) {
@@ -990,7 +972,7 @@ const fetchEmployeesAndAttendance = useCallback(async (prbId) => {
                               <div className="text-[12px] text-gray-500">{employee.Emp_Id}</div>
                             </td>
                             <td className="px-2 py-2">
-                              <span className="text-xs font-medium text-gray-900">  {employee.Emp_Name.replace(/[^a-zA-Z\s]/g, '').trim()}</span>
+                              <span className="text-xs font-medium text-gray-900">  {employee.Emp_Name?.trim()}</span>
                               <div className="text-[12px] text-gray-500">{employee.designation}</div>
                             </td>
                             {monthDays.map(({ day }) => {
@@ -999,7 +981,7 @@ const fetchEmployeesAndAttendance = useCallback(async (prbId) => {
                               const bgColor = status == "P" ? "bg-green-100" : status == "A" ? "bg-red-100" : status == "L" ? "bg-yellow-100" : status == "H" ? "bg-blue-100" : status == "WO" ? "bg-purple-100" : status == "-" ? "bg-gray-100" : "";
                               const textColor = status == "P" ? "text-green-700" : status == "A" ? "text-red-700" : status == "L" ? "text-yellow-700" : status == "H" ? "text-blue-700" : status == "WO" ? "text-purple-700" : status == "-" ? "text-gray-500" : "";
                               const isLocked = holidayDates[day] || (employeeWeekOffDates[employee.Emp_Id] && employeeWeekOffDates[employee.Emp_Id][day]);
-                              
+
                               return (
                                 <td key={day} className={`px-0.5 py-1 text-center relative group ${hasOverride ? "ring-1 ring-yellow-400" : ""}`}>
                                   {isEditable && !isLocked ? (

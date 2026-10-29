@@ -15,7 +15,7 @@ import { Link } from "react-router-dom";
 import PrintLayout from "../../../components/printlayout";
 import { useOrganization } from "../../../hooks/useorganization";
 
-const EARN_COLS = [
+const BASE_EARN_COLS = [
   { key: "Basic_GO", label: "Basic.GO\nSpl.Pay", code: "(101)\n(102)" },
   { key: "Basic_NGO", label: "Basic.NGO\nFP.Pay", code: "(101)\n(102)" },
   { key: "Leave_Enc", label: "Leave.Sal\nLeav.Enca", code: "(102)\n(109)" },
@@ -35,7 +35,27 @@ const EARN_COLS = [
   { key: "S_ITAX", label: "ITAX\nS.ITAX", code: "(9510)\n(9520)" },
 ];
 
-const NUM_KEYS = EARN_COLS.map((c) => c.key);
+const GROSSPAY_COL = BASE_EARN_COLS.find((c) => c.key === "GROSSPAY");
+
+/**
+ * Show ONLY mapped allowance heads (from master + emp mapping).
+ * Built-in Basic.GO / DA / HRA / ... columns are hidden (Basic stays under name).
+ * GROSSPAY total column is kept at the end.
+ */
+const mergeEarnCols = (dynamicColumns = [], rows = []) => {
+  const extras = (dynamicColumns || [])
+    .map((c) => ({
+      key: c.key,
+      label: c.short_name || c.name || c.code || c.key,
+      code: "", // avoid duplicate header text
+    }))
+    .filter((col) => {
+      if (!rows?.length) return true;
+      return rows.some((r) => Number(r[col.key] || 0) >= 1);
+    });
+
+  return GROSSPAY_COL ? [...extras, GROSSPAY_COL] : extras;
+};
 
 const fmt = (v) =>
   !v || Number(v) == 0 ? "0" : Number(v).toLocaleString("en-IN");
@@ -178,8 +198,19 @@ const SalaryIncome = () => {
   const [totalApiPages, setTotalApiPages] = useState(1);
   const [cumulativeTotals, setCumulativeTotals] = useState({});
   const [grandTotals, setGrandTotals] = useState({});
+  const [dynamicColumns, setDynamicColumns] = useState([]);
+  const [visibleSourceRows, setVisibleSourceRows] = useState([]);
   const allPageTotalsRef = React.useRef({});
   const PAGE_SIZE = 10;
+
+  const EARN_COLS = React.useMemo(
+    () => mergeEarnCols(dynamicColumns, visibleSourceRows),
+    [dynamicColumns, visibleSourceRows],
+  );
+  const NUM_KEYS = React.useMemo(
+    () => EARN_COLS.map((c) => c.key),
+    [EARN_COLS],
+  );
 
   useEffect(() => {
     axios
@@ -244,6 +275,7 @@ const SalaryIncome = () => {
         if (response.data.totals?.cumulative) {
           setCumulativeTotals(response.data.totals.cumulative);
         }
+        setDynamicColumns(response.data.dynamic_columns || []);
 
         let allFiltered = response.data.data || [];
         if (selDept)
@@ -253,6 +285,7 @@ const SalaryIncome = () => {
             (r) => (r.First_Name || "") == selEmp,
           );
 
+        setVisibleSourceRows(allFiltered);
         setTotalRecords(allFiltered.length);
         const totalPages = Math.ceil(allFiltered.length / PAGE_SIZE) || 1;
         setTotalApiPages(totalPages);
@@ -374,6 +407,7 @@ const SalaryIncome = () => {
       "SR No": r.srno,
       "Emp Code": r.Emp_Code,
       "Employee Name": r.First_Name,
+      Basic: r.Actual_Basic_Pay || 0,
       Department: r.Dpt_Name,
       ...EARN_COLS.reduce(
         (a, c) => ({ ...a, [c.label.replace(/\n/g, " ")]: r[c.key] || 0 }),
@@ -386,6 +420,7 @@ const SalaryIncome = () => {
       "SR No": "CUMULATIVE TOTAL",
       "Emp Code": "",
       "Employee Name": "",
+      Basic: "",
       Department: "",
       ...EARN_COLS.reduce(
         (a, c) => ({
@@ -405,7 +440,7 @@ const SalaryIncome = () => {
   };
 
   const hasData = data.length > 0;
-  const totalCols = EARN_COLS.length + 2;
+  const totalCols = EARN_COLS.length + 2; // SRNo + Name/Basic
 
   const PrintContent = () => {
     const printData = allDataForPrint.length > 0 ? allDataForPrint : data;
@@ -509,12 +544,12 @@ const SalaryIncome = () => {
               <th style={{ ...thS, textAlign: "center" }}>
                 SRNo
                 <br />
-                SLONO
-                <br />
                 PSRNO
               </th>
               <th style={{ ...thS, textAlign: "left", minWidth: "110px" }}>
                 EMPLOYEE'S NAME
+                <br />
+                BASIC
               </th>
               {EARN_COLS.map((c) => (
                 <th key={c.key} style={thS}>
@@ -527,7 +562,7 @@ const SalaryIncome = () => {
           <tbody>
             {printData.map((row, i) => (
               <React.Fragment key={i}>
-                <tr style={{ backgroundColor: "#e8edf2" }}>
+                <tr style={{ backgroundColor: "#ffffff" }}>
                   <td
                     style={{
                       ...tdS,
@@ -537,22 +572,21 @@ const SalaryIncome = () => {
                     }}
                   >
                     {row.srno}
-                  </td>
-                  <td
-                    colSpan={EARN_COLS.length + 1}
-                    style={{ ...tdS, fontWeight: "bold", color: "#1e3a5f" }}
-                  >
-                    {row.Dpt_Name}&nbsp;&nbsp;[HPS - {row.PayBill_Code} - GR.PAY
-                    : {row.EGM_Name}]
-                  </td>
-                </tr>
-                <tr style={{ backgroundColor: "#ffffff" }}>
-                  <td style={{ ...tdS, textAlign: "center", color: "#374151" }}>
-                    {row.Emp_Code}
+                    <div
+                      style={{
+                        fontSize: "6px",
+                        color: "#6b7280",
+                        fontWeight: "normal",
+                      }}
+                    >
+                      {row.Emp_Code}
+                    </div>
                   </td>
                   <td style={tdS}>
                     <div style={{ color: "#111827" }}>{row.First_Name}</div>
-                    <div style={{ fontSize: "6px", color: "#6b7280" }}>{fmt(row.Actual_Basic_Pay)}</div>
+                    <div style={{ fontSize: "6px", color: "#6b7280" }}>
+                      {fmt(row.Actual_Basic_Pay)}
+                    </div>
                   </td>
                   {NUM_KEYS.map((k) => (
                     <td
@@ -823,13 +857,13 @@ const SalaryIncome = () => {
                         className="px-2 py-2 text-center font-semibold text-white whitespace-pre-line leading-tight"
                         style={{ minWidth: "50px" }}
                       >
-                        {"SRNo\nSLONO\nPSRNO"}
+                        {"SRNo\nPSRNO"}
                       </th>
                       <th
-                        className="px-2 py-2 text-left font-semibold text-white"
+                        className="px-2 py-2 text-left font-semibold text-white whitespace-pre-line leading-tight"
                         style={{ minWidth: "160px" }}
                       >
-                        EMPLOYEE'S NAME
+                        {"EMPLOYEE'S NAME\nBASIC"}
                       </th>
                       {EARN_COLS.map((c) => (
                         <th
@@ -851,39 +885,30 @@ const SalaryIncome = () => {
                   <tbody>
                     {data.map((row, i) => (
                       <React.Fragment key={i}>
-                        <tr style={{ backgroundColor: "#e8edf2" }}>
+                        <tr style={{ backgroundColor: "#ffffff" }}>
                           <td
-                            className="px-2 py-1 text-center font-bold"
+                            className="px-2 py-1 text-center font-bold text-xs"
                             style={{ color: "#1e3a5f" }}
                           >
                             {row.srno}
-                          </td>
-                          <td
-                            colSpan={totalCols - 1}
-                            className="px-2 py-1 font-semibold text-xs"
-                            style={{ color: "#1e3a5f" }}
-                          >
-                            {row.Dpt_Name}&nbsp;&nbsp; [Matrix Level-
-                            {row.EGM_Name}]&nbsp;&nbsp; PERM.POST =
-                            1&nbsp;&nbsp;TEMP.POST = 0&nbsp;&nbsp;TOT.POST =
-                            1&nbsp;&nbsp; [HPS - {row.PayBill_Code} - GR.PAY :{" "}
-                            {row.EGM_Name}] &nbsp;(6thpay Basic/Grpay =
-                            0/0)&nbsp;&nbsp;GNR&nbsp;- -
-                          </td>
-                        </tr>
-                        <tr style={{ backgroundColor: "#ffffff" }}>
-                          <td
-                            className="px-2 py-1 text-center font-medium"
-                            style={{ color: "#374151" }}
-                          >
-                            {row.Emp_Code}
+                            <div
+                              style={{
+                                fontSize: "10px",
+                                color: "#6b7280",
+                                fontWeight: "normal",
+                              }}
+                            >
+                              {row.Emp_Code}
+                            </div>
                           </td>
                           <td
                             className="px-2 py-1 text-xs font-medium"
                             style={{ color: "#111827" }}
                           >
                             <div>{row.First_Name}</div>
-                            <div style={{ fontSize: "10px", color: "#6b7280" }}>{fmt(row.Actual_Basic_Pay)}</div>
+                            <div style={{ fontSize: "10px", color: "#6b7280" }}>
+                              {fmt(row.Actual_Basic_Pay)}
+                            </div>
                           </td>
                           {EARN_COLS.map((c) => (
                             <td
@@ -892,25 +917,6 @@ const SalaryIncome = () => {
                               style={{ color: "#1e3a5f" }}
                             >
                               {fmt(row[c.key])}
-                            </td>
-                          ))}
-                        </tr>
-                        <tr style={{ backgroundColor: "#ffffff" }}>
-                          <td
-                            className="px-2 py-1 text-center text-xs"
-                            style={{ color: "#374151" }}
-                          ></td>
-                          <td
-                            className="px-2 py-1 text-xs"
-                            style={{ color: "#6b7280" }}
-                          ></td>
-                          {EARN_COLS.map((c) => (
-                            <td
-                              key={c.key}
-                              className="px-2 py-1 text-right font-mono"
-                              style={{ color: "#6b7280" }}
-                            >
-                              0
                             </td>
                           ))}
                         </tr>

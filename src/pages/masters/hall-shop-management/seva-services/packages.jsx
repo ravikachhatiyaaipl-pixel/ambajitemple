@@ -1,9 +1,4 @@
 import { useState, useEffect, useMemo } from "react";
-import BackButton from "../../../../components/backbutton";
-import DonationFormPage, {
-  donationInputCls,
-  donationLabelCls,
-} from "../../donation/DonationFormPage";
 import { toast } from "react-hot-toast";
 import axios from "axios";
 import {
@@ -454,575 +449,15 @@ const SevaPackages = ({ user }) => {
     );
   }
 
-  if (showForm) {
-    return (
-      <DonationFormPage
-        title={editing ? "Edit Package" : "Add Package"}
-        subtitle={
-          editing
-            ? "Update the record details"
-            : "Fill in the details to create a new record"
-        }
-        detailsTitle="Package Details"
-        onBack={() => setShowForm(false)}
-        onSubmit={handleSave}
-        saving={saving}
-        submitLabel={editing ? "Update Package" : "Save Package"}
-      >
-        <div className="md:col-span-2 space-y-4">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div>
-            <label className={donationLabelCls}>
-              Service *
-            </label>
-            <select
-              value={form.service_id}
-              onChange={(e) => {
-                const svcId = e.target.value;
-                const svc = services.find((s) => s.service_id == svcId);
-
-                // Service Type apne aap service ke type se sync ho jata hai
-                setForm((p) => ({
-                  ...p,
-                  service_id: svcId,
-                  service_kind: svc?.service_kind || p.service_kind,
-                }));
-              }}
-              className={donationInputCls}
-            >
-              <option value="">— select —</option>
-              {visibleServices.length === 0 && (
-                <option value="" disabled>
-                  No service of this type
-                </option>
-              )}
-              {visibleServices.map((s) => (
-                <option key={s.service_id} value={s.service_id}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className={donationLabelCls}>
-              Service Type *
-            </label>
-            <select
-              value={form.service_kind}
-              onChange={(e) => {
-                const kind = e.target.value;
-                const cur = services.find(
-                  (s) => s.service_id == form.service_id
-                );
-
-                // Type change kiya to service match na kare to clear
-                setForm((p) => ({
-                  ...p,
-                  service_kind: kind,
-                  service_id:
-                    cur && cur.service_kind === kind
-                      ? p.service_id
-                      : kind
-                      ? ""
-                      : p.service_id,
-                }));
-              }}
-              className={donationInputCls}
-            >
-              <option value="">— select —</option>
-              {kinds.map((k) => (
-                <option key={k.kind_id ?? k.code} value={k.code}>
-                  {k.name} ({k.code})
-                </option>
-              ))}
-            </select>
-            <p className="mt-1 text-[10px] text-gray-500">
-              Service select karne par type apne aap set ho jata hai. Type
-              select karne par sirf usi type ke services dikhenge.
-            </p>
-          </div>
-
-          <div>
-            <label className={donationLabelCls}>
-              Package Name *
-            </label>
-            <input
-              value={form.name}
-              onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-              placeholder="Basic (1 person)"
-              className={donationInputCls}
-            />
-          </div>
-
-          <div>
-            <label className={donationLabelCls}>
-              Base Fee (Rs) *
-            </label>
-            <input
-              type="number"
-              step="0.01"
-              min="0"
-              value={form.fee}
-              onChange={(e) => setForm((p) => ({ ...p, fee: e.target.value }))}
-              className={donationInputCls}
-            />
-          </div>
-
-          {!isTithiBhojanPackage && (
-            <div>
-              <label className={donationLabelCls}>
-                Pooja Duration
-              </label>
-              <input
-                type="number"
-                min="1"
-                value={form.duration_minutes}
-                onChange={(e) =>
-                  setForm((p) => ({ ...p, duration_minutes: e.target.value }))
-                }
-                className={donationInputCls}
-              />
-            </div>
-          )}
-
-          {!isTithiBhojanPackage && (
-            <div>
-              <label className={donationLabelCls}>
-                Daily Limit (persons / day for this seva)
-              </label>
-              <input
-                type="number"
-                min="0"
-                value={form.daily_quota}
-                onChange={(e) =>
-                  setForm((p) => ({ ...p, daily_quota: e.target.value }))
-                }
-                className={donationInputCls}
-              />
-              <p className="mt-1 text-[10px] text-gray-500">
-                Tithi Bhojan के लिए दैनिक सीमा लागू नहीं होती।
-              </p>
-            </div>
-          )}
-
-          {!isTithiBhojanPackage && (
-            <div>
-              <label className={donationLabelCls}>
-                Persons per Group
-              </label>
-              <input
-                type="number"
-                min="1"
-                value={form.max_persons}
-                onChange={(e) =>
-                  setForm((p) => ({
-                    ...p,
-                    max_persons: e.target.value,
-                  }))
-                }
-                className={donationInputCls}
-              />
-              <p className="mt-1 text-[10px] text-gray-500">
-                Group size - कितने persons एक booking में आ सकते हैं।
-              </p>
-            </div>
-          )}
-
-          <div>
-              <label className={donationLabelCls}>
-              Start Date {isTithiBhojanPackage && "*"}
-            </label>
-            <input
-              type="date"
-              required={isTithiBhojanPackage}
-              value={form.effective_from}
-              onChange={(e) =>
-                setForm((p) => ({ ...p, effective_from: e.target.value }))
-              }
-              className={donationInputCls}
-            />
-          </div>
-
-          <div>
-            <label className={donationLabelCls}>
-              End Date {isTithiBhojanPackage && "*"}
-            </label>
-            <input
-              type="date"
-              required={isTithiBhojanPackage}
-              min={form.effective_from || undefined}
-              value={form.effective_to}
-              onChange={(e) =>
-                setForm((p) => ({ ...p, effective_to: e.target.value }))
-              }
-              className={donationInputCls}
-            />
-            {isTithiBhojanPackage && <p className="mt-1 text-[10px] text-amber-700">Bookings close automatically after this end date. Add at least one meal slot below.</p>}
-          </div>
-        </div>
-
-        <div>
-          <label className={donationLabelCls}>
-            Description
-          </label>
-          <textarea
-            rows={2}
-            value={form.description}
-            onChange={(e) =>
-              setForm((p) => ({ ...p, description: e.target.value }))
-            }
-            className={donationInputCls}
-          />
-        </div>
-
-        <div>
-          <label className={donationLabelCls}>
-            What's included
-          </label>
-          <div className="flex gap-2">
-            <input
-              value={includeInput}
-              onChange={(e) => setIncludeInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  addInclude();
-                }
-              }}
-              placeholder="Type an item and press Enter"
-              className={donationInputCls}
-            />
-            <button
-              type="button"
-              onClick={addInclude}
-              className="shrink-0 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
-              Add
-            </button>
-          </div>
-          {form.includes.length > 0 && (
-            <ul className="mt-2 space-y-1.5">
-              {form.includes.map((item, i) => (
-                <li
-                  key={i}
-                  className="flex items-center gap-2 rounded-lg bg-gray-50 px-2.5 py-1.5 text-xs text-gray-700"
-                >
-                  <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-red-500" />
-                  <span className="flex-1">{item}</span>
-                  <button
-                    type="button"
-                    onClick={() => removeInclude(item)}
-                    className="text-gray-400 hover:text-red-600"
-                    title="Remove"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-
-        {/* Custom Fields - admin can add any field */}
-        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
-          <div className="mb-3 flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-600">
-                <Plus className="h-4 w-4" />
-              </span>
-              <div>
-                <p className="text-xs font-semibold text-amber-800">
-                  Custom Fields (Dynamic)
-                </p>
-                <p className="text-[10px] text-amber-600">
-                  Add service-specific fields (e.g. Pandit name, Prashad
-                  type, Yagna material, Gotra required...)
-                </p>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={addCustomField}
-              className="shrink-0 rounded-lg border border-amber-300 px-3 py-2 text-xs font-medium text-amber-700 hover:bg-amber-100 transition"
-            >
-              <Plus className="h-3 w-3" /> Add Field
-            </button>
-          </div>
-
-          <div className="space-y-2">
-            {form.custom_fields.map((field, idx) => (
-              <div
-                key={idx}
-                className="grid grid-cols-1 sm:grid-cols-12 gap-2 rounded-lg bg-white p-2.5 border border-amber-200"
-              >
-                <div className="sm:col-span-5">
-                  <label className="mb-1 block text-[10px] font-medium text-amber-700">
-                    Field Name
-                  </label>
-                  <input
-                    value={field.field_name}
-                    onChange={(e) =>
-                      updateCustomField(idx, "field_name", e.target.value)
-                    }
-                    placeholder="e.g. Pandit Name"
-                    className="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
-                  />
-                </div>
-                <div className="sm:col-span-3">
-                  <label className="mb-1 block text-[10px] font-medium text-amber-700">
-                    Field Type
-                  </label>
-                  <select
-                    value={field.field_type}
-                    onChange={(e) =>
-                      updateCustomField(idx, "field_type", e.target.value)
-                    }
-                    className="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
-                  >
-                    <option value="text">Text</option>
-                    <option value="number">Number</option>
-                    <option value="date">Date</option>
-                    <option value="select">Select/Dropdown</option>
-                    <option value="checkbox">Checkbox</option>
-                    <option value="textarea">Text Area</option>
-                  </select>
-                </div>
-                <div className="sm:col-span-3">
-                  <label className="mb-1 block text-[10px] font-medium text-amber-700">
-                    Default Value
-                  </label>
-                  <input
-                    value={field.field_value}
-                    onChange={(e) =>
-                      updateCustomField(idx, "field_value", e.target.value)
-                    }
-                    placeholder="Default value"
-                    className="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
-                  />
-                </div>
-                <div className="flex items-end sm:col-span-1">
-                  <button
-                    type="button"
-                    onClick={() => removeCustomField(idx)}
-                    className="rounded border border-red-300 px-2 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </div>
-              </div>
-            ))}
-            {form.custom_fields.length === 0 && (
-              <p className="mt-2 text-[10px] text-amber-500 italic">
-                No custom fields yet. Click "Add Field" to create
-                service-specific fields.
-              </p>
-            )}
-          </div>
-        </div>
-
-        {/* TIME SLOTS - dynamic (recurring) */}
-        <div className="rounded-xl border border-gray-200 bg-gray-50/60 p-3">
-          <div className="mb-3 flex items-start justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-red-50 text-red-600">
-                <Clock className="h-4 w-4" />
-              </span>
-              <div>
-                <p className="text-xs font-semibold text-gray-800">
-                  Time Slots {isTithiBhojanPackage && <span className="text-red-600">*</span>}
-                </p>
-                <p className="text-[10px] text-gray-500">
-                  Har din repeat hote hain - koi bhi time manually type
-                  karein (7:30 AM, 19:45, 05:15...)
-                </p>
-              </div>
-            </div>
-            {form.slot_times.length > 0 && (
-              <span className="shrink-0 rounded-full bg-white px-2.5 py-1 text-[10px] font-medium text-gray-600 ring-1 ring-gray-200">
-                {form.slot_times.length} slot
-                {form.slot_times.length > 1 ? "s" : ""} added
-              </span>
-            )}
-          </div>
-
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-12">
-            <div className="sm:col-span-3">
-              <label className="mb-1 block text-[10px] font-medium text-gray-500">
-                Start time <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={slotDraft.start}
-                onChange={(e) =>
-                  setSlotDraft((s) => ({ ...s, start: e.target.value }))
-                }
-                onBlur={() => {
-                  const parsed = parseTimeInput(slotDraft.start);
-                  if (parsed && parsed !== slotDraft.start) {
-                    setSlotDraft((s) => ({
-                      ...s,
-                      start: to12Hour(parsed),
-                    }));
-                  }
-                }}
-                placeholder="07:30 AM"
-                className={`w-full rounded-lg border bg-white px-2.5 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-red-500 ${
-                  slotDraft.start && !parseTimeInput(slotDraft.start)
-                    ? "border-red-400"
-                    : slotError && !slotDraft.start
-                    ? "border-red-400 bg-red-50"
-                    : "border-gray-300"
-                }`}
-              />
-              {slotDraft.start && parseTimeInput(slotDraft.start) && (
-                <p className="mt-1 text-[10px] text-emerald-600">
-                  {to12Hour(parseTimeInput(slotDraft.start))}
-                </p>
-              )}
-              {slotDraft.start && !parseTimeInput(slotDraft.start) && (
-                <p className="mt-1 text-[10px] text-red-500">
-                  Invalid time
-                </p>
-              )}
-            </div>
-            <div className="sm:col-span-3">
-              <label className="mb-1 block text-[10px] font-medium text-gray-500">
-                End time
-              </label>
-              <input
-                type="text"
-                value={slotDraft.end}
-                onChange={(e) =>
-                  setSlotDraft((s) => ({ ...s, end: e.target.value }))
-                }
-                onBlur={() => {
-                  const parsed = parseTimeInput(slotDraft.end);
-                  if (parsed && parsed !== slotDraft.end) {
-                    setSlotDraft((s) => ({ ...s, end: to12Hour(parsed) }));
-                  }
-                }}
-                placeholder={`Auto (${slotDraft.start ? autoEndLabel : "based on duration"})`}
-                className={`w-full rounded-lg border bg-white px-2.5 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-red-500 ${
-                  slotDraft.end && !parseTimeInput(slotDraft.end)
-                    ? "border-red-400"
-                    : "border-gray-300"
-                }`}
-              />
-              <p className="mt-1 text-[10px] text-gray-500">
-                {slotDraft.end
-                  ? parseTimeInput(slotDraft.end)
-                    ? to12Hour(parseTimeInput(slotDraft.end))
-                    : "Invalid time"
-                  : "Leave blank for auto"}
-              </p>
-            </div>
-            <div className="sm:col-span-2">
-              <label className="mb-1 block text-[10px] font-medium text-gray-500">
-                Label
-              </label>
-              <input
-                type="text"
-                value={slotDraft.label}
-                onChange={(e) =>
-                  setSlotDraft((s) => ({ ...s, label: e.target.value }))
-                }
-                placeholder="Lunch"
-                className="w-full rounded-lg border border-gray-300 bg-white px-2.5 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-red-500"
-              />
-            </div>
-            <div className="sm:col-span-2">
-              <label className="mb-1 block text-[10px] font-medium text-gray-500">
-                Limit (persons)
-              </label>
-              <input
-                type="number"
-                min="0"
-                value={slotDraft.capacity}
-                onChange={(e) =>
-                  setSlotDraft((s) => ({ ...s, capacity: e.target.value }))
-                }
-                placeholder="0 = unlimited"
-                className="w-full rounded-lg border border-gray-300 bg-white px-2.5 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-red-500"
-              />
-            </div>
-            <div className="flex items-end sm:col-span-2">
-              <button
-                type="button"
-                onClick={addSlot}
-                className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-gray-800 px-3 py-2 text-sm font-medium text-white hover:bg-gray-900"
-              >
-                <Plus className="h-4 w-4" /> Add Slot
-              </button>
-            </div>
-          </div>
-
-          {form.slot_times.length > 0 && (
-            <div className="mt-3 space-y-1.5 border-t border-gray-200 pt-3">
-              {form.slot_times.map((t, i) => (
-                <div
-                  key={i}
-                  className="flex items-center gap-2.5 rounded-lg bg-white px-3 py-2 text-xs text-gray-700 ring-1 ring-gray-200"
-                >
-                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
-                    <Check className="h-3 w-3" />
-                  </span>
-                  <span className="font-semibold text-gray-900">
-                    {to12Hour(t.start)}
-                    {t.end ? ` – ${to12Hour(t.end)}` : ""}
-                  </span>
-                  {t.label && (
-                    <span className="truncate rounded bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-600">
-                      {t.label}
-                    </span>
-                  )}
-                  {t.capacity > 0 && (
-                    <span className="shrink-0 rounded bg-emerald-50 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700">
-                      {t.capacity} limit
-                    </span>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => removeSlot(i)}
-                    className="ml-auto shrink-0 rounded p-0.5 text-gray-400 hover:bg-red-50 hover:text-red-600"
-                    title="Remove slot"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <label className="flex items-center gap-2 text-sm text-gray-700">
-          <input
-            type="checkbox"
-            checked={form.is_active}
-            onChange={(e) =>
-              setForm((p) => ({ ...p, is_active: e.target.checked }))
-            }
-            className="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
-          />
-          Active
-        </label>
-        </div>
-      </DonationFormPage>
-    );
-  }
-
   return (
-    <div className="p-6 space-y-5 bg-[#f8f9fa] min-h-screen">
+    <div className="p-6 space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center">
-          <BackButton fallback="/dashboard" className="mr-4" />
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Seva Packages</h1>
-            <p className="text-sm text-gray-500">
-              Base fee, duration, daily quota and persons limits live here and
-              connect to services
-            </p>
-          </div>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Seva Packages</h1>
+          <p className="text-sm text-gray-500">
+            Base fee, duration, daily quota and persons limits live here and
+            connect to services
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <div className="relative">
@@ -1107,7 +542,7 @@ const SevaPackages = ({ user }) => {
       <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
+            <thead className="bg-gray-50">
               <tr>
                 {[
                   "#",
@@ -1281,6 +716,578 @@ const SevaPackages = ({ user }) => {
         </div>
       </div>
 
+      {showForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white shadow-xl">
+            <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
+              <h3 className="text-base font-semibold text-gray-900">
+                {editing ? "Edit Package" : "Add Package"}
+              </h3>
+              <button
+                onClick={() => setShowForm(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4 px-5 py-4">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-gray-700">
+                    Service *
+                  </label>
+                  <select
+                    value={form.service_id}
+                    onChange={(e) => {
+                      const svcId = e.target.value;
+                      const svc = services.find((s) => s.service_id == svcId);
+
+                      // Service Type apne aap service ke type se sync ho jata hai
+                      setForm((p) => ({
+                        ...p,
+                        service_id: svcId,
+                        service_kind: svc?.service_kind || p.service_kind,
+                      }));
+                    }}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                  >
+                    <option value="">— select —</option>
+                    {visibleServices.length === 0 && (
+                      <option value="" disabled>
+                        No service of this type
+                      </option>
+                    )}
+                    {visibleServices.map((s) => (
+                      <option key={s.service_id} value={s.service_id}>
+                        {s.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-gray-700">
+                    Service Type *
+                  </label>
+                  <select
+                    value={form.service_kind}
+                    onChange={(e) => {
+                      const kind = e.target.value;
+                      const cur = services.find(
+                        (s) => s.service_id == form.service_id
+                      );
+
+                      // Type change kiya to service match na kare to clear
+                      setForm((p) => ({
+                        ...p,
+                        service_kind: kind,
+                        service_id:
+                          cur && cur.service_kind === kind
+                            ? p.service_id
+                            : kind
+                            ? ""
+                            : p.service_id,
+                      }));
+                    }}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                  >
+                    <option value="">— select —</option>
+                    {kinds.map((k) => (
+                      <option key={k.kind_id ?? k.code} value={k.code}>
+                        {k.name} ({k.code})
+                      </option>
+                    ))}
+                  </select>
+                  <p className="mt-1 text-[10px] text-gray-500">
+                    Service select karne par type apne aap set ho jata hai. Type
+                    select karne par sirf usi type ke services dikhenge.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-gray-700">
+                    Package Name *
+                  </label>
+                  <input
+                    value={form.name}
+                    onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
+                    placeholder="Basic (1 person)"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-gray-700">
+                    Base Fee (Rs) *
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={form.fee}
+                    onChange={(e) => setForm((p) => ({ ...p, fee: e.target.value }))}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                  />
+                </div>
+
+                {!isTithiBhojanPackage && (
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-gray-700">
+                      Pooja Duration
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={form.duration_minutes}
+                      onChange={(e) =>
+                        setForm((p) => ({ ...p, duration_minutes: e.target.value }))
+                      }
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                    />
+                  </div>
+                )}
+
+                {!isTithiBhojanPackage && (
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-gray-700">
+                      Daily Limit (persons / day for this seva)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={form.daily_quota}
+                      onChange={(e) =>
+                        setForm((p) => ({ ...p, daily_quota: e.target.value }))
+                      }
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                    />
+                    <p className="mt-1 text-[10px] text-gray-500">
+                      Tithi Bhojan के लिए दैनिक सीमा लागू नहीं होती।
+                    </p>
+                  </div>
+                )}
+
+                {!isTithiBhojanPackage && (
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-gray-700">
+                      Persons per Group
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={form.max_persons}
+                      onChange={(e) =>
+                        setForm((p) => ({
+                          ...p,
+                          max_persons: e.target.value,
+                        }))
+                      }
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                    />
+                    <p className="mt-1 text-[10px] text-gray-500">
+                      Group size - कितने persons एक booking में आ सकते हैं।
+                    </p>
+                  </div>
+                )}
+
+                <div>
+                    <label className="mb-1 block text-xs font-medium text-gray-700">
+                    Start Date {isTithiBhojanPackage && "*"}
+                  </label>
+                  <input
+                    type="date"
+                    required={isTithiBhojanPackage}
+                    value={form.effective_from}
+                    onChange={(e) =>
+                      setForm((p) => ({ ...p, effective_from: e.target.value }))
+                    }
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-gray-700">
+                    End Date {isTithiBhojanPackage && "*"}
+                  </label>
+                  <input
+                    type="date"
+                    required={isTithiBhojanPackage}
+                    min={form.effective_from || undefined}
+                    value={form.effective_to}
+                    onChange={(e) =>
+                      setForm((p) => ({ ...p, effective_to: e.target.value }))
+                    }
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                  />
+                  {isTithiBhojanPackage && <p className="mt-1 text-[10px] text-amber-700">Bookings close automatically after this end date. Add at least one meal slot below.</p>}
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-700">
+                  Description
+                </label>
+                <textarea
+                  rows={2}
+                  value={form.description}
+                  onChange={(e) =>
+                    setForm((p) => ({ ...p, description: e.target.value }))
+                  }
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-700">
+                  What's included
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    value={includeInput}
+                    onChange={(e) => setIncludeInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        addInclude();
+                      }
+                    }}
+                    placeholder="Type an item and press Enter"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={addInclude}
+                    className="shrink-0 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  >
+                    Add
+                  </button>
+                </div>
+                {form.includes.length > 0 && (
+                  <ul className="mt-2 space-y-1.5">
+                    {form.includes.map((item, i) => (
+                      <li
+                        key={i}
+                        className="flex items-center gap-2 rounded-lg bg-gray-50 px-2.5 py-1.5 text-xs text-gray-700"
+                      >
+                        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-red-500" />
+                        <span className="flex-1">{item}</span>
+                        <button
+                          type="button"
+                          onClick={() => removeInclude(item)}
+                          className="text-gray-400 hover:text-red-600"
+                          title="Remove"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              {/* Custom Fields - admin can add any field */}
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                <div className="mb-3 flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-600">
+                      <Plus className="h-4 w-4" />
+                    </span>
+                    <div>
+                      <p className="text-xs font-semibold text-amber-800">
+                        Custom Fields (Dynamic)
+                      </p>
+                      <p className="text-[10px] text-amber-600">
+                        Add service-specific fields (e.g. Pandit name, Prashad
+                        type, Yagna material, Gotra required...)
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={addCustomField}
+                    className="shrink-0 rounded-lg border border-amber-300 px-3 py-2 text-xs font-medium text-amber-700 hover:bg-amber-100 transition"
+                  >
+                    <Plus className="h-3 w-3" /> Add Field
+                  </button>
+                </div>
+
+                <div className="space-y-2">
+                  {form.custom_fields.map((field, idx) => (
+                    <div
+                      key={idx}
+                      className="grid grid-cols-1 sm:grid-cols-12 gap-2 rounded-lg bg-white p-2.5 border border-amber-200"
+                    >
+                      <div className="sm:col-span-5">
+                        <label className="mb-1 block text-[10px] font-medium text-amber-700">
+                          Field Name
+                        </label>
+                        <input
+                          value={field.field_name}
+                          onChange={(e) =>
+                            updateCustomField(idx, "field_name", e.target.value)
+                          }
+                          placeholder="e.g. Pandit Name"
+                          className="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                        />
+                      </div>
+                      <div className="sm:col-span-3">
+                        <label className="mb-1 block text-[10px] font-medium text-amber-700">
+                          Field Type
+                        </label>
+                        <select
+                          value={field.field_type}
+                          onChange={(e) =>
+                            updateCustomField(idx, "field_type", e.target.value)
+                          }
+                          className="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                        >
+                          <option value="text">Text</option>
+                          <option value="number">Number</option>
+                          <option value="date">Date</option>
+                          <option value="select">Select/Dropdown</option>
+                          <option value="checkbox">Checkbox</option>
+                          <option value="textarea">Text Area</option>
+                        </select>
+                      </div>
+                      <div className="sm:col-span-3">
+                        <label className="mb-1 block text-[10px] font-medium text-amber-700">
+                          Default Value
+                        </label>
+                        <input
+                          value={field.field_value}
+                          onChange={(e) =>
+                            updateCustomField(idx, "field_value", e.target.value)
+                          }
+                          placeholder="Default value"
+                          className="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                        />
+                      </div>
+                      <div className="flex items-end sm:col-span-1">
+                        <button
+                          type="button"
+                          onClick={() => removeCustomField(idx)}
+                          className="rounded border border-red-300 px-2 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                  {form.custom_fields.length === 0 && (
+                    <p className="mt-2 text-[10px] text-amber-500 italic">
+                      No custom fields yet. Click "Add Field" to create
+                      service-specific fields.
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* TIME SLOTS - dynamic (recurring) */}
+              <div className="rounded-xl border border-gray-200 bg-gray-50/60 p-3">
+                <div className="mb-3 flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-red-50 text-red-600">
+                      <Clock className="h-4 w-4" />
+                    </span>
+                    <div>
+                      <p className="text-xs font-semibold text-gray-800">
+                        Time Slots {isTithiBhojanPackage && <span className="text-red-600">*</span>}
+                      </p>
+                      <p className="text-[10px] text-gray-500">
+                        Har din repeat hote hain - koi bhi time manually type
+                        karein (7:30 AM, 19:45, 05:15...)
+                      </p>
+                    </div>
+                  </div>
+                  {form.slot_times.length > 0 && (
+                    <span className="shrink-0 rounded-full bg-white px-2.5 py-1 text-[10px] font-medium text-gray-600 ring-1 ring-gray-200">
+                      {form.slot_times.length} slot
+                      {form.slot_times.length > 1 ? "s" : ""} added
+                    </span>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-12">
+                  <div className="sm:col-span-3">
+                    <label className="mb-1 block text-[10px] font-medium text-gray-500">
+                      Start time <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={slotDraft.start}
+                      onChange={(e) =>
+                        setSlotDraft((s) => ({ ...s, start: e.target.value }))
+                      }
+                      onBlur={() => {
+                        const parsed = parseTimeInput(slotDraft.start);
+                        if (parsed && parsed !== slotDraft.start) {
+                          setSlotDraft((s) => ({
+                            ...s,
+                            start: to12Hour(parsed),
+                          }));
+                        }
+                      }}
+                      placeholder="07:30 AM"
+                      className={`w-full rounded-lg border bg-white px-2.5 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-red-500 ${
+                        slotDraft.start && !parseTimeInput(slotDraft.start)
+                          ? "border-red-400"
+                          : slotError && !slotDraft.start
+                          ? "border-red-400 bg-red-50"
+                          : "border-gray-300"
+                      }`}
+                    />
+                    {slotDraft.start && parseTimeInput(slotDraft.start) && (
+                      <p className="mt-1 text-[10px] text-emerald-600">
+                        {to12Hour(parseTimeInput(slotDraft.start))}
+                      </p>
+                    )}
+                    {slotDraft.start && !parseTimeInput(slotDraft.start) && (
+                      <p className="mt-1 text-[10px] text-red-500">
+                        Invalid time
+                      </p>
+                    )}
+                  </div>
+                  <div className="sm:col-span-3">
+                    <label className="mb-1 block text-[10px] font-medium text-gray-500">
+                      End time
+                    </label>
+                    <input
+                      type="text"
+                      value={slotDraft.end}
+                      onChange={(e) =>
+                        setSlotDraft((s) => ({ ...s, end: e.target.value }))
+                      }
+                      onBlur={() => {
+                        const parsed = parseTimeInput(slotDraft.end);
+                        if (parsed && parsed !== slotDraft.end) {
+                          setSlotDraft((s) => ({ ...s, end: to12Hour(parsed) }));
+                        }
+                      }}
+                      placeholder={`Auto (${slotDraft.start ? autoEndLabel : "based on duration"})`}
+                      className={`w-full rounded-lg border bg-white px-2.5 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-red-500 ${
+                        slotDraft.end && !parseTimeInput(slotDraft.end)
+                          ? "border-red-400"
+                          : "border-gray-300"
+                      }`}
+                    />
+                    <p className="mt-1 text-[10px] text-gray-500">
+                      {slotDraft.end
+                        ? parseTimeInput(slotDraft.end)
+                          ? to12Hour(parseTimeInput(slotDraft.end))
+                          : "Invalid time"
+                        : "Leave blank for auto"}
+                    </p>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="mb-1 block text-[10px] font-medium text-gray-500">
+                      Label
+                    </label>
+                    <input
+                      type="text"
+                      value={slotDraft.label}
+                      onChange={(e) =>
+                        setSlotDraft((s) => ({ ...s, label: e.target.value }))
+                      }
+                      placeholder="Lunch"
+                      className="w-full rounded-lg border border-gray-300 bg-white px-2.5 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-red-500"
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="mb-1 block text-[10px] font-medium text-gray-500">
+                      Limit (persons)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={slotDraft.capacity}
+                      onChange={(e) =>
+                        setSlotDraft((s) => ({ ...s, capacity: e.target.value }))
+                      }
+                      placeholder="0 = unlimited"
+                      className="w-full rounded-lg border border-gray-300 bg-white px-2.5 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-red-500"
+                    />
+                  </div>
+                  <div className="flex items-end sm:col-span-2">
+                    <button
+                      type="button"
+                      onClick={addSlot}
+                      className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-gray-800 px-3 py-2 text-sm font-medium text-white hover:bg-gray-900"
+                    >
+                      <Plus className="h-4 w-4" /> Add Slot
+                    </button>
+                  </div>
+                </div>
+
+                {form.slot_times.length > 0 && (
+                  <div className="mt-3 space-y-1.5 border-t border-gray-200 pt-3">
+                    {form.slot_times.map((t, i) => (
+                      <div
+                        key={i}
+                        className="flex items-center gap-2.5 rounded-lg bg-white px-3 py-2 text-xs text-gray-700 ring-1 ring-gray-200"
+                      >
+                        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+                          <Check className="h-3 w-3" />
+                        </span>
+                        <span className="font-semibold text-gray-900">
+                          {to12Hour(t.start)}
+                          {t.end ? ` – ${to12Hour(t.end)}` : ""}
+                        </span>
+                        {t.label && (
+                          <span className="truncate rounded bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-600">
+                            {t.label}
+                          </span>
+                        )}
+                        {t.capacity > 0 && (
+                          <span className="shrink-0 rounded bg-emerald-50 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700">
+                            {t.capacity} limit
+                          </span>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => removeSlot(i)}
+                          className="ml-auto shrink-0 rounded p-0.5 text-gray-400 hover:bg-red-50 hover:text-red-600"
+                          title="Remove slot"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <label className="flex items-center gap-2 text-sm text-gray-700">
+                <input
+                  type="checkbox"
+                  checked={form.is_active}
+                  onChange={(e) =>
+                    setForm((p) => ({ ...p, is_active: e.target.checked }))
+                  }
+                  className="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
+                />
+                Active
+              </label>
+            </div>
+
+            <div className="flex gap-3 border-t border-gray-200 px-5 py-4">
+              <button
+                onClick={() => setShowForm(false)}
+                className="flex-1 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="flex-1 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-60"
+              >
+                {saving ? "Saving..." : editing ? "Update" : "Create"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

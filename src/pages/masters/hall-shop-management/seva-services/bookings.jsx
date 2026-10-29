@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo } from "react";
-import BackButton from "../../../../components/backbutton";
 import { toast } from "react-hot-toast";
 import axios from "axios";
 import qrcode from "../../../../utils/qrcode-generator.mjs";
@@ -364,16 +363,13 @@ const SevaBookings = ({ user }) => {
   }
 
   return (
-    <div className="p-6 space-y-5 bg-[#f8f9fa] min-h-screen">
+    <div className="p-6 space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center">
-          <BackButton fallback="/dashboard" className="mr-4" />
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">{modeFilter === "ANNASHETRA_DONATION" ? "Annakshetra Donations" : modeFilter === "TITHI_BHOJAN" ? "Tithi Bhojan Bookings" : "Seva Bookings"}</h1>
-            <p className="text-sm text-gray-500">
-              All pooja / seva bookings by devotees with approval and scheduling
-            </p>
-          </div>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">{modeFilter === "ANNASHETRA_DONATION" ? "Annakshetra Donations" : modeFilter === "TITHI_BHOJAN" ? "Tithi Bhojan Bookings" : "Seva Bookings"}</h1>
+          <p className="text-sm text-gray-500">
+            All pooja / seva bookings by devotees with approval and scheduling
+          </p>
         </div>
         <select value={modeFilter} onChange={(e) => setModeFilter(e.target.value)} className="rounded-lg border px-3 py-2 text-sm">
           <option value="">All Seva Bookings</option><option value="ANNASHETRA_DONATION">Annakshetra Donations</option><option value="TITHI_BHOJAN">Tithi Bhojan</option>

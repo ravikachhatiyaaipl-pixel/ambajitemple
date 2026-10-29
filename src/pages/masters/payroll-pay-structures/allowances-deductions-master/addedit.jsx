@@ -18,14 +18,23 @@ import {
   ArrowLeft,
   Briefcase,
   AlertCircle,
-  DollarSign,
   Hash,
   Percent,
   Type,
+  Plus,
+  Trash2,
+  IndianRupee,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import Swal from "sweetalert2";
 import PayAlwdedApi from "../../../services/payalwdedapi";
+
+const emptySlab = () => ({
+  From_Amt: "",
+  To_Amt: "",
+  Slab_Type: "P",
+  Slab_Value: "",
+});
 
 const AddEditPayAlwded = ({ user }) => {
   const { id } = useParams();
@@ -38,11 +47,14 @@ const AddEditPayAlwded = ({ user }) => {
     PAD_Code: "",
     PAD_ShortName: "",
     PAD_Name: "",
+    Calc_Type: "P",
     Percentage: "",
-    Alw_Ded: "A", // Default to Allowance
+    Flat_Amount: "",
+    Based_On: "BASIC",
+    Alw_Ded: "A",
     Lg_Id: user?.Lg_Id || "1",
   });
-
+  const [slabs, setSlabs] = useState([emptySlab()]);
   const [errors, setErrors] = useState({});
 
   useEffect(() => {
@@ -62,10 +74,25 @@ const AddEditPayAlwded = ({ user }) => {
           PAD_Code: data.PAD_Code || "",
           PAD_ShortName: data.PAD_ShortName || "",
           PAD_Name: data.PAD_Name || "",
-          Percentage: data.Percentage || "",
+          Calc_Type: data.Calc_Type || "P",
+          Percentage: data.Percentage ?? "",
+          Flat_Amount: data.Flat_Amount ?? "",
+          Based_On: data.Based_On || "BASIC",
           Alw_Ded: data.Alw_Ded || "A",
           Lg_Id: data.Lg_Id || "1",
         });
+        if (Array.isArray(data.slabs) && data.slabs.length > 0) {
+          setSlabs(
+            data.slabs.map((s) => ({
+              From_Amt: s.From_Amt ?? "",
+              To_Amt: s.To_Amt ?? "",
+              Slab_Type: s.Slab_Type || "P",
+              Slab_Value: s.Slab_Value ?? "",
+            })),
+          );
+        } else {
+          setSlabs([emptySlab()]);
+        }
       } else {
         toast.error("Failed to load allowance/deduction data!");
         navigate(
@@ -82,50 +109,74 @@ const AddEditPayAlwded = ({ user }) => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-
+    setFormData((prev) => ({ ...prev, [name]: value }));
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: null }));
     }
   };
 
+  const handleSlabChange = (index, field, value) => {
+    setSlabs((prev) =>
+      prev.map((row, i) => (i === index ? { ...row, [field]: value } : row)),
+    );
+  };
+
+  const addSlab = () => setSlabs((prev) => [...prev, emptySlab()]);
+  const removeSlab = (index) =>
+    setSlabs((prev) =>
+      prev.length === 1 ? prev : prev.filter((_, i) => i !== index),
+    );
+
   const validateForm = () => {
     const newErrors = {};
 
-    if (!formData.PAD_Code.trim()) {
-      newErrors.PAD_Code = "Code is required";
-    } else if (formData.PAD_Code.length > 20) {
+    if (!formData.PAD_Code.trim()) newErrors.PAD_Code = "Code is required";
+    else if (formData.PAD_Code.length > 20)
       newErrors.PAD_Code = `Maximum 20 characters allowed (${formData.PAD_Code.length}/20)`;
-    }
 
-    if (!formData.PAD_ShortName.trim()) {
+    if (!formData.PAD_ShortName.trim())
       newErrors.PAD_ShortName = "Short name is required";
-    } else if (formData.PAD_ShortName.length > 10) {
+    else if (formData.PAD_ShortName.length > 10)
       newErrors.PAD_ShortName = `Maximum 10 characters allowed (${formData.PAD_ShortName.length}/10)`;
-    }
 
-    if (!formData.PAD_Name.trim()) {
-      newErrors.PAD_Name = "Name is required";
-    } else if (formData.PAD_Name.length > 100) {
+    if (!formData.PAD_Name.trim()) newErrors.PAD_Name = "Name is required";
+    else if (formData.PAD_Name.length > 100)
       newErrors.PAD_Name = `Maximum 100 characters allowed (${formData.PAD_Name.length}/100)`;
+
+    if (!formData.Alw_Ded) newErrors.Alw_Ded = "Type is required";
+    if (!formData.Calc_Type)
+      newErrors.Calc_Type = "Calculation type is required";
+
+    if (formData.Calc_Type === "P") {
+      if (formData.Percentage === "" || formData.Percentage === null)
+        newErrors.Percentage = "Percentage is required";
+      else if (isNaN(parseFloat(formData.Percentage)))
+        newErrors.Percentage = "Percentage must be a valid number";
+      else if (parseFloat(formData.Percentage) < 0)
+        newErrors.Percentage = "Percentage cannot be negative";
+      else if (parseFloat(formData.Percentage) > 100)
+        newErrors.Percentage = "Percentage cannot exceed 100";
     }
 
-    if (!formData.Percentage) {
-      newErrors.Percentage = "Percentage is required";
-    } else if (isNaN(parseFloat(formData.Percentage))) {
-      newErrors.Percentage = "Percentage must be a valid number";
-    } else if (parseFloat(formData.Percentage) < 0) {
-      newErrors.Percentage = "Percentage cannot be negative";
-    } else if (parseFloat(formData.Percentage) > 100) {
-      newErrors.Percentage = "Percentage cannot exceed 100";
+    if (formData.Calc_Type === "F") {
+      if (formData.Flat_Amount === "" || formData.Flat_Amount === null)
+        newErrors.Flat_Amount = "Flat amount is required";
+      else if (isNaN(parseFloat(formData.Flat_Amount)))
+        newErrors.Flat_Amount = "Flat amount must be a valid number";
+      else if (parseFloat(formData.Flat_Amount) < 0)
+        newErrors.Flat_Amount = "Flat amount cannot be negative";
     }
 
-    if (!formData.Alw_Ded) {
-      newErrors.Alw_Ded = "Type is required";
+    if (formData.Calc_Type === "S") {
+      if (!slabs.length) newErrors.slabs = "At least one slab is required";
+      slabs.forEach((s, i) => {
+        if (s.From_Amt === "" || isNaN(parseFloat(s.From_Amt)))
+          newErrors[`slab_${i}_From_Amt`] = "From amount required";
+        if (s.Slab_Value === "" || isNaN(parseFloat(s.Slab_Value)))
+          newErrors[`slab_${i}_Slab_Value`] = "Value required";
+        if (s.Slab_Type === "P" && parseFloat(s.Slab_Value) > 100)
+          newErrors[`slab_${i}_Slab_Value`] = "Percentage cannot exceed 100";
+      });
     }
 
     setErrors(newErrors);
@@ -134,10 +185,7 @@ const AddEditPayAlwded = ({ user }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    if (!validateForm()) {
-      return;
-    }
+    if (!validateForm()) return;
 
     const result = await Swal.fire({
       title: isEditMode
@@ -162,9 +210,27 @@ const AddEditPayAlwded = ({ user }) => {
         PAD_Code: formData.PAD_Code,
         PAD_ShortName: formData.PAD_ShortName,
         PAD_Name: formData.PAD_Name,
-        Percentage: parseFloat(formData.Percentage),
+        Calc_Type: formData.Calc_Type,
+        Based_On: "BASIC",
+        Percentage:
+          formData.Calc_Type === "P" ? parseFloat(formData.Percentage) : 0,
+        Flat_Amount:
+          formData.Calc_Type === "F" ? parseFloat(formData.Flat_Amount) : 0,
         Alw_Ded: formData.Alw_Ded,
-        Lg_Id: parseInt(formData.Lg_Id),
+        Lg_Id: parseInt(formData.Lg_Id) || null,
+        slabs:
+          formData.Calc_Type === "S"
+            ? slabs.map((s, i) => ({
+                From_Amt: parseFloat(s.From_Amt) || 0,
+                To_Amt:
+                  s.To_Amt === "" || s.To_Amt === null
+                    ? null
+                    : parseFloat(s.To_Amt),
+                Slab_Type: s.Slab_Type,
+                Slab_Value: parseFloat(s.Slab_Value) || 0,
+                Sort_Order: i,
+              }))
+            : [],
       };
 
       if (isEditMode) {
@@ -179,15 +245,11 @@ const AddEditPayAlwded = ({ user }) => {
         navigate(
           "/masters/payroll-pay-structures/allowances-deductions-master",
         );
-      }, 1500);
+      }, 1000);
     } catch (error) {
-      console.error("Error saving:", error);
-
       if (error.response?.data?.errors) {
         const apiErrors = error.response.data.errors;
-        const errorMessages = Object.values(apiErrors).flat().join(", ");
-        toast.error(errorMessages);
-
+        toast.error(Object.values(apiErrors).flat().join(", "));
         const fieldErrors = {};
         Object.keys(apiErrors).forEach((key) => {
           fieldErrors[key] = apiErrors[key][0];
@@ -205,10 +267,6 @@ const AddEditPayAlwded = ({ user }) => {
     } finally {
       setSaving(false);
     }
-  };
-
-  const handleCancel = () => {
-    navigate("/masters/payroll-pay-structures/allowances-deductions-master");
   };
 
   if (loading) {
@@ -241,9 +299,7 @@ const AddEditPayAlwded = ({ user }) => {
                 : "Add New Allowance/Deduction"}
             </h1>
             <p className="text-gray-600 mt-1">
-              {isEditMode
-                ? "Update allowance/deduction information"
-                : "Create a new allowance or deduction for the system"}
+              Calculation is always based on Basic pay
             </p>
           </div>
         </div>
@@ -261,35 +317,21 @@ const AddEditPayAlwded = ({ user }) => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Code */}
             <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="block text-sm font-medium text-gray-700">
-                  Code <span className="text-red-500">*</span>
-                </label>
-                <span
-                  className={`text-xs ${
-                    formData.PAD_Code.length > 15
-                      ? formData.PAD_Code.length >= 20
-                        ? "text-red-600 font-bold"
-                        : "text-amber-600"
-                      : "text-gray-500"
-                  }`}
-                >
-                  {formData.PAD_Code.length}/20 characters
-                </span>
-              </div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Code <span className="text-red-500">*</span>
+              </label>
               <div className="relative">
-                <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Hash className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <input
                   type="text"
                   name="PAD_Code"
                   value={formData.PAD_Code}
                   onChange={handleInputChange}
-                  className={`w-full pl-10 pr-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                  className={`w-full pl-10 pr-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
                     errors.PAD_Code ? "border-red-300" : "border-gray-300"
                   }`}
-                  placeholder="e.g., HRA, DA, PF"
+                  placeholder="e.g., WA, SPL"
                   maxLength={20}
                 />
               </div>
@@ -301,35 +343,21 @@ const AddEditPayAlwded = ({ user }) => {
               )}
             </div>
 
-            {/* Short Name */}
             <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="block text-sm font-medium text-gray-700">
-                  Short Name <span className="text-red-500">*</span>
-                </label>
-                <span
-                  className={`text-xs ${
-                    formData.PAD_ShortName.length > 8
-                      ? formData.PAD_ShortName.length >= 10
-                        ? "text-red-600 font-bold"
-                        : "text-amber-600"
-                      : "text-gray-500"
-                  }`}
-                >
-                  {formData.PAD_ShortName.length}/10 characters
-                </span>
-              </div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Short Name <span className="text-red-500">*</span>
+              </label>
               <div className="relative">
-                <Type className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Type className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <input
                   type="text"
                   name="PAD_ShortName"
                   value={formData.PAD_ShortName}
                   onChange={handleInputChange}
-                  className={`w-full pl-10 pr-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                  className={`w-full pl-10 pr-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
                     errors.PAD_ShortName ? "border-red-300" : "border-gray-300"
                   }`}
-                  placeholder="e.g., HRA"
+                  placeholder="e.g., WA"
                   maxLength={10}
                 />
               </div>
@@ -341,33 +369,19 @@ const AddEditPayAlwded = ({ user }) => {
               )}
             </div>
 
-            {/* Full Name */}
             <div className="md:col-span-2">
-              <div className="flex items-center justify-between mb-1">
-                <label className="block text-sm font-medium text-gray-700">
-                  Full Name <span className="text-red-500">*</span>
-                </label>
-                <span
-                  className={`text-xs ${
-                    formData.PAD_Name.length > 80
-                      ? formData.PAD_Name.length >= 100
-                        ? "text-red-600 font-bold"
-                        : "text-amber-600"
-                      : "text-gray-500"
-                  }`}
-                >
-                  {formData.PAD_Name.length}/100 characters
-                </span>
-              </div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Full Name <span className="text-red-500">*</span>
+              </label>
               <input
                 type="text"
                 name="PAD_Name"
                 value={formData.PAD_Name}
                 onChange={handleInputChange}
-                className={`w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                className={`w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
                   errors.PAD_Name ? "border-red-300" : "border-gray-300"
                 }`}
-                placeholder="e.g., House Rent Allowance"
+                placeholder="e.g., Washing Allowance"
                 maxLength={100}
               />
               {errors.PAD_Name && (
@@ -378,36 +392,6 @@ const AddEditPayAlwded = ({ user }) => {
               )}
             </div>
 
-            {/* Percentage */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Percentage (%) <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
-                <Percent className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <input
-                  type="number"
-                  name="Percentage"
-                  value={formData.Percentage}
-                  onChange={handleInputChange}
-                  step="0.01"
-                  min="0"
-                  max="100"
-                  className={`w-full pl-10 pr-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                    errors.Percentage ? "border-red-300" : "border-gray-300"
-                  }`}
-                  placeholder="e.g., 10.50"
-                />
-              </div>
-              {errors.Percentage && (
-                <p className="mt-1 text-sm text-red-600 flex items-center">
-                  <AlertCircle className="h-3 w-3 mr-1" />
-                  {errors.Percentage}
-                </p>
-              )}
-            </div>
-
-            {/* Type */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Type <span className="text-red-500">*</span>
@@ -416,34 +400,224 @@ const AddEditPayAlwded = ({ user }) => {
                 name="Alw_Ded"
                 value={formData.Alw_Ded}
                 onChange={handleInputChange}
-                className={`w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                className={`w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
                   errors.Alw_Ded ? "border-red-300" : "border-gray-300"
                 }`}
               >
                 <option value="A">Allowance</option>
                 <option value="D">Deduction</option>
               </select>
-              {errors.Alw_Ded && (
-                <p className="mt-1 text-sm text-red-600 flex items-center">
-                  <AlertCircle className="h-3 w-3 mr-1" />
-                  {errors.Alw_Ded}
-                </p>
-              )}
             </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Calculation Type <span className="text-red-500">*</span>
+              </label>
+              <select
+                name="Calc_Type"
+                value={formData.Calc_Type}
+                onChange={handleInputChange}
+                className={`w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                  errors.Calc_Type ? "border-red-300" : "border-gray-300"
+                }`}
+              >
+                <option value="P">Percentage (of Basic)</option>
+                <option value="F">Flat Amount</option>
+                <option value="S">Slab Wise</option>
+              </select>
+            </div>
+
+            {formData.Calc_Type === "P" && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Percentage (%) <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <Percent className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <input
+                    type="number"
+                    name="Percentage"
+                    value={formData.Percentage}
+                    onChange={handleInputChange}
+                    step="0.01"
+                    min="0"
+                    max="100"
+                    className={`w-full pl-10 pr-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                      errors.Percentage ? "border-red-300" : "border-gray-300"
+                    }`}
+                    placeholder="e.g., 10.50"
+                  />
+                </div>
+                {errors.Percentage && (
+                  <p className="mt-1 text-sm text-red-600 flex items-center">
+                    <AlertCircle className="h-3 w-3 mr-1" />
+                    {errors.Percentage}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {formData.Calc_Type === "F" && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Flat Amount (₹) <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <input
+                    type="number"
+                    name="Flat_Amount"
+                    value={formData.Flat_Amount}
+                    onChange={handleInputChange}
+                    step="0.01"
+                    min="0"
+                    className={`w-full pl-10 pr-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                      errors.Flat_Amount ? "border-red-300" : "border-gray-300"
+                    }`}
+                    placeholder="e.g., 500"
+                  />
+                </div>
+                {errors.Flat_Amount && (
+                  <p className="mt-1 text-sm text-red-600 flex items-center">
+                    <AlertCircle className="h-3 w-3 mr-1" />
+                    {errors.Flat_Amount}
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between pt-6 border-t">
-          <div className="mb-4 sm:mb-0">
-            <p className="text-sm text-gray-600">
-              <span className="text-red-500">*</span> Required fields
-            </p>
+        {formData.Calc_Type === "S" && (
+          <div className="bg-white rounded-xl shadow-sm border p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">
+                  Slab Configuration
+                </h2>
+                <p className="text-sm text-gray-500">
+                  Match employee Basic to a slab. Each slab can be % or flat.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={addSlab}
+                className="inline-flex items-center px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                Add Slab
+              </button>
+            </div>
+            {errors.slabs && (
+              <p className="mb-3 text-sm text-red-600">{errors.slabs}</p>
+            )}
+            <div className="space-y-3">
+              {slabs.map((slab, index) => (
+                <div
+                  key={index}
+                  className="grid grid-cols-1 md:grid-cols-5 gap-3 p-3 border border-gray-200 rounded-lg bg-gray-50"
+                >
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      From Basic
+                    </label>
+                    <input
+                      type="number"
+                      value={slab.From_Amt}
+                      onChange={(e) =>
+                        handleSlabChange(index, "From_Amt", e.target.value)
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                      min="0"
+                      step="0.01"
+                    />
+                    {errors[`slab_${index}_From_Amt`] && (
+                      <p className="text-xs text-red-600 mt-1">
+                        {errors[`slab_${index}_From_Amt`]}
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      To Basic
+                    </label>
+                    <input
+                      type="number"
+                      value={slab.To_Amt}
+                      onChange={(e) =>
+                        handleSlabChange(index, "To_Amt", e.target.value)
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                      min="0"
+                      step="0.01"
+                      placeholder="No limit"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      Slab Type
+                    </label>
+                    <select
+                      value={slab.Slab_Type}
+                      onChange={(e) =>
+                        handleSlabChange(index, "Slab_Type", e.target.value)
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    >
+                      <option value="P">Percentage</option>
+                      <option value="F">Flat</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      {slab.Slab_Type === "P" ? "Value (%)" : "Value (₹)"}
+                    </label>
+                    <input
+                      type="number"
+                      value={slab.Slab_Value}
+                      onChange={(e) =>
+                        handleSlabChange(index, "Slab_Value", e.target.value)
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                      min="0"
+                      step="0.01"
+                    />
+                    {errors[`slab_${index}_Slab_Value`] && (
+                      <p className="text-xs text-red-600 mt-1">
+                        {errors[`slab_${index}_Slab_Value`]}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex items-end">
+                    <button
+                      type="button"
+                      onClick={() => removeSlab(index)}
+                      className="w-full px-3 py-2 border border-red-200 text-red-600 rounded-lg hover:bg-red-50 flex items-center justify-center"
+                      disabled={slabs.length === 1}
+                    >
+                      <Trash2 className="h-4 w-4 mr-1" />
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
+        )}
+
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between pt-6 border-t">
+          <p className="text-sm text-gray-600 mb-4 sm:mb-0">
+            <span className="text-red-500">*</span> Required fields
+          </p>
           <div className="flex items-center space-x-3">
             <button
               type="button"
-              onClick={handleCancel}
-              className="px-6 py-2.5 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 flex items-center transition-colors"
+              onClick={() =>
+                navigate(
+                  "/masters/payroll-pay-structures/allowances-deductions-master",
+                )
+              }
+              className="px-6 py-2.5 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 flex items-center"
             >
               <X className="h-4 w-4 mr-2" />
               Cancel
@@ -451,7 +625,7 @@ const AddEditPayAlwded = ({ user }) => {
             <button
               type="submit"
               disabled={saving}
-              className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 flex items-center transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+              className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 flex items-center disabled:opacity-50"
             >
               {saving ? (
                 <>
@@ -461,7 +635,7 @@ const AddEditPayAlwded = ({ user }) => {
               ) : (
                 <>
                   <Save className="h-4 w-4 mr-2" />
-                  {isEditMode ? "Update Allowancw/Deduction" : "Create Allowancw/Deduction"}
+                  {isEditMode ? "Update" : "Create"}
                 </>
               )}
             </button>

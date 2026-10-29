@@ -15,7 +15,7 @@ import { Link } from "react-router-dom";
 import PrintLayout from "../../../components/printlayout";
 import { useOrganization } from "../../../hooks/useorganization";
 
-const DED_COLS = [
+const BASE_DED_COLS = [
   {
     key: "HRR_PTAREC",
     label: "HBR\nPTAREC",
@@ -109,7 +109,7 @@ const DED_COLS = [
   },
 ];
 
-const NUM_KEYS = [
+const BASE_NUM_KEYS = [
   "HRR",
   "PTAX",
   "PLI",
@@ -135,6 +135,41 @@ const NUM_KEYS = [
   "LIC",
   "HBA_INT",
 ];
+
+const DEDUCT_NET_COL = BASE_DED_COLS.find((c) => c.key === "DEDUCT_NET");
+
+/**
+ * Show ONLY mapped alw/ded heads (from master + emp mapping).
+ * Built-in GPF/NPS/PTAX/... columns are hidden.
+ * DEDUCT/NET total column is kept at the end.
+ */
+const mergeDedCols = (dynamicColumns = [], rows = []) => {
+  const extras = (dynamicColumns || [])
+    .map((c) => {
+      const title = c.short_name || c.name || c.code || c.key;
+      return {
+        key: c.key,
+        label: title,
+        code: "",
+        firstLineKey: c.key,
+        secondLineKey: `${c.key}_blank`,
+        isDynamic: true,
+      };
+    })
+    .filter((col) => {
+      if (!rows?.length) return true;
+      return rows.some((r) => Number(r[col.firstLineKey] || 0) >= 1);
+    });
+
+  return DEDUCT_NET_COL ? [...extras, DEDUCT_NET_COL] : extras;
+};
+
+const cellVal = (row, key) => {
+  if (!key || String(key).endsWith("_blank")) return "";
+  const v = row?.[key];
+  if (v === undefined || v === null || Number(v) === 0) return "0";
+  return Number(v).toLocaleString("en-IN");
+};
 const fmt = (v) =>
   !v || Number(v) == 0 ? "0" : Number(v).toLocaleString("en-IN");
 const PAGE_SIZE = 10;
@@ -325,8 +360,22 @@ const SalaryDeduction = () => {
   const [totalApiPages, setTotalApiPages] = useState(1);
   const [apiTotals, setApiTotals] = useState({});
   const [grandTotals, setGrandTotals] = useState({});
+  const [dynamicColumns, setDynamicColumns] = useState([]);
+  const [visibleSourceRows, setVisibleSourceRows] = useState([]);
   const [showPrint, setShowPrint] = useState(false);
   const [printOrientation, setPrintOrientation] = useState("landscape");
+
+  const DED_COLS = React.useMemo(
+    () => mergeDedCols(dynamicColumns, visibleSourceRows),
+    [dynamicColumns, visibleSourceRows],
+  );
+  const NUM_KEYS = React.useMemo(
+    () => [
+      ...BASE_NUM_KEYS,
+      ...dynamicColumns.map((c) => c.key),
+    ],
+    [dynamicColumns],
+  );
 
   useEffect(() => {
     axios
@@ -372,34 +421,43 @@ const SalaryDeduction = () => {
 
   const allFilteredRef = React.useRef([]);
 
-  const normalizeRow = (r, srno) => ({
-    ...r,
-    srno,
-    HRR: Number(r.HRR) || 0,
-    LIC: Number(r.LIC) || 0,
-    PTAX: Number(r.PTAX) || 0,
-    PLI: Number(r.PLI) || 0,
-    JEEPENT: Number(r.JEEPENT) || 0,
-    IAS_INU: Number(r.IAS_INU) || 0,
-    IAS_SAVE: Number(r.IAS_SAVE) || 0,
-    GPF: Number(r.GPF) || 0,
-    GPF_DA: Number(r.GPF_DA) || 0,
-    NPS_CPF: Number(r.NPS_CPF) || 0,
-    MCA_ADV: Number(r.MCA_ADV) || 0,
-    HBA_ADV: Number(r.HBA_ADV) || 0,
-    MEDI_ADV: Number(r.MEDI_ADV) || 0,
-    MEDI_INT: Number(r.MEDI_INT) || 0,
-    Lic: Number(r.Lic) || 0,
-    Misrec: Number(r.Misrec) || 0,
-    Syndib: Number(r.Syndib) || 0,
-    Karmachari: Number(r.Karmachari) || 0,
-    DEDUCT: Number(r.DEDUCT) || 0,
-    NET: Number(r.NET) || 0,
-    PTAREC: 0,
-    GISF: 0,
-    GISV: 0,
-    HBA_INT: 0,
-  });
+  const normalizeRow = (r, srno) => {
+    const row = {
+      ...r,
+      srno,
+      HRR: Number(r.HRR) || 0,
+      LIC: Number(r.LIC) || 0,
+      PTAX: Number(r.PTAX) || 0,
+      PLI: Number(r.PLI) || 0,
+      JEEPENT: Number(r.JEEPENT) || 0,
+      IAS_INU: Number(r.IAS_INU) || 0,
+      IAS_SAVE: Number(r.IAS_SAVE) || 0,
+      GPF: Number(r.GPF) || 0,
+      GPF_DA: Number(r.GPF_DA) || 0,
+      NPS_CPF: Number(r.NPS_CPF) || 0,
+      MCA_ADV: Number(r.MCA_ADV) || 0,
+      HBA_ADV: Number(r.HBA_ADV) || 0,
+      MEDI_ADV: Number(r.MEDI_ADV) || 0,
+      MEDI_INT: Number(r.MEDI_INT) || 0,
+      Lic: Number(r.Lic) || 0,
+      Misrec: Number(r.Misrec) || 0,
+      Syndib: Number(r.Syndib) || 0,
+      Karmachari: Number(r.Karmachari) || 0,
+      DEDUCT: Number(r.DEDUCT) || 0,
+      NET: Number(r.NET) || 0,
+      PTAREC: Number(r.PTAREC) || 0,
+      GISF: Number(r.GISF) || 0,
+      GISV: Number(r.GISV) || 0,
+      HBA_INT: Number(r.HBA_INT) || 0,
+    };
+    // Keep mapped alw/ded amounts (PAD_{id})
+    Object.keys(r || {}).forEach((k) => {
+      if (k.startsWith("PAD_")) {
+        row[k] = Number(r[k]) || 0;
+      }
+    });
+    return row;
+  };
 
   const fetchReport = async (page = 1) => {
     setLoading(true);
@@ -420,6 +478,7 @@ const SalaryDeduction = () => {
         }
       );
       if (res.data?.success) {
+        setDynamicColumns(res.data.dynamic_columns || []);
         let allFiltered = res.data.data || [];
         if (selDept)
           allFiltered = allFiltered.filter((r) => r.Dpt_Name == selDept);
@@ -429,6 +488,7 @@ const SalaryDeduction = () => {
           );
 
         allFilteredRef.current = allFiltered;
+        setVisibleSourceRows(allFiltered);
 
         setTotalRecords(allFiltered.length);
         const totalPages = Math.ceil(allFiltered.length / PAGE_SIZE) || 1;
@@ -727,8 +787,6 @@ const SalaryDeduction = () => {
                 <th style={{ ...thS, textAlign: "center" }}>
                   SRNo
                   <br />
-                  SLONO
-                  <br />
                   PSRNO
                 </th>
                 <th style={{ ...thS, textAlign: "left", minWidth: "110px" }}>
@@ -747,7 +805,7 @@ const SalaryDeduction = () => {
             <tbody>
               {printData.map((row, i) => (
                 <React.Fragment key={i}>
-                  <tr style={{ backgroundColor: "#e8edf2" }}>
+                  <tr style={{ backgroundColor: "#ffffff" }}>
                     <td
                       style={{
                         ...tdS,
@@ -757,24 +815,14 @@ const SalaryDeduction = () => {
                       }}
                     >
                       {row.srno}
-                    </td>
-                    <td
-                      colSpan={DED_COLS.length + 1}
-                      style={{ ...tdS, fontWeight: "bold", color: "#1e3a5f" }}
-                    >
-                      {row.Dpt_Name}
-                    </td>
-                  </tr>
-                  <tr style={{ backgroundColor: "#ffffff" }}>
-                    <td
-                      style={{ ...tdS, textAlign: "center", color: "#374151" }}
-                    >
-                      1
+                      <div style={{ fontSize: "6px", color: "#6b7280", fontWeight: "normal" }}>
+                        {row.Emp_Code}
+                      </div>
                     </td>
                     <td style={tdS}>
                       <div style={{ color: "#111827" }}>{row.First_Name}</div>
                       <div style={{ fontSize: "6px", color: "#6b7280" }}>
-                        {row.Last_Name} &nbsp;|&nbsp; {fmt(row.Actual_Basic_Pay)}
+                        {fmt(row.Actual_Basic_Pay)}
                       </div>
                     </td>
                     {DED_COLS.map((c) => (
@@ -782,25 +830,14 @@ const SalaryDeduction = () => {
                         key={c.key}
                         style={{ ...tdS, textAlign: "right", color: "#1e3a5f" }}
                       >
-                        {fmt(row[c.firstLineKey] || 0)}
-                      </td>
-                    ))}
-                  </tr>
-                  <tr style={{ backgroundColor: "#ffffff" }}>
-                    <td
-                      style={{ ...tdS, textAlign: "center", color: "#374151" }}
-                    >
-                      {row.Emp_Code}
-                    </td>
-                    <td style={{ ...tdS, color: "#6b7280" }}>
-                      {row.Last_Name}
-                    </td>
-                    {DED_COLS.map((c) => (
-                      <td
-                        key={c.key}
-                        style={{ ...tdS, textAlign: "right", color: "#6b7280" }}
-                      >
-                        {fmt(row[c.secondLineKey] || 0)}
+                        {cellVal(row, c.firstLineKey)}
+                        {c.secondLineKey &&
+                          !String(c.secondLineKey).endsWith("_blank") && (
+                            <>
+                              <br />
+                              {cellVal(row, c.secondLineKey)}
+                            </>
+                          )}
                       </td>
                     ))}
                   </tr>
@@ -1108,7 +1145,7 @@ const SalaryDeduction = () => {
                         className="px-2 py-2 text-center font-semibold text-white whitespace-pre-line leading-tight"
                         style={{ minWidth: "50px" }}
                       >
-                        {"SRNo\nSLONO\nPSRNO"}
+                        {"SRNo\nPSRNO"}
                       </th>
                       <th
                         className="px-2 py-2 text-left font-semibold text-white"
@@ -1138,56 +1175,47 @@ const SalaryDeduction = () => {
                   <tbody>
                     {pagedData.map((row, i) => (
                       <React.Fragment key={i}>
-                        <tr>
+                        <tr style={{ backgroundColor: "#ffffff" }}>
                           <td
-                            className="px-2 py-1 text-center font-bold"
+                            className="px-2 py-1 text-center font-bold text-xs"
                             style={{ color: "#1e3a5f" }}
                           >
                             {row.srno}
-                          </td>
-                        </tr>
-                        <tr style={{ backgroundColor: "#ffffff" }}>
-                          <td
-                            className="px-2 py-1 text-center text-xs"
-                            style={{ color: "#374151" }}
-                          >
-                            1
+                            <div
+                              style={{
+                                fontSize: "10px",
+                                color: "#6b7280",
+                                fontWeight: "normal",
+                              }}
+                            >
+                              {row.Emp_Code}
+                            </div>
                           </td>
                           <td
                             className="px-2 py-1 text-xs font-medium"
                             style={{ color: "#111827" }}
                           >
                             <div>{row.First_Name}</div>
-                            <div style={{ fontSize: "10px", color: "#6b7280" }}>{fmt(row.Actual_Basic_Pay)}</div>
+                            <div style={{ fontSize: "10px", color: "#6b7280" }}>
+                              {fmt(row.Actual_Basic_Pay)}
+                            </div>
                           </td>
                           {DED_COLS.map((c) => (
                             <td
                               key={c.key}
-                              className="px-2 py-1 text-right font-mono"
+                              className="px-2 py-1 text-right font-mono text-xs"
                               style={{ color: "#1e3a5f" }}
                             >
-                              {fmt(row[c.firstLineKey] || 0)}
-                            </td>
-                          ))}
-                        </tr>
-                        <tr style={{ backgroundColor: "#ffffff" }}>
-                          <td
-                            className="px-2 py-1 text-center text-xs"
-                            style={{ color: "#374151" }}
-                          >
-                            {row.Emp_Code}
-                          </td>
-                          <td
-                            className="px-2 py-1 text-xs"
-                            style={{ color: "#6b7280" }}
-                          ></td>
-                          {DED_COLS.map((c) => (
-                            <td
-                              key={c.key}
-                              className="px-2 py-1 text-right font-mono"
-                              style={{ color: "#6b7280" }}
-                            >
-                              {fmt(row[c.secondLineKey] || 0)}
+                              {cellVal(row, c.firstLineKey)}
+                              {c.secondLineKey &&
+                                !String(c.secondLineKey).endsWith("_blank") && (
+                                  <>
+                                    <br />
+                                    <span style={{ color: "#6b7280" }}>
+                                      {cellVal(row, c.secondLineKey)}
+                                    </span>
+                                  </>
+                                )}
                             </td>
                           ))}
                         </tr>

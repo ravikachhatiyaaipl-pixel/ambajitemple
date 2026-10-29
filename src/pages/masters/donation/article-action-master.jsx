@@ -9,13 +9,10 @@ import {
   Trash2,
   RefreshCw,
   ArrowRight,
+  X,
   Users,
   MapPin,
 } from "lucide-react";
-import DonationFormPage, {
-  donationInputCls,
-  donationLabelCls,
-} from "./DonationFormPage";
 
 /**
  * Article Donation Action Master (stage ART).
@@ -232,148 +229,6 @@ const ArticleDonationActionMaster = ({ user }) => {
 
   const steps = useMemo(() => chain, [chain]);
 
-  if (showForm) {
-    return (
-      <DonationFormPage
-        title={editing ? "Edit Step" : "Add Step"}
-        subtitle={
-          editing
-            ? "Update the record details"
-            : "Fill in the details to create a new record"
-        }
-        detailsTitle="Step Details"
-        onBack={() => setShowForm(false)}
-        onSubmit={handleSave}
-        saving={saving}
-        submitLabel={editing ? "Update Step" : "Save Step"}
-      >
-        <div>
-          <label className={donationLabelCls}>
-            Step name <span className="text-red-500">*</span>
-          </label>
-          <input
-            value={form.St_Name}
-            onChange={(e) => setForm((p) => ({ ...p, St_Name: e.target.value }))}
-            placeholder="HOD Approved"
-            className={donationInputCls}
-          />
-        </div>
-
-        <div>
-          <label className={donationLabelCls}>Previous step</label>
-          <select
-            value={form.Previous_Status}
-            onChange={(e) =>
-              setForm((p) => ({ ...p, Previous_Status: e.target.value }))
-            }
-            className={donationInputCls}
-          >
-            <option value="">— none (first step) —</option>
-            {steps
-              .filter((s) => !editing || s.Act_Id !== editing.Act_Id)
-              .map((s) => (
-                <option key={s.Act_Id} value={s.Act_Id}>
-                  {s.St_Name}
-                </option>
-              ))}
-          </select>
-        </div>
-
-        <div>
-          <label className={donationLabelCls}>Action direction</label>
-          <select
-            value={form.Is_Forward}
-            onChange={(e) =>
-              setForm((p) => ({ ...p, Is_Forward: e.target.value }))
-            }
-            className={donationInputCls}
-          >
-            <option value="Y">Forward (approval moves ahead)</option>
-            <option value="N">Backward (Query / Sent Back / Reject)</option>
-          </select>
-        </div>
-
-        <div>
-          <label className={donationLabelCls}>Remarks</label>
-          <input
-            value={form.Act_Remarks}
-            onChange={(e) =>
-              setForm((p) => ({ ...p, Act_Remarks: e.target.value }))
-            }
-            className={donationInputCls}
-          />
-        </div>
-
-          <div className="md:col-span-2">
-            <label className={donationLabelCls}>
-              Who can perform this step
-            </label>
-            {designations.length === 0 ? (
-              <p className="text-xs text-gray-500">
-                No designation master loaded - leave empty to allow Admin only.
-              </p>
-            ) : (
-              <div className="max-h-40 overflow-y-auto rounded-md border border-gray-200 p-2">
-                {designations.map((d) => {
-                  const id = d.Dsg_id ?? d.id;
-                  const on = form.Authorities.includes(id);
-                  return (
-                    <label
-                      key={id}
-                      className="flex items-center gap-2 px-1 py-1 text-sm text-gray-700"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={on}
-                        onChange={() => toggleIn("Authorities", id)}
-                        className="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
-                      />
-                      {dsgName(id)}
-                    </label>
-                  );
-                })}
-              </div>
-            )}
-            <p className="mt-1 text-xs text-gray-400">
-              Leave empty - only Admin can perform this step.
-            </p>
-          </div>
-
-          <div className="md:col-span-2">
-            <label className={donationLabelCls}>
-              Who can see donations on this step
-            </label>
-            {designations.length === 0 ? (
-              <p className="text-xs text-gray-500">
-                No designation master loaded.
-              </p>
-            ) : (
-              <div className="max-h-40 overflow-y-auto rounded-md border border-gray-200 p-2">
-                {designations.map((d) => {
-                  const id = d.Dsg_id ?? d.id;
-                  const on = form.Viewers.includes(id);
-                  return (
-                    <label
-                      key={id}
-                      className="flex items-center gap-2 px-1 py-1 text-sm text-gray-700"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={on}
-                        onChange={() => toggleIn("Viewers", id)}
-                        className="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
-                      />
-                      {dsgName(id)}
-                    </label>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-      </DonationFormPage>
-    );
-  }
-
   if (loading) {
     return (
       <div className="flex min-h-[400px] items-center justify-center">
@@ -383,7 +238,7 @@ const ArticleDonationActionMaster = ({ user }) => {
   }
 
   return (
-    <div className="p-6 space-y-5 bg-[#f8f9fa] min-h-screen">
+    <div className="p-6 space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
@@ -397,13 +252,13 @@ const ArticleDonationActionMaster = ({ user }) => {
         <div className="flex items-center gap-2">
           <button
             onClick={fetchAll}
-            className="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
             <RefreshCw className="h-4 w-4" /> Refresh
           </button>
           <button
             onClick={openCreate}
-            className="inline-flex items-center gap-2 rounded-md bg-red-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-red-700"
+            className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
           >
             <Plus className="h-4 w-4" /> Add Step
           </button>
@@ -510,6 +365,175 @@ const ArticleDonationActionMaster = ({ user }) => {
           </span>
         </div>
       </div>
+
+      {/* FORM */}
+      {showForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-5 shadow-xl">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-semibold text-gray-900">
+                {editing ? "Edit Step" : "Add Step"}
+              </h3>
+              <button
+                onClick={() => setShowForm(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="mt-4 space-y-3">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-700">
+                  Step name *
+                </label>
+                <input
+                  value={form.St_Name}
+                  onChange={(e) =>
+                    setForm((p) => ({ ...p, St_Name: e.target.value }))
+                  }
+                  placeholder="HOD Approved"
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-700">
+                  Previous step
+                </label>
+                <select
+                  value={form.Previous_Status}
+                  onChange={(e) =>
+                    setForm((p) => ({ ...p, Previous_Status: e.target.value }))
+                  }
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                >
+                  <option value="">— none (first step) —</option>
+                  {steps
+                    .filter((s) => !editing || s.Act_Id !== editing.Act_Id)
+                    .map((s) => (
+                      <option key={s.Act_Id} value={s.Act_Id}>
+                        {s.St_Name}
+                      </option>
+                    ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-700">
+                  Action direction
+                </label>
+                <select
+                  value={form.Is_Forward}
+                  onChange={(e) =>
+                    setForm((p) => ({ ...p, Is_Forward: e.target.value }))
+                  }
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                >
+                  <option value="Y">Forward (approval moves ahead)</option>
+                  <option value="N">Backward (Query / Sent Back / Reject)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-700">
+                  Who can perform this step
+                </label>
+                {designations.length === 0 ? (
+                  <p className="text-[11px] text-gray-500">
+                    No designation master loaded - leave empty to allow Admin only.
+                  </p>
+                ) : (
+                  <div className="max-h-40 overflow-y-auto rounded-lg border border-gray-200 p-2">
+                    {designations.map((d) => {
+                      const id = d.Dsg_id ?? d.id;
+                      const on = form.Authorities.includes(id);
+                      return (
+                        <label
+                          key={id}
+                          className="flex items-center gap-2 px-1 py-1 text-xs text-gray-700"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={on}
+                            onChange={() => toggleIn("Authorities", id)}
+                            className="h-3.5 w-3.5 rounded border-gray-300 text-red-600"
+                          />
+                          {dsgName(id)}
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
+                <p className="mt-1 text-[10px] text-gray-500">
+                  Leave empty - only Admin can perform this step.
+                </p>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-700">
+                  Who can see donations on this step
+                </label>
+                {designations.length === 0 ? (
+                  <p className="text-[11px] text-gray-500">
+                    No designation master loaded.
+                  </p>
+                ) : (
+                  <div className="max-h-32 overflow-y-auto rounded-lg border border-gray-200 p-2">
+                    {designations.map((d) => {
+                      const id = d.Dsg_id ?? d.id;
+                      const on = form.Viewers.includes(id);
+                      return (
+                        <label
+                          key={id}
+                          className="flex items-center gap-2 px-1 py-1 text-xs text-gray-700"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={on}
+                            onChange={() => toggleIn("Viewers", id)}
+                            className="h-3.5 w-3.5 rounded border-gray-300 text-red-600"
+                          />
+                          {dsgName(id)}
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-700">
+                  Remarks
+                </label>
+                <input
+                  value={form.Act_Remarks}
+                  onChange={(e) =>
+                    setForm((p) => ({ ...p, Act_Remarks: e.target.value }))
+                  }
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                />
+              </div>
+            </div>
+
+            <div className="mt-5 flex gap-3">
+              <button
+                onClick={() => setShowForm(false)}
+                className="flex-1 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="flex-1 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-60"
+              >
+                {saving ? "Saving..." : "Save"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

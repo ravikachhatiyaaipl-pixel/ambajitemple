@@ -150,6 +150,8 @@ const ViewVendorInvoiceTaxes = lazy(() => import("../masters/financial-accountin
 const PayAlwdedList = lazy(() => import("../masters/payroll-pay-structures/allowances-deductions-master/list"));
 const AddEditPayAlwded = lazy(() => import("../masters/payroll-pay-structures/allowances-deductions-master/addedit"));
 const ViewPayAlwded = lazy(() => import("../masters/payroll-pay-structures/allowances-deductions-master/view"));
+const AlwdedEmpMappingList = lazy(() => import("../masters/payroll-pay-structures/alwded-emp-mapping/list"));
+const AddEditAlwdedEmpMapping = lazy(() => import("../masters/payroll-pay-structures/alwded-emp-mapping/addedit"));
 const PayLevelList = lazy(() => import("../masters/payroll-pay-structures/pay-level/list"));
 const AddEditPayLevel = lazy(() => import("../masters/payroll-pay-structures/pay-level/addedit"));
 const ViewPayLevel = lazy(() => import("../masters/payroll-pay-structures/pay-level/view"));
@@ -1093,6 +1095,14 @@ const MasterRoutes = ({ user }) => {
       <Route
         path="payroll-pay-structures/allowances-deductions-master/view/:id"
         element={<ViewPayAlwded user={user} />}
+      />
+      <Route
+        path="payroll-pay-structures/alwded-emp-mapping"
+        element={<AlwdedEmpMappingList user={user} />}
+      />
+      <Route
+        path="payroll-pay-structures/alwded-emp-mapping/create"
+        element={<AddEditAlwdedEmpMapping user={user} />}
       />
       <Route
         path="payroll-pay-structures/pay-structure-type-master"

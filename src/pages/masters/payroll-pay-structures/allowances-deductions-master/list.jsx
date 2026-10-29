@@ -91,13 +91,13 @@ const PayAlwdedList = ({ user }) => {
       const response = await PayAlwdedApi.getAllList();
 
       if (response.status) {
-        const itemsData = response.data?.data || [];
+        const itemsData = Array.isArray(response.data)
+          ? response.data
+          : response.data?.data || [];
         setAllItems(itemsData);
         setPaginationData(response.data);
-        setTotalItems(response.data.total || itemsData.length);
-        setTotalPages(
-          response.data.last_page || Math.ceil(itemsData.length / itemsPerPage),
-        );
+        setTotalItems(itemsData.length);
+        setTotalPages(Math.ceil(itemsData.length / itemsPerPage) || 1);
         setInitialLoad(false);
       } else if (Array.isArray(response)) {
         setAllItems(response);
@@ -257,7 +257,10 @@ const PayAlwdedList = ({ user }) => {
     try {
       const response = await PayAlwdedApi.getAllList();
       if (response.status) {
-        setAllItems(response.data?.data || []);
+        const itemsData = Array.isArray(response.data)
+          ? response.data
+          : response.data?.data || [];
+        setAllItems(itemsData);
         toast.success("Data refreshed successfully!");
       }
     } catch (error) {
@@ -273,7 +276,25 @@ const PayAlwdedList = ({ user }) => {
   };
 
   const formatPercentage = (value) => {
-    return parseFloat(value).toFixed(2) + "%";
+    return parseFloat(value || 0).toFixed(2) + "%";
+  };
+
+  const formatCalcValue = (item) => {
+    const type = item.Calc_Type || "P";
+    if (type === "F") {
+      return `₹${parseFloat(item.Flat_Amount || 0).toFixed(2)}`;
+    }
+    if (type === "S") {
+      const count = Array.isArray(item.slabs) ? item.slabs.length : 0;
+      return `Slab (${count})`;
+    }
+    return formatPercentage(item.Percentage);
+  };
+
+  const calcTypeLabel = (type) => {
+    if (type === "F") return "Flat";
+    if (type === "S") return "Slab";
+    return "Percentage";
   };
 
   const StatCard = ({ title, value, subValue, icon: Icon, color }) => {
@@ -490,11 +511,11 @@ const PayAlwdedList = ({ user }) => {
                 </th>
                 <th
                   className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors duration-150"
-                  onClick={() => handleSort("Percentage")}
+                  onClick={() => handleSort("Calc_Type")}
                 >
                   <div className="flex items-center">
-                    Percentage
-                    {sortField == "Percentage" && (
+                    Calc / Value
+                    {sortField == "Calc_Type" && (
                       <span className="ml-1 text-blue-600">
                         {sortDirection == "asc" ? "↑" : "↓"}
                       </span>
@@ -596,11 +617,11 @@ const PayAlwdedList = ({ user }) => {
                         </span>
                       </td>
                       <td className="px-6 py-4">
-                        <div className="flex items-center">
-                          <Percent className="h-4 w-4 text-gray-400 mr-1" />
-                          <span className="text-sm font-medium text-gray-900">
-                            {formatPercentage(item.Percentage)}
-                          </span>
+                        <div className="text-sm font-medium text-gray-900">
+                          {calcTypeLabel(item.Calc_Type)}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {formatCalcValue(item)}
                         </div>
                       </td>
                       <td className="px-6 py-4">
