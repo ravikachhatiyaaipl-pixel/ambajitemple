@@ -9,6 +9,7 @@ import {
   IndianRupee,
   Users,
   ChevronRight,
+  ChevronLeft,
   CheckCircle,
   X,
   Loader2,
@@ -34,7 +35,6 @@ import {
   Plus,
   Trash2,
 } from "lucide-react";
-import BackButton from "../components/backbutton";
 
 const KIND_META = {
   POOJA: { label: "Pooja", cls: "bg-orange-100 text-orange-700", Icon: Sparkles },
@@ -732,7 +732,7 @@ const SevaPortal = ({ user, onLogout }) => {
     <div className="min-h-screen bg-amber-50/40">
       {/* ===== HEADER ===== */}
       <header className="sticky top-0 z-20 border-b border-red-100 bg-white/95 backdrop-blur">
-        <div className="flex w-full items-center justify-between gap-3 px-4 py-3 sm:px-6">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
           <div className="flex min-w-0 items-center gap-3">
             <img
               src="/ambajilogo.png"
@@ -777,16 +777,10 @@ const SevaPortal = ({ user, onLogout }) => {
         </div>
       </header>
 
-      <main className="w-full px-4 py-6 sm:px-6">
+      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
         {/* ================= CATALOGUE ================= */}
         {view === "catalogue" && (
           <>
-            <div className="mb-4">
-              <BackButton
-                to={user?.isApplicant ? "/applicant-dashboard" : "/devotee-dashboard"}
-                label="Back to dashboard"
-              />
-            </div>
             <div
               className="relative overflow-hidden rounded-2xl px-6 py-7 text-white shadow-md sm:px-8"
               style={{
@@ -1022,12 +1016,12 @@ const SevaPortal = ({ user, onLogout }) => {
         {view === "booking" && selectedService && (
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
             <div className="lg:col-span-2">
-              <div className="mb-4">
-                <BackButton
-                  onClick={() => setView("catalogue")}
-                  label="Back to catalogue"
-                />
-              </div>
+              <button
+                onClick={() => setView("catalogue")}
+                className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-gray-600 hover:text-red-600"
+              >
+                <ChevronLeft className="h-4 w-4" /> Back to catalogue
+              </button>
 
               <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
                 <div className="flex items-start gap-3">
@@ -1553,20 +1547,13 @@ const SevaPortal = ({ user, onLogout }) => {
 
         {/* ================= MY BOOKINGS ================= */}
         {view === "mybookings" && (
-          <div className="w-full">
+          <div>
             <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-center">
-                <BackButton
-                  onClick={() => setView("catalogue")}
-                  title="Back to catalogue"
-                  className="mr-4"
-                />
-                <div>
-                  <h1 className="text-2xl font-bold text-gray-900">My Bookings</h1>
-                  <p className="text-sm text-gray-500">
-                    Your seva bookings, payments and receipts
-                  </p>
-                </div>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">My Bookings</h1>
+                <p className="text-sm text-gray-500">
+                  Your seva bookings, payments and receipts
+                </p>
               </div>
               <button
                 onClick={() => setView("catalogue")}

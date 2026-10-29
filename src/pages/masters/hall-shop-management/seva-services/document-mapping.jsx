@@ -1,9 +1,4 @@
 import { useState, useEffect, useMemo } from "react";
-import BackButton from "../../../../components/backbutton";
-import DonationFormPage, {
-  donationInputCls,
-  donationLabelCls,
-} from "../../donation/DonationFormPage";
 import { toast } from "react-hot-toast";
 import axios from "axios";
 import {
@@ -12,6 +7,7 @@ import {
   Trash2,
   Search,
   Loader2,
+  X,
   Link2,
   FileText,
   Layers,
@@ -186,136 +182,16 @@ const SevaDocumentMapping = ({ user }) => {
     );
   }
 
-  if (showForm) {
-    return (
-      <DonationFormPage
-        title={editing ? "Edit Mapping" : "Add Mapping"}
-        subtitle={
-          editing
-            ? "Update the record details"
-            : "Fill in the details to create a new record"
-        }
-        detailsTitle="Mapping Details"
-        onBack={() => setShowForm(false)}
-        onSubmit={handleSave}
-        saving={saving}
-        submitLabel={editing ? "Update Mapping" : "Save Mapping"}
-      >
-        <div>
-          <label className={donationLabelCls}>
-            Service *
-          </label>
-          <select
-            value={form.service_id}
-            onChange={(e) =>
-              setForm((p) => ({ ...p, service_id: e.target.value }))
-            }
-            className={donationInputCls}
-          >
-            <option value="">— select —</option>
-            {services.map((s) => (
-              <option key={s.service_id} value={s.service_id}>
-                {s.name} ({s.code})
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className={donationLabelCls}>
-            Documents *
-          </label>
-          <div className="max-h-56 overflow-y-auto rounded-lg border border-gray-300 p-2">
-            {documents.length === 0 && (
-              <p className="px-1 py-2 text-xs text-gray-500">
-                No documents available.
-              </p>
-            )}
-            {documents.map((d) => (
-              <label
-                key={d.document_id}
-                className="flex cursor-pointer items-center gap-2 rounded-md px-1.5 py-1.5 text-xs text-gray-700 hover:bg-gray-50"
-              >
-                <input
-                  type="checkbox"
-                  checked={form.document_ids.includes(d.document_id)}
-                  onChange={() => toggleDocument(d.document_id)}
-                  className="h-3.5 w-3.5 rounded border-gray-300 text-red-600 focus:ring-red-500"
-                />
-                <span className="flex-1">{d.name}</span>
-                <span className="font-mono text-[10px] text-gray-400">
-                  {d.code}
-                </span>
-                {d.is_required && (
-                  <span className="rounded-full bg-red-50 px-1.5 py-0.5 text-[10px] font-medium text-red-600">
-                    required
-                  </span>
-                )}
-              </label>
-            ))}
-          </div>
-          <p className="mt-1 text-[10px] text-gray-500">
-            {form.document_ids.length
-              ? `${form.document_ids.length} document(s) selected`
-              : "Select one or more documents - all will be mapped to this service."}
-          </p>
-        </div>
-        <div>
-          <label className={donationLabelCls}>
-            Sort order
-          </label>
-          <input
-            type="number"
-            value={form.sort_order}
-            onChange={(e) =>
-              setForm((p) => ({ ...p, sort_order: e.target.value }))
-            }
-            className={donationInputCls}
-          />
-        </div>
-        <div className="rounded-xl border border-gray-200 bg-gray-50 p-3">
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            {[
-              ["is_required", "Mandatory for this service"],
-              ["is_active", "Active"],
-            ].map(([key, label]) => (
-              <label
-                key={key}
-                className="flex items-center gap-2 text-xs text-gray-700"
-              >
-                <input
-                  type="checkbox"
-                  checked={!!form[key]}
-                  onChange={(e) =>
-                    setForm((p) => ({ ...p, [key]: e.target.checked }))
-                  }
-                  className="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
-                />
-                {label}
-              </label>
-            ))}
-          </div>
-        </div>
-        <p className="rounded-lg bg-blue-50 px-3 py-2 text-[11px] text-blue-800">
-          Mapped documents devotee ko booking form me dikhenge. Mandatory
-          documents approve hone se pehle upload hona zaroori hoga.
-        </p>
-      </DonationFormPage>
-    );
-  }
-
   return (
-    <div className="p-6 space-y-5 bg-[#f8f9fa] min-h-screen">
+    <div className="p-6 space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center">
-          <BackButton fallback="/dashboard" className="mr-4" />
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">
-              Seva Document Mapping
-            </h1>
-            <p className="text-sm text-gray-500">
-              Map documents with services - devotees see these when booking
-            </p>
-          </div>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">
+            Seva Document Mapping
+          </h1>
+          <p className="text-sm text-gray-500">
+            Map documents with services - devotees see these when booking
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <div className="relative">
@@ -380,7 +256,7 @@ const SevaDocumentMapping = ({ user }) => {
       <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
+            <thead className="bg-gray-50">
               <tr>
                 {[
                   "#",
@@ -482,6 +358,146 @@ const SevaDocumentMapping = ({ user }) => {
         </div>
       </div>
 
+      {showForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-xl">
+            <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
+              <h3 className="text-base font-semibold text-gray-900">
+                {editing ? "Edit Mapping" : "Add Mapping"}
+              </h3>
+              <button
+                onClick={() => setShowForm(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3.5 px-5 py-4">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-700">
+                  Service *
+                </label>
+                <select
+                  value={form.service_id}
+                  onChange={(e) =>
+                    setForm((p) => ({ ...p, service_id: e.target.value }))
+                  }
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                >
+                  <option value="">— select —</option>
+                  {services.map((s) => (
+                    <option key={s.service_id} value={s.service_id}>
+                      {s.name} ({s.code})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-700">
+                  Documents *
+                </label>
+                <div className="max-h-56 overflow-y-auto rounded-lg border border-gray-300 p-2">
+                  {documents.length === 0 && (
+                    <p className="px-1 py-2 text-xs text-gray-500">
+                      No documents available.
+                    </p>
+                  )}
+                  {documents.map((d) => (
+                    <label
+                      key={d.document_id}
+                      className="flex cursor-pointer items-center gap-2 rounded-md px-1.5 py-1.5 text-xs text-gray-700 hover:bg-gray-50"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={form.document_ids.includes(d.document_id)}
+                        onChange={() => toggleDocument(d.document_id)}
+                        className="h-3.5 w-3.5 rounded border-gray-300 text-red-600 focus:ring-red-500"
+                      />
+                      <span className="flex-1">{d.name}</span>
+                      <span className="font-mono text-[10px] text-gray-400">
+                        {d.code}
+                      </span>
+                      {d.is_required && (
+                        <span className="rounded-full bg-red-50 px-1.5 py-0.5 text-[10px] font-medium text-red-600">
+                          required
+                        </span>
+                      )}
+                    </label>
+                  ))}
+                </div>
+                <p className="mt-1 text-[10px] text-gray-500">
+                  {form.document_ids.length
+                    ? `${form.document_ids.length} document(s) selected`
+                    : "Select one or more documents - all will be mapped to this service."}
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-gray-700">
+                    Sort order
+                  </label>
+                  <input
+                    type="number"
+                    value={form.sort_order}
+                    onChange={(e) =>
+                      setForm((p) => ({ ...p, sort_order: e.target.value }))
+                    }
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                  />
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-gray-200 bg-gray-50 p-3">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  {[
+                    ["is_required", "Mandatory for this service"],
+                    ["is_active", "Active"],
+                  ].map(([key, label]) => (
+                    <label
+                      key={key}
+                      className="flex items-center gap-2 text-xs text-gray-700"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={!!form[key]}
+                        onChange={(e) =>
+                          setForm((p) => ({ ...p, [key]: e.target.checked }))
+                        }
+                        className="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
+                      />
+                      {label}
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <p className="rounded-lg bg-blue-50 px-3 py-2 text-[11px] text-blue-800">
+                Mapped documents devotee ko booking form me dikhenge. Mandatory
+                documents approve hone se pehle upload hona zaroori hoga.
+              </p>
+            </div>
+
+            <div className="flex gap-3 border-t border-gray-200 px-5 py-4">
+              <button
+                onClick={() => setShowForm(false)}
+                className="flex-1 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="flex-1 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-60"
+              >
+                {saving ? "Saving..." : editing ? "Update" : "Create"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

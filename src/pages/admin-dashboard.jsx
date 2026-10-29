@@ -8,38 +8,43 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import axios from "axios";
 import { Link } from "react-router-dom";
 import {
-  Users, UserCheck, Building2, RefreshCw, Heart, Landmark, TrendingUp, TrendingDown,
-  AlertTriangle, ChevronRight, ShieldCheck, Zap, Boxes, CalendarCheck, UserCog, Clock,
+  Users, UserCheck, Building2, RefreshCw, Wallet, IndianRupee, UserCog, Heart,
+  BarChart3, Landmark, CalendarCheck, Package, HandCoins, FileText, Gavel, Boxes,
+  TrendingUp, TrendingDown, AlertTriangle, ChevronRight, ShieldCheck, Home,
+  BookOpen, CreditCard,
 } from "lucide-react";
 import {
   PortalPage, PortalLoader, HeroBanner, HeroButton, StatCard, StatGrid, Panel,
-  TrendChart, BarsChart, DonutChart, ActionTile,
-  greeting, todayLabel, countBy, monthlyCounts,
+  TrendChart, BarsChart, DonutChart, ActionTile, EmptyState,
+  greeting, todayLabel, countBy, monthlyCounts, TONES,
 } from "../components/dashboard/portalkit";
 import { inrShort } from "../components/dashboard/dashboardkit";
-import { useQuickActions } from "../hooks/usequickactions";
 
 const DEVOTEE_ROLE_ID = 15;
 
-const HR_ICONS = { on_leave: CalendarCheck, retire: UserCog, ot: Clock };
-const HR_KPIS = ["on_leave", "retire", "ot"];
-const COLS = { 1: "lg:grid-cols-1", 2: "lg:grid-cols-2", 3: "lg:grid-cols-3", 4: "lg:grid-cols-4" };
-const hasRows = (d) => Array.isArray(d) && d.some((r) => Number(r.value) > 0);
+const MODULES = [
+  { name: "Accounting & Finance", desc: "Ledger, vouchers, bank reconciliation, GST/TDS compliance", icon: Wallet, tone: "red", to: "/dashboards/finance" },
+  { name: "Payroll", desc: "Salary, PF, Gratuity, Bonus, payslips, statutory deductions", icon: IndianRupee, tone: "green", to: "/dashboards/payroll" },
+  { name: "Human Resource", desc: "Employee master, attendance, leave, transfer, appraisal", icon: UserCog, tone: "violet", to: "/dashboards/hr" },
+  { name: "Devotee Management", desc: "Devotee records, historic control, auto notifications", icon: Heart, tone: "red" },
+  { name: "Estate & Property", desc: "Land, buildings, assets, survey, legal documents", icon: Landmark, tone: "gold", to: "/dashboards/estate" },
+  { name: "Booking Management", desc: "Tithi Bhojan, Puja booking, hall reservations", icon: CalendarCheck, tone: "teal" },
+  { name: "Inventory", desc: "Stock items, purchase entries, vendor supply", icon: Package, tone: "slate" },
+  { name: "Loan Management", desc: "Sanction, repayment tracking, EMI records", icon: HandCoins, tone: "teal" },
+  { name: "Reports & MIS", desc: "Statutory reports, printable MIS, decision support", icon: BarChart3, tone: "gold", to: "/dashboards/executive" },
+  { name: "Tender & Procurement", desc: "Vendor registration, tender workflow, approvals", icon: Gavel, tone: "slate", to: "/dashboards/tender" },
+  { name: "Donation", desc: "Contributions, coupons, donation history", icon: Boxes, tone: "violet" },
+  { name: "Documents", desc: "Central repository, uploads, filters, audit trail", icon: FileText, tone: "green" },
+];
 
-// Lays out only the panels that have data, so a missing panel never leaves a blank gap.
-const Row = ({ items }) => {
-  const vis = items.filter(Boolean);
-  if (!vis.length) return null;
-  const wide = vis.length === 2 && vis[0].wide;
-  const cls = wide ? "lg:grid-cols-3" : COLS[Math.min(vis.length, 4)];
-  return (
-    <div className={`grid grid-cols-1 gap-4 ${cls}`}>
-      {vis.map((v, i) => (
-        <div key={v.key} className={wide && i === 0 ? "lg:col-span-2" : ""}>{v.node}</div>
-      ))}
-    </div>
-  );
-};
+const QUICK = [
+  { label: "Cash Book", hint: "Daily receipts & payments", to: "/reports/cash-bank/cash-book", icon: BookOpen, tone: "red" },
+  { label: "Bank Book", hint: "Bank-wise transactions", to: "/reports/cash-bank/bank-book", icon: CreditCard, tone: "teal" },
+  { label: "Trial Balance", hint: "Ledger summary", to: "/reports/core-ledger/trialbalance", icon: TrendingUp, tone: "green" },
+  { label: "Shop Rent", hint: "Rent collection status", to: "/reports/estate/shop-rent-collection", icon: Home, tone: "gold" },
+  { label: "Hall Bookings", hint: "Booking register", to: "/reports/estate/hall-booking-register", icon: CalendarCheck, tone: "violet" },
+  { label: "Employee Master", hint: "Staff records", to: "/masters/employee-records/employee-master", icon: Users, tone: "slate" },
+];
 
 const asArray = (res) => {
   if (res?.status !== "fulfilled") return null;
@@ -66,7 +71,6 @@ const AdminDashboard = () => {
   const [est, setEst] = useState(null);
   const [hr, setHr] = useState(null);
   const [exe, setExe] = useState(null);
-  const { quickActions, modules } = useQuickActions();
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -116,38 +120,10 @@ const AdminDashboard = () => {
   const newUsers = useMemo(() => monthlyCounts(users, (u) => u.created_at, 6), [users]);
   const hasNewUsers = newUsers.some((m) => m.value > 0);
 
-  const activeEmployees = useMemo(() => employees.filter((e) => e.Is_Active == 1 || e.Is_Active === true).length, [employees]);
-  const hasStatus = employees.some((e) => e.Is_Active !== undefined && e.Is_Active !== null);
-  const empStatus = useMemo(() => [
-    { label: "Active", value: activeEmployees },
-    { label: "Inactive", value: employees.length - activeEmployees },
-  ], [employees, activeEmployees]);
-
   const finKpis = (fin?.kpis || []).slice(0, 4);
   const estKpis = (est?.kpis || []).filter((k) => ["shops", "shops_let", "rent", "hall_rev"].includes(k.key)).slice(0, 4);
-  const hrKpis = (hr?.kpis || []).filter((k) => HR_KPIS.includes(k.key));
   const alerts = [...(fin?.alerts || []), ...(est?.alerts || []), ...(hr?.alerts || [])].slice(0, 6);
   const pending = (fin?.pending || []).slice(0, 6);
-
-  // Snapshot cards come only from live dashboard feeds; trimmed to full rows so no empty slot is left.
-  const snapshot = [
-    ...finKpis.map((k) => ({ key: `f-${k.key}`, label: k.label, value: fmtKpi(k), sub: "Finance", tone: KPI_TONE[k.accent] || "red",
-      icon: k.key.includes("pay") ? TrendingDown : TrendingUp, to: "/dashboards/finance" })),
-    ...estKpis.map((k) => ({ key: `e-${k.key}`, label: k.label, value: fmtKpi(k), sub: "Estate", tone: KPI_TONE[k.accent] || "gold",
-      icon: Landmark, to: "/dashboards/estate" })),
-    ...hrKpis.map((k) => ({ key: `h-${k.key}`, label: k.label, value: fmtKpi(k), sub: "HR", tone: KPI_TONE[k.accent] || "green",
-      icon: HR_ICONS[k.key] || Users, to: "/dashboards/hr" })),
-  ];
-  const snapCols = snapshot.length >= 4 ? 4 : snapshot.length;
-  const snapCards = snapCols === 4 ? snapshot.slice(0, Math.floor(snapshot.length / 4) * 4) : snapshot;
-
-  const hasTrend = Array.isArray(fin?.trend) && fin.trend.length > 0;
-  const deptData = hr?.byDept;
-  const donut2 = hasRows(hr?.byType)
-    ? { title: "By Employee Type", subtitle: "Staff split", data: hr.byType, label: "staff" }
-    : hasStatus && employees.length > 0
-      ? { title: "Employee Status", subtitle: "Active vs inactive", data: empStatus, label: "employees" }
-      : null;
 
   if (loading) return <PortalLoader />;
 
@@ -163,136 +139,148 @@ const AdminDashboard = () => {
       {/* Core numbers */}
       <StatGrid cols={4}>
         <StatCard label="Total Devotees" value={devoteeCount} sub="Registered devotees" icon={Heart} tone="red" />
-        <StatCard label="Total Employees" value={employees.length} sub={hasStatus ? `${activeEmployees} active` : undefined} icon={UserCheck} tone="green" />
-        <StatCard label="Total Departments" value={departments.length} icon={Building2} tone="gold" />
+        <StatCard label="Total Employees" value={employees.length} sub="Active staff" icon={UserCheck} tone="green" />
+        <StatCard label="Total Departments" value={departments.length} sub="Across temple" icon={Building2} tone="gold" />
         <StatCard label="Portal Users" value={users.length} sub={`${roles.length || usersByRole.length} roles in use`} icon={ShieldCheck} tone="teal" />
       </StatGrid>
 
-      {/* Finance / estate / HR snapshot (only live KPIs) */}
-      {snapCards.length > 0 && (
-        <StatGrid cols={snapCols}>
-          {snapCards.map(({ key, ...c }) => <StatCard key={key} {...c} />)}
+      {/* Finance + estate snapshot */}
+      {(finKpis.length > 0 || estKpis.length > 0) && (
+        <StatGrid cols={4}>
+          {finKpis.map((k) => (
+            <StatCard key={`f-${k.key}`} label={k.label} value={fmtKpi(k)} sub="Finance" tone={KPI_TONE[k.accent] || "red"}
+              icon={k.key.includes("pay") ? TrendingDown : TrendingUp} to="/dashboards/finance" />
+          ))}
+          {estKpis.map((k) => (
+            <StatCard key={`e-${k.key}`} label={k.label} value={fmtKpi(k)} sub="Estate" tone={KPI_TONE[k.accent] || "gold"}
+              icon={Landmark} to="/dashboards/estate" />
+          ))}
         </StatGrid>
       )}
 
       {/* Trend + role split */}
-      <Row items={[
-        hasTrend && {
-          key: "trend", node: (
-            <Panel title="Receipts vs Payments" subtitle="Monthly trend" className="h-full"
-              action={<Link to="/dashboards/finance" className="inline-flex items-center text-xs font-medium text-red-700 hover:underline">Details <ChevronRight className="h-3.5 w-3.5" /></Link>}>
-              <TrendChart data={fin.trend} series={[
-                { key: "receipts", name: "Receipts", color: "#059669" },
-                { key: "payments", name: "Payments", color: "#B71C1C" },
-              ]} />
-            </Panel>
-          ),
-        },
-      ]} />
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <Panel title="Receipts vs Payments" subtitle="Monthly trend" className="lg:col-span-2"
+          action={<Link to="/dashboards/finance" className="inline-flex items-center text-xs font-medium text-red-700 hover:underline">Details <ChevronRight className="h-3.5 w-3.5" /></Link>}>
+          <TrendChart data={fin?.trend} series={[
+            { key: "receipts", name: "Receipts", color: "#059669" },
+            { key: "payments", name: "Payments", color: "#B71C1C" },
+          ]} />
+        </Panel>
+        <Panel title="Users by Role" subtitle="Who uses the portal">
+          <DonutChart data={usersByRole} centerValue={users.length} centerLabel="users" />
+        </Panel>
+      </div>
 
-      {/* Employees */}
-      <Row items={[
-        hasRows(deptData) && {
-          key: "dept", wide: true, node: (
-            <Panel title="Employees by Department" subtitle="Head-count (top 10)" className="h-full"
-              action={<Link to="/dashboards/hr" className="inline-flex items-center text-xs font-medium text-red-700 hover:underline">Details <ChevronRight className="h-3.5 w-3.5" /></Link>}>
-              <BarsChart data={deptData} bars={[{ key: "value", name: "Employees", color: "#E53935" }]} height={240} />
-            </Panel>
-          ),
-        },
-        donut2 && {
-          key: "emp2", node: (
-            <Panel title={donut2.title} subtitle={donut2.subtitle} className="h-full">
-              <DonutChart data={donut2.data} centerValue={employees.length || undefined} centerLabel={donut2.label} />
-            </Panel>
-          ),
-        },
-      ]} />
+      {/* HR + estate */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <Panel title="Head-count by Department" subtitle="Top 10" className="lg:col-span-2">
+          <BarsChart data={hr?.byDept} bars={[{ key: "value", name: "Employees", color: "#E53935" }]} horizontal height={280} />
+        </Panel>
+        <Panel title="Employee Type" subtitle="Staff composition">
+          <DonutChart data={hr?.byType} height={280} />
+        </Panel>
+      </div>
 
-      {/* Modules (from menu master) */}
-      <Row items={[
-        modules.length > 0 && {
-          key: "modules", node: (
-            <Panel title="Modules" subtitle="Open any module" className="h-full">
-              <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 xl:grid-cols-4">
-                {modules.slice(0, 12).map((m) => (
-                  <ActionTile key={m.name} to={m.to} icon={Boxes} label={m.name} hint={`${m.count} pages`} tone={m.tone} />
-                ))}
-              </div>
-            </Panel>
-          ),
-        },
-      ]} />
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <Panel title="Hall Revenue Trend" subtitle="Estate & bookings" className="lg:col-span-2">
+          <TrendChart data={est?.trend} series={[{ key: "value", name: "Hall Revenue", color: "#F5B800" }]} />
+        </Panel>
+        <Panel title="Department Expenditure" subtitle="Top departments">
+          <BarsChart data={exe?.deptExpense} bars={[{ key: "value", name: "Expenditure", color: "#B71C1C" }]} money horizontal />
+        </Panel>
+      </div>
 
-      {/* Users by role + registrations side by side */}
-      <Row items={[
-        hasRows(usersByRole) && {
-          key: "roles", node: (
-            <Panel title="Users by Role" subtitle="Who uses the portal" className="h-full">
-              <DonutChart data={usersByRole} centerValue={users.length} centerLabel="users" />
-            </Panel>
-          ),
-        },
-        hasNewUsers && {
-          key: "newusers", node: (
-            <Panel title="New Portal Registrations" subtitle="Last 6 months" className="h-full">
-              <BarsChart data={newUsers} bars={[{ key: "value", name: "New users", color: "#E53935" }]} height={220} />
-            </Panel>
-          ),
-        },
-      ]} />
+      {hasNewUsers && (
+        <Panel title="New Portal Registrations" subtitle="Last 6 months">
+          <BarsChart data={newUsers} bars={[{ key: "value", name: "New users", color: "#E53935" }]} height={200} />
+        </Panel>
+      )}
 
-      {/* Pending / alerts / quick actions (each shown only when it has data) */}
-      <Row items={[
-        pending.length > 0 && {
-          key: "pending", node: (
-            <Panel title="Vouchers Pending Approval" className="h-full">
-              <div className="divide-y divide-gray-100">
-                {pending.map((p, i) => (
-                  <Link key={i} to={p.to || "#"} className="group flex items-center justify-between py-2.5">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm text-gray-800">{p.title}</p>
-                      {p.meta && <p className="text-xs text-gray-400">{p.meta}</p>}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {p.value !== undefined && <span className="text-sm font-semibold text-gray-700">{p.value}</span>}
-                      <ChevronRight className="h-4 w-4 text-gray-300 group-hover:text-red-600" />
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </Panel>
-          ),
-        },
-        alerts.length > 0 && {
-          key: "alerts", node: (
-            <Panel title="Alerts" className="h-full">
-              <div className="space-y-2">
-                {alerts.map((a, i) => (
-                  <div key={i} className="flex items-start gap-2 rounded-lg px-3 py-2 text-sm"
-                    style={{
-                      background: a.level === "danger" ? "#FDECEC" : a.level === "warning" ? "#FEF3C7" : "#E3F6F9",
-                      color: a.level === "danger" ? "#B71C1C" : a.level === "warning" ? "#92400E" : "#0E7490"
-                    }}>
-                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-                    <span>{a.text}</span>
+      {/* Pending / alerts / quick actions */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <Panel title="Vouchers Pending Approval" className="lg:col-span-1">
+          {pending.length === 0 ? (
+            <EmptyState icon={FileText} text="Nothing pending" height={140} />
+          ) : (
+            <div className="divide-y divide-gray-100">
+              {pending.map((p, i) => (
+                <Link key={i} to={p.to || "#"} className="group flex items-center justify-between py-2.5">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm text-gray-800">{p.title}</p>
+                    {p.meta && <p className="text-xs text-gray-400">{p.meta}</p>}
                   </div>
-                ))}
-              </div>
-            </Panel>
-          ),
-        },
-        quickActions.length > 0 && {
-          key: "quick", node: (
-            <Panel title="Quick Actions" subtitle="Set in Menu Master" className="h-full">
-              <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
-                {quickActions.slice(0, 8).map((q) => <ActionTile key={`${q.to}|${q.label}`} {...q} icon={Zap} />)}
-              </div>
-            </Panel>
-          ),
-        },
-      ]} />
+                  <div className="flex items-center gap-2">
+                    {p.value !== undefined && <span className="text-sm font-semibold text-gray-700">{p.value}</span>}
+                    <ChevronRight className="h-4 w-4 text-gray-300 group-hover:text-red-600" />
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </Panel>
+        <Panel title="Alerts" className="lg:col-span-1">
+          {alerts.length === 0 ? (
+            <EmptyState icon={ShieldCheck} text="All clear — no alerts" height={140} />
+          ) : (
+            <div className="space-y-2">
+              {alerts.map((a, i) => (
+                <div key={i} className="flex items-start gap-2 rounded-lg px-3 py-2 text-sm"
+                  style={{
+                    background: a.level === "danger" ? "#FDECEC" : a.level === "warning" ? "#FEF3C7" : "#E3F6F9",
+                    color: a.level === "danger" ? "#B71C1C" : a.level === "warning" ? "#92400E" : "#0E7490"
+                  }}>
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                  <span>{a.text}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </Panel>
+        <Panel title="Quick Actions" className="lg:col-span-1">
+          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+            {QUICK.map((q) => <ActionTile key={q.label} {...q} />)}
+          </div>
+        </Panel>
+      </div>
 
+      {/* Modules */}
+      <div>
+        <h2 className="text-lg font-semibold text-gray-900">Modules</h2>
+        <p className="mb-4 text-sm text-gray-500">All ERP modules available in the system</p>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {MODULES.map((m) => {
+            const t = TONES[m.tone] || TONES.red;
+            const card = (
+              <div className="h-full rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: t.bg }}>
+                  <m.icon className="h-5 w-5" style={{ color: t.fg }} />
+                </div>
+                <h3 className="mt-4 text-sm font-semibold text-gray-900">{m.name}</h3>
+                <p className="mt-1.5 text-xs leading-relaxed text-gray-500">{m.desc}</p>
+              </div>
+            );
+            return m.to ? <Link key={m.name} to={m.to} className="block">{card}</Link> : <div key={m.name}>{card}</div>;
+          })}
+        </div>
+      </div>
+
+      {/* Departments */}
+      <Panel title="Departments" subtitle={`${departments.length} departments in the temple`}>
+        {departments.length === 0 ? (
+          <EmptyState icon={Building2} text="No departments found" height={100} />
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {departments.map((d) => (
+              <span key={d.Dpt_id} className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-700"
+                style={{ background: "#ffffff" }}>
+                <Building2 className="h-3.5 w-3.5 text-red-500" />
+                {d.Dpt_Name || d.Dpt_Desc}
+              </span>
+            ))}
+          </div>
+        )}
+      </Panel>
     </PortalPage>
   );
 };

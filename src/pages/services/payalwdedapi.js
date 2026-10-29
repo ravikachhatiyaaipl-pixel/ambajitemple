@@ -21,7 +21,7 @@ const PayAlwdedApi = {
 
   getAllList: async () => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/lst-pay-alwded`,{
+      const response = await axios.get(`${API_BASE_URL}/pay-alwded-all`,{
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
         }});

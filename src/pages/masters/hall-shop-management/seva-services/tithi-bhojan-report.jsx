@@ -63,7 +63,7 @@ export default function TithiBhojanReport() {
   const periodLabel = { day: "Daily", week: "Weekly", month: "Monthly", year: "Yearly" }[period];
 
   return (
-    <div className="space-y-5 p-6 bg-[#f8f9fa] min-h-screen">
+    <div className="space-y-5 p-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Tithi Bhojan Report</h1>
         <p className="text-sm text-gray-500">Filter bookings by date, meal slot, and service. View daily, weekly, monthly, or yearly totals and the meal coupons issued.</p>

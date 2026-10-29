@@ -218,12 +218,31 @@ const ViewPayAlwded = ({ user }) => {
                 <div className="space-y-4">
                   <div>
                     <label className="text-sm font-medium text-gray-500">
-                      Percentage
+                      Calculation Type
+                    </label>
+                    <div className="mt-1">
+                      <span className="text-gray-900 font-medium">
+                        {(item.Calc_Type || "P") === "F"
+                          ? "Flat Amount"
+                          : (item.Calc_Type || "P") === "S"
+                            ? "Slab Wise"
+                            : "Percentage (of Basic)"}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">
+                      Value
                     </label>
                     <div className="mt-1 flex items-center">
                       <Percent className="h-4 w-4 text-gray-400 mr-2" />
                       <span className="text-gray-900 font-medium">
-                        {formatPercentage(item.Percentage)}
+                        {(item.Calc_Type || "P") === "F"
+                          ? `₹${parseFloat(item.Flat_Amount || 0).toFixed(2)}`
+                          : (item.Calc_Type || "P") === "S"
+                            ? `${(item.slabs || []).length} slab(s)`
+                            : formatPercentage(item.Percentage)}
                       </span>
                     </div>
                   </div>
@@ -247,14 +266,56 @@ const ViewPayAlwded = ({ user }) => {
 
                   <div>
                     <label className="text-sm font-medium text-gray-500">
-                      LG ID
+                      Based On
                     </label>
                     <div className="mt-1">
-                      <span className="text-gray-900">{item.Lg_Id}</span>
+                      <span className="text-gray-900">
+                        {item.Based_On || "BASIC"}
+                      </span>
                     </div>
                   </div>
                 </div>
               </div>
+
+              {(item.Calc_Type || "P") === "S" &&
+                Array.isArray(item.slabs) &&
+                item.slabs.length > 0 && (
+                  <div className="mt-6 border-t pt-4">
+                    <h3 className="text-sm font-semibold text-gray-900 mb-3">
+                      Slabs
+                    </h3>
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full text-sm">
+                        <thead>
+                          <tr className="bg-gray-50 text-left">
+                            <th className="px-3 py-2">From</th>
+                            <th className="px-3 py-2">To</th>
+                            <th className="px-3 py-2">Type</th>
+                            <th className="px-3 py-2">Value</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {item.slabs.map((s) => (
+                            <tr key={s.PAS_Id} className="border-t">
+                              <td className="px-3 py-2">{s.From_Amt}</td>
+                              <td className="px-3 py-2">
+                                {s.To_Amt ?? "∞"}
+                              </td>
+                              <td className="px-3 py-2">
+                                {s.Slab_Type === "F" ? "Flat" : "%"}
+                              </td>
+                              <td className="px-3 py-2">
+                                {s.Slab_Type === "F"
+                                  ? `₹${s.Slab_Value}`
+                                  : `${s.Slab_Value}%`}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
             </div>
           </div>
         </div>

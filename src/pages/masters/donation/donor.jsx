@@ -5,6 +5,7 @@ import {
   Edit,
   Trash2,
   Search,
+  Loader2,
   X,
   ArrowLeft,
   RefreshCw,
@@ -14,15 +15,11 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import DonationApi from "../../services/donationapi";
-import DonationFormPage, {
-  donationInputCls,
-  donationLabelCls,
-} from "./DonationFormPage";
 
 /**
  * S08 - DONATION DONOR MASTER
  * - Phone se search (auto-fill)
- * - Donor-wise donation history
+ * - Donor-wise donation history  
  */
 const DonationDonorMaster = ({ user }) => {
   const navigate = useNavigate();
@@ -166,124 +163,15 @@ const DonationDonorMaster = ({ user }) => {
       .includes(t);
   });
 
-  if (showForm) {
-    const setField = (name) => (e) =>
-      setForm((p) => ({ ...p, [name]: e.target.value }));
-
-    return (
-      <DonationFormPage
-        title={editing ? "Edit Donor" : "Add Donor"}
-        subtitle={
-          editing
-            ? "Update the record details"
-            : "Fill in the details to create a new record"
-        }
-        detailsTitle="Donor Details"
-        onBack={() => setShowForm(false)}
-        onSubmit={handleSave}
-        saving={saving}
-        submitLabel={editing ? "Update Donor" : "Save Donor"}
-        error={formError}
-      >
-        <div>
-          <label className={donationLabelCls}>
-            Donor Name <span className="text-red-500">*</span>
-          </label>
-          <input
-            value={form.donor_name}
-            onChange={setField("donor_name")}
-            className={donationInputCls}
-          />
-        </div>
-        <div>
-          <label className={donationLabelCls}>
-            Phone <span className="text-red-500">*</span>
-          </label>
-          <input
-            value={form.donor_phone}
-            onChange={setField("donor_phone")}
-            className={donationInputCls}
-          />
-          <p className="mt-1 text-xs text-gray-400">
-            Unique - yahi phone entry form me auto-fill hota hai
-          </p>
-        </div>
-        <div>
-          <label className={donationLabelCls}>Email</label>
-          <input
-            value={form.donor_email}
-            onChange={setField("donor_email")}
-            className={donationInputCls}
-          />
-        </div>
-        <div>
-          <label className={donationLabelCls}>PAN</label>
-          <input
-            value={form.donor_pan}
-            onChange={(e) =>
-              setForm((p) => ({ ...p, donor_pan: e.target.value.toUpperCase() }))
-            }
-            className={`${donationInputCls} font-mono`}
-          />
-        </div>
-        <div>
-          <label className={donationLabelCls}>ID Proof Type</label>
-          <select
-            value={form.id_proof_type_id}
-            onChange={setField("id_proof_type_id")}
-            className={donationInputCls}
-          >
-            <option value="">-- select --</option>
-            {docTypes.map((d) => (
-              <option key={d.doctype_id} value={d.doctype_id}>
-                {d.doctype_name}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className={donationLabelCls}>ID Proof No</label>
-          <input
-            value={form.id_proof_no}
-            onChange={setField("id_proof_no")}
-            className={donationInputCls}
-          />
-        </div>
-        <div className="md:col-span-2">
-          <label className={donationLabelCls}>Address</label>
-          <textarea
-            value={form.donor_address}
-            onChange={setField("donor_address")}
-            rows={2}
-            className={donationInputCls}
-          />
-        </div>
-        <div className="md:col-span-2">
-          <label className="flex items-center gap-2 text-sm text-gray-700">
-            <input
-              type="checkbox"
-              checked={!!form.is_active}
-              onChange={(e) =>
-                setForm((p) => ({ ...p, is_active: e.target.checked }))
-              }
-              className="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
-            />
-            Active
-          </label>
-        </div>
-      </DonationFormPage>
-    );
-  }
-
   return (
-    <div className="p-6 bg-[#f8f9fa] min-h-screen">
+    <div className="p-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
         <div className="flex items-center">
           <button
             onClick={() => navigate("/dashboard")}
-            className="mr-4 text-gray-600 hover:text-gray-900"
+            className="mr-4 text-gray-500 hover:text-gray-700"
           >
-            <ArrowLeft className="h-5 w-5" />
+            <ArrowLeft className="h-5 w-5 rotate-180" />
           </button>
           <div>
             <h1 className="text-2xl font-bold text-gray-900">
@@ -297,16 +185,16 @@ const DonationDonorMaster = ({ user }) => {
         <div className="flex items-center space-x-3">
           <button
             onClick={load}
-            className="px-4 py-2 bg-white border border-gray-300 rounded-md hover:bg-gray-50 flex items-center text-sm font-medium transition-all duration-200"
+            className="px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium flex items-center transition-all"
           >
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
           </button>
           <button
             onClick={openCreate}
-            className="bg-red-600 hover:bg-red-700 text-white px-4 py-2.5 rounded-md font-medium flex items-center transition-all shadow-sm"
+            className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-red-700"
           >
-            <Plus className="h-4 w-4 mr-2" /> Add Donor
+            <Plus className="h-4 w-4" /> Add Donor
           </button>
         </div>
       </div>
@@ -340,13 +228,13 @@ const DonationDonorMaster = ({ user }) => {
         ))}
       </div>
 
-      <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6 shadow-sm">
+      <div className="bg-gradient-to-r from-gray-50 to-gray-100 border border-gray-200 rounded-xl p-4 mb-6">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
           <input
             type="text"
             placeholder="Search by name, phone or PAN..."
-            className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-red-500 focus:border-red-500 outline-none text-sm"
+            className="w-full pl-10 pr-10 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
@@ -361,16 +249,16 @@ const DonationDonorMaster = ({ user }) => {
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+            <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
               <tr>
                 {["#", "Donor Name", "Phone", "Email", "PAN", "Status", "Actions"].map(
                   (h) => (
                     <th
                       key={h}
-                      className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"
+                      className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider"
                     >
                       {h}
                     </th>
@@ -383,7 +271,7 @@ const DonationDonorMaster = ({ user }) => {
                 <tr>
                   <td colSpan="7" className="px-6 py-12 text-center">
                     <div className="flex flex-col items-center justify-center">
-                      <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-red-600"></div>
+                      <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-600"></div>
                       <p className="mt-4 text-gray-600">Loading...</p>
                     </div>
                   </td>
@@ -541,6 +429,169 @@ const DonationDonorMaster = ({ user }) => {
                   </tbody>
                 </table>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Form modal */}
+      {showForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white shadow-xl">
+            <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
+              <h3 className="text-base font-semibold text-gray-900">
+                {editing ? "Edit Donor" : "Add Donor"}
+              </h3>
+              <button
+                onClick={() => setShowForm(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 px-5 py-4 sm:grid-cols-2">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-700">
+                  Donor Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  value={form.donor_name}
+                  onChange={(e) =>
+                    setForm((p) => ({ ...p, donor_name: e.target.value }))
+                  }
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-700">
+                  Phone <span className="text-red-500">*</span>
+                </label>
+                <input
+                  value={form.donor_phone}
+                  onChange={(e) =>
+                    setForm((p) => ({ ...p, donor_phone: e.target.value }))
+                  }
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                />
+                <p className="mt-1 text-[10px] text-gray-500">
+                  Unique - yahi phone entry form me auto-fill hota hai
+                </p>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-700">
+                  Email
+                </label>
+                <input
+                  value={form.donor_email}
+                  onChange={(e) =>
+                    setForm((p) => ({ ...p, donor_email: e.target.value }))
+                  }
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-700">
+                  PAN
+                </label>
+                <input
+                  value={form.donor_pan}
+                  onChange={(e) =>
+                    setForm((p) => ({ ...p, donor_pan: e.target.value.toUpperCase() }))
+                  }
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-mono"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-700">
+                  ID Proof Type
+                </label>
+                <select
+                  value={form.id_proof_type_id}
+                  onChange={(e) =>
+                    setForm((p) => ({
+                      ...p,
+                      id_proof_type_id: e.target.value,
+                    }))
+                  }
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                >
+                  <option value="">-- select --</option>
+                  {docTypes.map((d) => (
+                    <option key={d.doctype_id} value={d.doctype_id}>
+                      {d.doctype_name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-700">
+                  ID Proof No
+                </label>
+                <input
+                  value={form.id_proof_no}
+                  onChange={(e) =>
+                    setForm((p) => ({ ...p, id_proof_no: e.target.value }))
+                  }
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="mb-1 block text-xs font-medium text-gray-700">
+                  Address
+                </label>
+                <textarea
+                  value={form.donor_address}
+                  onChange={(e) =>
+                    setForm((p) => ({ ...p, donor_address: e.target.value }))
+                  }
+                  rows={2}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="flex items-center gap-2 text-sm text-gray-700">
+                  <input
+                    type="checkbox"
+                    checked={!!form.is_active}
+                    onChange={(e) =>
+                      setForm((p) => ({ ...p, is_active: e.target.checked }))
+                    }
+                    className="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
+                  />
+                  Active
+                </label>
+              </div>
+            </div>
+
+            {formError && (
+              <div className="mx-5 mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                {formError}
+              </div>
+            )}
+
+            <div className="flex gap-3 border-t border-gray-200 px-5 py-4">
+              <button
+                onClick={() => setShowForm(false)}
+                className="flex-1 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="flex-1 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-60"
+              >
+                {saving ? (
+                  <span className="inline-flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" /> Saving...
+                  </span>
+                ) : editing ? (
+                  "Update"
+                ) : (
+                  "Create"
+                )}
+              </button>
             </div>
           </div>
         </div>

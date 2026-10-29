@@ -5,21 +5,18 @@ import {
   Edit,
   Trash2,
   Search,
+  Loader2,
   X,
   ArrowLeft,
   RefreshCw,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import DonationFormPage, {
-  donationInputCls,
-  donationLabelCls,
-} from "./DonationFormPage";
 
 /**
  * DONATION MODULE - reusable master screen
  *
  * Config driven (list / create / update / delete endpoints + columns + fields)
- * - Estate (Seva/Shop) masters jaisa hi design (list + full page add/edit form)
+ * - Seva/Shop masters jaisa hi design (cards + gradient table + modal form)
  */
 const DonationMasterScreen = ({
   title,
@@ -161,94 +158,16 @@ const DonationMasterScreen = ({
   const statCards =
     typeof stats === "function" ? stats(rows) : stats || [];
 
-  const entityLabel = title.replace(/ Master$/, "");
-
-  if (showForm) {
-    return (
-      <DonationFormPage
-        title={`${editing ? "Edit" : "Add"} ${entityLabel}`}
-        subtitle={
-          editing
-            ? "Update the record details"
-            : "Fill in the details to create a new record"
-        }
-        detailsTitle={`${entityLabel} Details`}
-        onBack={() => setShowForm(false)}
-        onSubmit={handleSave}
-        saving={saving}
-        submitLabel={`${editing ? "Update" : "Save"} ${entityLabel}`}
-        error={formError}
-      >
-        {fields
-          .filter((f) => !f.filter)
-          .map((f) => (
-            <div key={f.name} className={f.full ? "md:col-span-2" : ""}>
-              <label className={donationLabelCls}>
-                {f.label}
-                {f.required && <span className="text-red-500"> *</span>}
-              </label>
-
-              {f.type === "select" ? (
-                <select
-                  value={form[f.name] ?? ""}
-                  onChange={(e) =>
-                    setForm((p) => ({ ...p, [f.name]: e.target.value }))
-                  }
-                  className={donationInputCls}
-                >
-                  <option value="">- select -</option>
-                  {(f.options || []).map((o) => (
-                    <option key={o.value} value={o.value}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
-              ) : f.type === "checkbox" ? (
-                <label className="flex items-center gap-2 py-2 text-sm text-gray-700">
-                  <input
-                    type="checkbox"
-                    checked={!!form[f.name]}
-                    onChange={(e) =>
-                      setForm((p) => ({
-                        ...p,
-                        [f.name]: e.target.checked,
-                      }))
-                    }
-                    className="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
-                  />
-                  {f.checkboxLabel || "Yes"}
-                </label>
-              ) : (
-                <input
-                  type={f.type || "text"}
-                  step={f.step}
-                  min={f.min}
-                  value={form[f.name] ?? ""}
-                  onChange={(e) =>
-                    setForm((p) => ({ ...p, [f.name]: e.target.value }))
-                  }
-                  placeholder={f.placeholder}
-                  className={donationInputCls}
-                />
-              )}
-
-              {f.help && <p className="mt-1 text-xs text-gray-400">{f.help}</p>}
-            </div>
-          ))}
-      </DonationFormPage>
-    );
-  }
-
   return (
-    <div className="p-6 bg-[#f8f9fa] min-h-screen">
+    <div className="p-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
         <div className="flex items-center">
           <button
             onClick={() => navigate("/dashboard")}
-            className="mr-4 text-gray-600 hover:text-gray-900"
+            className="mr-4 text-gray-500 hover:text-gray-700"
           >
-            <ArrowLeft className="h-5 w-5" />
+            <ArrowLeft className="h-5 w-5 rotate-180" />
           </button>
           <div>
             <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
@@ -260,16 +179,16 @@ const DonationMasterScreen = ({
         <div className="flex items-center space-x-3">
           <button
             onClick={load}
-            className="px-4 py-2 bg-white border border-gray-300 rounded-md hover:bg-gray-50 flex items-center text-sm font-medium transition-all duration-200"
+            className="px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium flex items-center transition-all"
           >
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
           </button>
           <button
             onClick={openCreate}
-            className="bg-red-600 hover:bg-red-700 text-white px-4 py-2.5 rounded-md font-medium flex items-center transition-all shadow-sm"
+            className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-red-700"
           >
-            <Plus className="h-4 w-4 mr-2" /> {addLabel}
+            <Plus className="h-4 w-4" /> {addLabel}
           </button>
         </div>
       </div>
@@ -290,14 +209,14 @@ const DonationMasterScreen = ({
       )}
 
       {/* Action bar */}
-      <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6 shadow-sm">
+      <div className="bg-gradient-to-r from-gray-50 to-gray-100 border border-gray-200 rounded-xl p-4 mb-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
             <input
               type="text"
               placeholder="Search..."
-              className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-red-500 focus:border-red-500 outline-none text-sm"
+              className="w-full pl-10 pr-10 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
@@ -320,7 +239,7 @@ const DonationMasterScreen = ({
                 onChange={(e) =>
                   setFilters((p) => ({ ...p, [f.name]: e.target.value }))
                 }
-                className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500"
+                className="rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm"
               >
                 <option value="">{f.filterLabel || `All ${f.label}`}</option>
                 {(f.options || []).map((o) => (
@@ -334,20 +253,20 @@ const DonationMasterScreen = ({
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+            <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
               <tr>
                 {columns.map((c) => (
                   <th
                     key={c.key}
-                    className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"
+                    className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider"
                   >
                     {c.label}
                   </th>
                 ))}
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
@@ -360,7 +279,7 @@ const DonationMasterScreen = ({
                     className="px-6 py-12 text-center"
                   >
                     <div className="flex flex-col items-center justify-center">
-                      <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-red-600"></div>
+                      <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-600"></div>
                       <p className="mt-4 text-gray-600">Loading...</p>
                     </div>
                   </td>
@@ -410,6 +329,119 @@ const DonationMasterScreen = ({
           </table>
         </div>
       </div>
+
+      {/* Form modal */}
+      {showForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white shadow-xl">
+            <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
+              <h3 className="text-base font-semibold text-gray-900">
+                {editing ? "Edit" : "Add"} {title.replace(/ Master$/, "")}
+              </h3>
+              <button
+                onClick={() => setShowForm(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 px-5 py-4 sm:grid-cols-2">
+              {fields
+                .filter((f) => !f.filter)
+                .map((f) => (
+                  <div
+                    key={f.name}
+                    className={f.full ? "sm:col-span-2" : ""}
+                  >
+                    <label className="mb-1 block text-xs font-medium text-gray-700">
+                      {f.label}
+                      {f.required && <span className="text-red-500"> *</span>}
+                    </label>
+
+                    {f.type === "select" ? (
+                      <select
+                        value={form[f.name] ?? ""}
+                        onChange={(e) =>
+                          setForm((p) => ({ ...p, [f.name]: e.target.value }))
+                        }
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                      >
+                        <option value="">- select -</option>
+                        {(f.options || []).map((o) => (
+                          <option key={o.value} value={o.value}>
+                            {o.label}
+                          </option>
+                        ))}
+                      </select>
+                    ) : f.type === "checkbox" ? (
+                      <label className="flex items-center gap-2 text-sm text-gray-700">
+                        <input
+                          type="checkbox"
+                          checked={!!form[f.name]}
+                          onChange={(e) =>
+                            setForm((p) => ({
+                              ...p,
+                              [f.name]: e.target.checked,
+                            }))
+                          }
+                          className="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
+                        />
+                        {f.checkboxLabel || "Yes"}
+                      </label>
+                    ) : (
+                      <input
+                        type={f.type || "text"}
+                        step={f.step}
+                        min={f.min}
+                        value={form[f.name] ?? ""}
+                        onChange={(e) =>
+                          setForm((p) => ({ ...p, [f.name]: e.target.value }))
+                        }
+                        placeholder={f.placeholder}
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                      />
+                    )}
+
+                    {f.help && (
+                      <p className="mt-1 text-[10px] text-gray-500">{f.help}</p>
+                    )}
+                  </div>
+                ))}
+            </div>
+
+            {formError && (
+              <div className="mx-5 mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                {formError}
+              </div>
+            )}
+
+            <div className="flex gap-3 border-t border-gray-200 px-5 py-4">
+              <button
+                onClick={() => setShowForm(false)}
+                className="flex-1 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="flex-1 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-60"
+              >
+                {saving ? (
+                  <span className="inline-flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" /> Saving...
+                  </span>
+                ) : editing ? (
+                  "Update"
+                ) : (
+                  "Create"
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
