@@ -304,11 +304,6 @@ const SevaServices = ({ user }) => {
             </p>
           </div>
         </div>
-        <p className="rounded-lg bg-blue-50 px-3 py-2 text-[11px] text-blue-800">
-          Price, Pooja Duration, daily limit and group size are defined
-          in the <strong> Seva Packages </strong> master. Devotee selects
-          the package at the time of booking.
-        </p>
         <div className="rounded-xl border border-gray-200 bg-gray-50 p-3">
           <p className="mb-2 text-xs font-semibold text-gray-700">
             Visibility
