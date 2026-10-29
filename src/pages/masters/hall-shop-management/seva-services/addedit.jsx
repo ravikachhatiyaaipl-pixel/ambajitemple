@@ -1,4 +1,9 @@
 import { useState, useEffect, useMemo } from "react";
+import BackButton from "../../../../components/backbutton";
+import DonationFormPage, {
+  donationInputCls,
+  donationLabelCls,
+} from "../../donation/DonationFormPage";
 import { toast } from "react-hot-toast";
 import axios from "axios";
 import {
@@ -7,7 +12,6 @@ import {
   Trash2,
   Search,
   Loader2,
-  X,
   CheckCircle,
   XCircle,
   Layers,
@@ -186,16 +190,168 @@ const SevaServices = ({ user }) => {
     );
   }
 
+  if (showForm) {
+    return (
+      <DonationFormPage
+        title={editing ? "Edit Service" : "Add Service"}
+        subtitle={
+          editing
+            ? "Update the record details"
+            : "Fill in the details to create a new record"
+        }
+        detailsTitle="Service Details"
+        onBack={() => setShowForm(false)}
+        onSubmit={handleSave}
+        saving={saving}
+        submitLabel={editing ? "Update Service" : "Save Service"}
+      >
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div>
+            <label className={donationLabelCls}>
+              Category
+            </label>
+            <select
+              value={form.category_id}
+              onChange={(e) => {
+                const catId = e.target.value;
+                const cat = categories.find(
+                  (c) => String(c.category_id) === String(catId)
+                );
+                setForm((p) => ({
+                  ...p,
+                  category_id: catId,
+                }));
+              }}
+              className={donationInputCls}
+            >
+              <option value="">— none —</option>
+              {categories.map((c) => (
+                <option key={c.category_id} value={c.category_id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+            {selectedCategory && (
+              <p className="mt-1 text-[10px] text-gray-500">
+                Code automatically generate hoga (name se)
+              </p>
+            )}
+          </div>
+
+          <div>
+            <label className={donationLabelCls}>
+              Service Name *
+            </label>
+            <input
+              value={form.name}
+              onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
+              placeholder="Maha Pooja"
+              className={donationInputCls}
+            />
+          </div>
+
+          <div>
+            <label className={donationLabelCls}>
+              Service Kind *
+            </label>
+            <select
+              value={form.service_kind}
+              onChange={(e) =>
+                setForm((p) => ({ ...p, service_kind: e.target.value }))
+              }
+              className={donationInputCls}
+            >
+              {kinds.map((k) => (
+                <option key={k.kind_id} value={k.code}>
+                  {k.name} ({k.code})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className={donationLabelCls}>Booking Flow *</label>
+            <select value={form.service_mode} onChange={(e) => setForm((p) => ({ ...p, service_mode: e.target.value }))} className={donationInputCls}>
+              <option value="GENERAL">General Seva</option>
+              <option value="ANNASHETRA_DONATION">Annakshetra Donation</option>
+              <option value="TITHI_BHOJAN">Tithi Bhojan</option>
+            </select>
+            <p className="mt-1 text-[10px] text-gray-500">Controls the devotee booking flow and its service listing.</p>
+          </div>
+
+          {/* PERMISSION APPROVAL = yes/no */}
+          <div>
+            <label className={donationLabelCls}>
+              Permission Approval
+            </label>
+            <select
+              value={form.permission_approval ? "1" : "0"}
+              onChange={(e) =>
+                setForm((p) => ({
+                  ...p,
+                  permission_approval: e.target.value === "1",
+                }))
+              }
+              className={donationInputCls}
+            >
+              <option value="0">No — direct booking (no approval)</option>
+              <option value="1">Yes — Action Master approval required</option>
+            </select>
+            <p className="mt-1 text-[10px] text-gray-500">
+              {form.permission_approval
+                ? "Yes - bookings will wait for approval (HOD Approved, then Admin Approved) as per the Action Master flow."
+                : "No - bookings are scheduled directly, no approval needed."}
+            </p>
+          </div>
+        </div>
+        <p className="rounded-lg bg-blue-50 px-3 py-2 text-[11px] text-blue-800">
+          Price, Pooja Duration, daily limit and group size are defined
+          in the <strong> Seva Packages </strong> master. Devotee selects
+          the package at the time of booking.
+        </p>
+        <div className="rounded-xl border border-gray-200 bg-gray-50 p-3">
+          <p className="mb-2 text-xs font-semibold text-gray-700">
+            Visibility
+          </p>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {[
+              ["show_on_portal", "Show on portal"],
+              ["is_active", "Active"],
+            ].map(([key, label]) => (
+              <label
+                key={key}
+                className="flex items-center gap-2 text-xs text-gray-700"
+              >
+                <input
+                  type="checkbox"
+                  checked={!!form[key]}
+                  onChange={(e) =>
+                    setForm((p) => ({ ...p, [key]: e.target.checked }))
+                  }
+                  className="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
+                />
+                {label}
+              </label>
+            ))}
+          </div>
+        </div>
+      </DonationFormPage>
+    );
+  }
+
   return (
-    <div className="p-6 space-y-5">
+    <div className="p-6 space-y-5 bg-[#f8f9fa] min-h-screen">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Seva Services</h1>
-          <p className="text-sm text-gray-500">
-            Pooja, Yagna, Bhog, Thaal, Ratri Puja and more - pricing lives in
-            Packages
-          </p>
+        <div className="flex items-center">
+          <BackButton fallback="/dashboard" className="mr-4" />
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Seva Services</h1>
+            <p className="text-sm text-gray-500">
+              Pooja, Yagna, Bhog, Thaal, Ratri Puja and more - pricing lives in
+              Packages
+            </p>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <div className="relative">
@@ -262,7 +418,7 @@ const SevaServices = ({ user }) => {
       <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+            <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
               <tr>
                 {[
                   "#",
@@ -396,175 +552,6 @@ const SevaServices = ({ user }) => {
         </div>
       </div>
 
-      {/* Form modal */}
-      {showForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white shadow-xl">
-            <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
-              <h3 className="text-base font-semibold text-gray-900">
-                {editing ? "Edit Service" : "Add Service"}
-              </h3>
-              <button
-                onClick={() => setShowForm(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="space-y-4 px-5 py-4">
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-gray-700">
-                    Category
-                  </label>
-                  <select
-                    value={form.category_id}
-                    onChange={(e) => {
-                      const catId = e.target.value;
-                      const cat = categories.find(
-                        (c) => String(c.category_id) === String(catId)
-                      );
-                      setForm((p) => ({
-                        ...p,
-                        category_id: catId,
-                      }));
-                    }}
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-                  >
-                    <option value="">— none —</option>
-                    {categories.map((c) => (
-                      <option key={c.category_id} value={c.category_id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-                  {selectedCategory && (
-                    <p className="mt-1 text-[10px] text-gray-500">
-                      Code automatically generate hoga (name se)
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-gray-700">
-                    Service Name *
-                  </label>
-                  <input
-                    value={form.name}
-                    onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-                    placeholder="Maha Pooja"
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-gray-700">
-                    Service Kind *
-                  </label>
-                  <select
-                    value={form.service_kind}
-                    onChange={(e) =>
-                      setForm((p) => ({ ...p, service_kind: e.target.value }))
-                    }
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-                  >
-                    {kinds.map((k) => (
-                      <option key={k.kind_id} value={k.code}>
-                        {k.name} ({k.code})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-gray-700">Booking Flow *</label>
-                  <select value={form.service_mode} onChange={(e) => setForm((p) => ({ ...p, service_mode: e.target.value }))} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
-                    <option value="GENERAL">General Seva</option>
-                    <option value="ANNASHETRA_DONATION">Annakshetra Donation</option>
-                    <option value="TITHI_BHOJAN">Tithi Bhojan</option>
-                  </select>
-                  <p className="mt-1 text-[10px] text-gray-500">Controls the devotee booking flow and its service listing.</p>
-                </div>
-
-                {/* PERMISSION APPROVAL = yes/no */}
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-gray-700">
-                    Permission Approval
-                  </label>
-                  <select
-                    value={form.permission_approval ? "1" : "0"}
-                    onChange={(e) =>
-                      setForm((p) => ({
-                        ...p,
-                        permission_approval: e.target.value === "1",
-                      }))
-                    }
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-                  >
-                    <option value="0">No — direct booking (no approval)</option>
-                    <option value="1">Yes — Action Master approval required</option>
-                  </select>
-                  <p className="mt-1 text-[10px] text-gray-500">
-                    {form.permission_approval
-                      ? "Yes - bookings will wait for approval (HOD Approved, then Admin Approved) as per the Action Master flow."
-                      : "No - bookings are scheduled directly, no approval needed."}
-                  </p>
-                </div>
-              </div>
-
-              <p className="rounded-lg bg-blue-50 px-3 py-2 text-[11px] text-blue-800">
-                Price, Pooja Duration, daily limit and group size are defined
-                in the <strong> Seva Packages </strong> master. Devotee selects
-                the package at the time of booking.
-              </p>
-
-              <div className="rounded-xl border border-gray-200 bg-gray-50 p-3">
-                <p className="mb-2 text-xs font-semibold text-gray-700">
-                  Visibility
-                </p>
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                  {[
-                    ["show_on_portal", "Show on portal"],
-                    ["is_active", "Active"],
-                  ].map(([key, label]) => (
-                    <label
-                      key={key}
-                      className="flex items-center gap-2 text-xs text-gray-700"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={!!form[key]}
-                        onChange={(e) =>
-                          setForm((p) => ({ ...p, [key]: e.target.checked }))
-                        }
-                        className="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
-                      />
-                      {label}
-                    </label>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex gap-3 border-t border-gray-200 px-5 py-4">
-              <button
-                onClick={() => setShowForm(false)}
-                className="flex-1 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSave}
-                disabled={saving}
-                className="flex-1 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-60"
-              >
-                {saving ? "Saving..." : editing ? "Update" : "Create"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

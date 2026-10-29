@@ -7,14 +7,16 @@ import {
   Package,
   IndianRupee,
   Scale,
-  Loader2,
   Building2,
   Calendar,
   X,
-  Check,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import DonationApi from "../../services/donationapi";
+import DonationFormPage, {
+  donationInputCls,
+  donationLabelCls,
+} from "../../masters/donation/DonationFormPage";
 
 /**
  * S15 - DONATION STORAGE ALLOCATION
@@ -110,15 +112,98 @@ const DonationStorageAllocation = ({ user }) => {
     0
   );
 
+  if (modal) {
+    return (
+      <DonationFormPage
+        title="Storage Allocation"
+        subtitle={`Receipt ${modal.receipt_no} - allocate vault / locker`}
+        detailsTitle="Allocation Details"
+        onBack={() => setModal(null)}
+        onSubmit={handleAllocate}
+        saving={saving}
+        submitLabel="Allocate Storage"
+      >
+        <div className="md:col-span-2 rounded-md border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600">
+          <div className="flex justify-between">
+            <span>Donor</span>
+            <span className="font-medium text-gray-900">
+              {modal.donor?.donor_name}
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span>Weight</span>
+            <span className="font-medium text-gray-900">
+              {Number(modal.weight_in_gram || 0).toFixed(4)} g
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span>Valuation</span>
+            <span className="font-medium text-gray-900">
+              {Number(modal.valuation_amount || 0).toLocaleString("en-IN", {
+                minimumFractionDigits: 2,
+              })}
+            </span>
+          </div>
+        </div>
+
+        <div>
+          <label className={donationLabelCls}>
+            Location <span className="text-red-500">*</span>
+          </label>
+          <select
+            value={form.location_id}
+            onChange={(e) =>
+              setForm((p) => ({ ...p, location_id: e.target.value }))
+            }
+            className={donationInputCls}
+          >
+            <option value="">-- select --</option>
+            {locations.map((l) => (
+              <option key={l.location_id} value={l.location_id}>
+                {l.location_name} ({l.location_type})
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className={donationLabelCls}>
+            Allocated Date <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="date"
+            value={form.allocated_date}
+            onChange={(e) =>
+              setForm((p) => ({ ...p, allocated_date: e.target.value }))
+            }
+            className={donationInputCls}
+          />
+        </div>
+
+        <div className="md:col-span-2">
+          <label className={donationLabelCls}>Remarks</label>
+          <textarea
+            rows={2}
+            value={form.remarks}
+            onChange={(e) =>
+              setForm((p) => ({ ...p, remarks: e.target.value }))
+            }
+            className={donationInputCls}
+          />
+        </div>
+      </DonationFormPage>
+    );
+  }
+
   return (
-    <div className="p-6">
+    <div className="p-6 bg-[#f8f9fa] min-h-screen">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
         <div className="flex items-center">
           <button
             onClick={() => navigate("/dashboard")}
-            className="mr-4 text-gray-500 hover:text-gray-700"
+            className="mr-4 text-gray-600 hover:text-gray-900"
           >
-            <ArrowLeft className="h-5 w-5 rotate-180" />
+            <ArrowLeft className="h-5 w-5" />
           </button>
           <div>
             <h1 className="text-2xl font-bold text-gray-900">
@@ -131,7 +216,7 @@ const DonationStorageAllocation = ({ user }) => {
         </div>
         <button
           onClick={load}
-          className="px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium flex items-center transition-all"
+          className="px-4 py-2 bg-white border border-gray-300 rounded-md hover:bg-gray-50 flex items-center text-sm font-medium transition-all duration-200"
         >
           <RefreshCw className="h-4 w-4 mr-2" />
           Refresh
@@ -295,128 +380,6 @@ const DonationStorageAllocation = ({ user }) => {
           </table>
         </div>
       </div>
-
-      {/* Allocate modal */}
-      {modal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white shadow-xl">
-            <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
-              <div>
-                <h3 className="text-base font-semibold text-gray-900">
-                  Storage Allocation
-                </h3>
-                <p className="text-xs text-gray-500 font-mono">
-                  {modal.receipt_no}
-                </p>
-              </div>
-              <button
-                onClick={() => setModal(null)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="space-y-4 px-5 py-4">
-              <div className="rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-600">
-                <div className="flex justify-between">
-                  <span>Donor</span>
-                  <span className="font-medium text-gray-900">
-                    {modal.donor?.donor_name}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Weight</span>
-                  <span className="font-medium text-gray-900">
-                    {Number(modal.weight_in_gram || 0).toFixed(4)} g
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Valuation</span>
-                  <span className="font-medium text-gray-900">
-                    -
-                    {Number(modal.valuation_amount || 0).toLocaleString("en-IN", {
-                      minimumFractionDigits: 2,
-                    })}
-                  </span>
-                </div>
-              </div>
-
-              <div>
-                <label className="mb-1 block text-xs font-medium text-gray-700">
-                  Location <span className="text-red-500">*</span>
-                </label>
-                <select
-                  value={form.location_id}
-                  onChange={(e) =>
-                    setForm((p) => ({ ...p, location_id: e.target.value }))
-                  }
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-                >
-                  <option value="">-- select --</option>
-                  {locations.map((l) => (
-                    <option key={l.location_id} value={l.location_id}>
-                      {l.location_name} ({l.location_type})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="mb-1 block text-xs font-medium text-gray-700">
-                  Allocated Date <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="date"
-                  value={form.allocated_date}
-                  onChange={(e) =>
-                    setForm((p) => ({ ...p, allocated_date: e.target.value }))
-                  }
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-                />
-              </div>
-
-              <div>
-                <label className="mb-1 block text-xs font-medium text-gray-700">
-                  Remarks
-                </label>
-                <textarea
-                  rows={2}
-                  value={form.remarks}
-                  onChange={(e) =>
-                    setForm((p) => ({ ...p, remarks: e.target.value }))
-                  }
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-                />
-              </div>
-            </div>
-
-            <div className="flex gap-3 border-t border-gray-200 px-5 py-4">
-              <button
-                onClick={() => setModal(null)}
-                className="flex-1 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleAllocate}
-                disabled={saving}
-                className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg bg-amber-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-amber-600 disabled:opacity-60"
-              >
-                {saving ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" /> Saving...
-                  </>
-                ) : (
-                  <>
-                    <Check className="h-4 w-4" /> Allocate
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
