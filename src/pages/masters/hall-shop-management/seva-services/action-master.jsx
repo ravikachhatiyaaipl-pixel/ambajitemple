@@ -12,7 +12,6 @@ import {
   X,
   Users,
 } from "lucide-react";
-import { CrudFormPage } from "../../../../components/crud/crudkit";
 
 /**
  * Seva Action Master (stage SEV).
@@ -27,6 +26,7 @@ import { CrudFormPage } from "../../../../components/crud/crudkit";
  */
 const SevaActionMaster = ({ user }) => {
   const [chain, setChain] = useState([]);
+  const [departments, setDepartments] = useState([]);
   const [designations, setDesignations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -50,9 +50,12 @@ const SevaActionMaster = ({ user }) => {
   const fetchAll = async () => {
     try {
       setLoading(true);
-      const [chainRes, dsgRes] = await Promise.all([
+      const [chainRes, dsgRes, deptRes] = await Promise.all([
         axios.get(`${base}/seva/approval-chain?stage=SEV`, { headers }),
         axios.get(`${base}/lst-designation-master`, { headers }).catch(() => ({
+          data: { data: [] },
+        })),
+        axios.get(`${base}/lst-department-master`, { headers }).catch(() => ({
           data: { data: [] },
         })),
       ]);
@@ -62,6 +65,10 @@ const SevaActionMaster = ({ user }) => {
       const d = dsgRes.data?.data;
       if (Array.isArray(d)) setDesignations(d);
       else if (d?.data && Array.isArray(d.data)) setDesignations(d.data);
+
+      const depts = deptRes.data?.data;
+      if (Array.isArray(depts)) setDepartments(depts);
+      else if (depts?.data && Array.isArray(depts.data)) setDepartments(depts.data);
     } catch (e) {
       toast.error(e.response?.data?.message || "Failed to load action master");
     } finally {
@@ -171,6 +178,12 @@ const SevaActionMaster = ({ user }) => {
     return d?.Dsg_Name || d?.name || `Designation ${id}`;
   };
 
+  const deptName = (id) => {
+    if (!id) return "Any";
+    const d = departments.find((x) => String(x.Dpt_id) === String(id));
+    return d?.Dpt_Name || `Dept ${id}`;
+  };
+
   const steps = useMemo(() => chain, [chain]);
 
   if (loading) {
@@ -178,135 +191,6 @@ const SevaActionMaster = ({ user }) => {
       <div className="flex min-h-[400px] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-red-600" />
       </div>
-    );
-  }
-
-  if (showForm) {
-    return (
-      <CrudFormPage
-        title={editing ? "Edit Step" : "Add Step"}
-        onClose={() => setShowForm(false)}
-        onSubmit={handleSave}
-        saving={saving}
-        submitLabel="Save"
-      >
-          <div>
-            <label className="mb-1 block text-xs font-medium text-gray-700">
-              Step name *
-            </label>
-            <input
-              value={form.St_Name}
-              onChange={(e) =>
-                setForm((p) => ({ ...p, St_Name: e.target.value }))
-              }
-              placeholder="HOD Approved"
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-            />
-          </div>
-
-          <div>
-            <label className="mb-1 block text-xs font-medium text-gray-700">
-              Previous step
-            </label>
-            <select
-              value={form.Previous_Status}
-              onChange={(e) =>
-                setForm((p) => ({ ...p, Previous_Status: e.target.value }))
-              }
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-            >
-              <option value="">— none (first step) —</option>
-              {steps
-                .filter((s) => !editing || s.Act_Id !== editing.Act_Id)
-                .map((s) => (
-                  <option key={s.Act_Id} value={s.Act_Id}>
-                    {s.St_Name}
-                  </option>
-                ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="mb-1 block text-xs font-medium text-gray-700">
-              Who can approve this step
-            </label>
-            {designations.length === 0 ? (
-              <p className="text-[11px] text-gray-500">
-                No designation master loaded - leave empty to allow any
-                authorised user.
-              </p>
-            ) : (
-              <div className="max-h-40 overflow-y-auto rounded-lg border border-gray-200 p-2">
-                {designations.map((d) => {
-                  const id = d.Dsg_id ?? d.id;
-                  const on = form.Authorities.includes(id);
-                  return (
-                    <label
-                      key={id}
-                      className="flex items-center gap-2 px-1 py-1 text-xs text-gray-700"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={on}
-                        onChange={() => toggleIn("Authorities", id)}
-                        className="h-3.5 w-3.5 rounded border-gray-300 text-red-600"
-                      />
-                      {d.Dsg_Name || d.name || `Designation ${id}`}
-                    </label>
-                  );
-                })}
-              </div>
-            )}
-            <p className="mt-1 text-[10px] text-gray-500">
-              Leave empty - any authorised user can approve this step.
-            </p>
-          </div>
-
-          <div>
-            <label className="mb-1 block text-xs font-medium text-gray-700">
-              Who can see bookings on this step
-            </label>
-            {designations.length === 0 ? (
-              <p className="text-[11px] text-gray-500">
-                No designation master loaded.
-              </p>
-            ) : (
-              <div className="max-h-32 overflow-y-auto rounded-lg border border-gray-200 p-2">
-                {designations.map((d) => {
-                  const id = d.Dsg_id ?? d.id;
-                  const on = form.Viewers.includes(id);
-                  return (
-                    <label
-                      key={id}
-                      className="flex items-center gap-2 px-1 py-1 text-xs text-gray-700"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={on}
-                        onChange={() => toggleIn("Viewers", id)}
-                        className="h-3.5 w-3.5 rounded border-gray-300 text-red-600"
-                      />
-                      {d.Dsg_Name || d.name || `Designation ${id}`}
-                    </label>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          <div>
-            <label className="mb-1 block text-xs font-medium text-gray-700">
-              Remarks
-            </label>
-            <input
-              value={form.Act_Remarks}
-              onChange={(e) =>
-                setForm((p) => ({ ...p, Act_Remarks: e.target.value }))
-              }
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-            />
-          </div>
-      </CrudFormPage>
     );
   }
 
@@ -418,6 +302,14 @@ const SevaActionMaster = ({ user }) => {
                         </strong>
                       </p>
                     )}
+                    {s.Dpt_id && (
+                      <p className="text-[11px] text-gray-600">
+                        <span className="inline-flex items-center gap-1">
+                          <span className="w-1 h-1 rounded-full bg-gray-400" />
+                          Dept: {deptName(s.Dpt_id)}
+                        </span>
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -426,6 +318,182 @@ const SevaActionMaster = ({ user }) => {
         )}
       </div>
 
+      {/* FORM */}
+      {showForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-5 shadow-xl">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-semibold text-gray-900">
+                {editing ? "Edit Step" : "Add Step"}
+              </h3>
+              <button
+                onClick={() => setShowForm(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="mt-4 space-y-3">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-700">
+                  Step name *
+                </label>
+                <input
+                  value={form.St_Name}
+                  onChange={(e) =>
+                    setForm((p) => ({ ...p, St_Name: e.target.value }))
+                  }
+                  placeholder="HOD Approved"
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-700">
+                  Previous step
+                </label>
+                <select
+                  value={form.Previous_Status}
+                  onChange={(e) =>
+                    setForm((p) => ({ ...p, Previous_Status: e.target.value }))
+                  }
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                >
+                  <option value="">— none (first step) —</option>
+                  {steps
+                    .filter((s) => !editing || s.Act_Id !== editing.Act_Id)
+                    .map((s) => (
+                      <option key={s.Act_Id} value={s.Act_Id}>
+                        {s.St_Name}
+                      </option>
+                    ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-700">
+                  Department
+                </label>
+                <select
+                  value={form.Dpt_id}
+                  onChange={(e) =>
+                    setForm((p) => ({ ...p, Dpt_id: e.target.value }))
+                  }
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                >
+                  <option value="">— Any department —</option>
+                  {departments.map((d) => (
+                    <option key={d.Dpt_id} value={d.Dpt_id}>
+                      {d.Dpt_Name}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-1 text-[10px] text-gray-500">
+                  Set department to restrict this step to users of that department only.
+                </p>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-700">
+                  Who can approve this step
+                </label>
+                {designations.length === 0 ? (
+                  <p className="text-[11px] text-gray-500">
+                    No designation master loaded - leave empty to allow any
+                    authorised user.
+                  </p>
+                ) : (
+                  <div className="max-h-40 overflow-y-auto rounded-lg border border-gray-200 p-2">
+                    {designations.map((d) => {
+                      const id = d.Dsg_id ?? d.id;
+                      const on = form.Authorities.includes(id);
+                      return (
+                        <label
+                          key={id}
+                          className="flex items-center gap-2 px-1 py-1 text-xs text-gray-700"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={on}
+                            onChange={() => toggleIn("Authorities", id)}
+                            className="h-3.5 w-3.5 rounded border-gray-300 text-red-600"
+                          />
+                          {d.Dsg_Name || d.name || `Designation ${id}`}
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
+                <p className="mt-1 text-[10px] text-gray-500">
+                  Leave empty - any authorised user can approve this step.
+                </p>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-700">
+                  Who can see bookings on this step
+                </label>
+                {designations.length === 0 ? (
+                  <p className="text-[11px] text-gray-500">
+                    No designation master loaded.
+                  </p>
+                ) : (
+                  <div className="max-h-32 overflow-y-auto rounded-lg border border-gray-200 p-2">
+                    {designations.map((d) => {
+                      const id = d.Dsg_id ?? d.id;
+                      const on = form.Viewers.includes(id);
+                      return (
+                        <label
+                          key={id}
+                          className="flex items-center gap-2 px-1 py-1 text-xs text-gray-700"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={on}
+                            onChange={() => toggleIn("Viewers", id)}
+                            className="h-3.5 w-3.5 rounded border-gray-300 text-red-600"
+                          />
+                          {d.Dsg_Name || d.name || `Designation ${id}`}
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-700">
+                  Remarks
+                </label>
+                <input
+                  value={form.Act_Remarks}
+                  onChange={(e) =>
+                    setForm((p) => ({ ...p, Act_Remarks: e.target.value }))
+                  }
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                />
+              </div>
+            </div>
+
+            <div className="mt-5 flex gap-3">
+              <button
+                onClick={() => setShowForm(false)}
+                className="flex-1 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="flex-1 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-60"
+              >
+                {saving ? "Saving..." : "Save"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

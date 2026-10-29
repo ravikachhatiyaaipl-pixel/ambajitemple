@@ -70,27 +70,5 @@ export const useQuickActions = () => {
       }));
   }, [menus]);
 
-  // Top-level menus (modules) with how many pages each one holds and where it opens.
-  const modules = useMemo(() => {
-    const kids = (code) => menus.filter((m) => code && m.UpGrp == code);
-    const leaves = (m, depth = 0) => {
-      const sub = depth < 6 ? kids(m.GrCod) : [];
-      return sub.length ? sub.flatMap((k) => leaves(k, depth + 1)) : hasLink(m) ? [m] : [];
-    };
-    return menus
-      .filter((m) => !m.UpGrp && menuName(m))
-      .map((m, i) => {
-        const pages = leaves(m);
-        const first = pages[0]?.Menu_Links;
-        return {
-          name: menuName(m),
-          count: pages.length,
-          to: first ? (first.startsWith("/") ? first : `/${first}`) : "",
-          tone: TONE_CYCLE[i % TONE_CYCLE.length],
-        };
-      })
-      .filter((m) => m.count > 0);
-  }, [menus]);
-
-  return { menus, quickActions, modules, loading };
+  return { menus, quickActions, loading };
 };

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef, Fragment } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import axios from "axios";
@@ -32,9 +32,9 @@ import {
   Handshake,
   HandCoins,
   CalendarCheck,
-  Printer,
+  Plus,
+  Trash2,
 } from "lucide-react";
-import BackButton from "../components/backbutton";
 
 const KIND_META = {
   POOJA: { label: "Pooja", cls: "bg-orange-100 text-orange-700", Icon: Sparkles },
@@ -48,24 +48,25 @@ const KIND_META = {
   SPONSORSHIP: { label: "Sponsorship", cls: "bg-gray-100 text-gray-700", Icon: Handshake },
 };
 
-const BOOKINGS_PER_PAGE = 10;
-const BOOKING_STATUSES = [
-  "PENDING_PAYMENT",
-  "PENDING_APPROVAL",
-  "QUERY_RAISED",
-  "APPROVED",
-  "SCHEDULED",
-  "PERFORMED",
-  "COMPLETED",
-  "CANCELLED",
-  "REJECTED",
-];
-
 const SevaPortal = ({ user, onLogout }) => {
   const navigate = useNavigate();
   const token = localStorage.getItem("auth_token");
   const base = import.meta.env.VITE_API_URL;
   const headers = { Authorization: `Bearer ${token}` };
+
+  // ---------- LOCAL date helpers ----------
+  // NOTE: toISOString() UTC deta hai - browser timezone UTC se peeche ho to
+  // date ek din aage dikhta hai. Isliye local date use karte hain.
+  const localDate = (d = new Date()) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+      d.getDate()
+    ).padStart(2, "0")}`;
+
+  const addDays = (d, days) => {
+    const x = new Date(d);
+    x.setDate(x.getDate() + days);
+    return x;
+  };
 
   const [view, setView] = useState("catalogue");
   const [loading, setLoading] = useState(true);
@@ -76,24 +77,27 @@ const SevaPortal = ({ user, onLogout }) => {
   const [paymentModes, setPaymentModes] = useState([]);
   const [query, setQuery] = useState("");
   const [activeCat, setActiveCat] = useState("ALL");
+  const [activeMode, setActiveMode] = useState("ALL");
+  const [coDonorText, setCoDonorText] = useState("");
+  const coDonorRows = coDonorText.split("\n");
+  const [donationAmount, setDonationAmount] = useState("");
 
   const [selectedService, setSelectedService] = useState(null);
   const [selectedPackage, setSelectedPackage] = useState(null);
-  const [performDate, setPerformDate] = useState(() => {
-    const d = new Date();
-    d.setDate(d.getDate() + 1);
-    return d.toISOString().slice(0, 10);
-  });
-  // Catalogue ka daily limit kis date ka dikhana hai (default = aaj)
-  const [quotaDate, setQuotaDate] = useState(() =>
-    new Date().toISOString().slice(0, 10)
+  const [performDate, setPerformDate] = useState(() =>
+    localDate(addDays(new Date(), 1))
   );
-  const quotaDateRef = useRef(quotaDate);
-  quotaDateRef.current = quotaDate;
+  // Catalogue ka daily limit kis date ka dikhana hai.
+  // Default = SERVER ka aaj (browser timezone se mismatch na ho) -
+  // isliye pehle khali bhejte hain, server quota_date bhejta hai.
+  const [quotaDate, setQuotaDate] = useState("");
+  // User ne khud date change ki hai ya nahi (auto rollover band karne ke liye)
+  const [dateIsAuto, setDateIsAuto] = useState(true);
   const [slots, setSlots] = useState([]);
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [quota, setQuota] = useState(null);
   const [groupSize, setGroupSize] = useState(1);
+  const [packageLimit, setPackageLimit] = useState(null);
   const [pricePreview, setPricePreview] = useState(null);
 
   const [devoteeName, setDevoteeName] = useState(
@@ -121,20 +125,23 @@ const SevaPortal = ({ user, onLogout }) => {
   );
 
   const [myBookings, setMyBookings] = useState([]);
+  const [bookingServiceFilter, setBookingServiceFilter] = useState("ALL");
+  const [bookingStatusFilter, setBookingStatusFilter] = useState("ALL");
+  const [bookingSearch, setBookingSearch] = useState("");
   const [queryResponses, setQueryResponses] = useState({});
   const [activeBooking, setActiveBooking] = useState(null);
   const [paying, setPaying] = useState(false);
+  const [razorpayKeyId, setRazorpayKeyId] = useState("");
+  const [razorpayBusy, setRazorpayBusy] = useState(null);
   const [payAmount, setPayAmount] = useState("");
-  const [bookingQuery, setBookingQuery] = useState("");
-  const [bookingStatus, setBookingStatus] = useState("ALL");
-  const [bookingPage, setBookingPage] = useState(1);
-  const [receiptBooking, setReceiptBooking] = useState(null);
-  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     loadCatalogue();
     loadMyBookings();
     loadPaymentModes();
+    axios.get(`${base}/portal/seva/payment-config`, { headers })
+      .then((res) => setRazorpayKeyId(res.data?.data?.enabled ? (res.data.data.key_id || "") : ""))
+      .catch(() => setRazorpayKeyId(""));
   }, []);
 
   const loadCatalogue = async (silent = false) => {
@@ -142,13 +149,28 @@ const SevaPortal = ({ user, onLogout }) => {
       if (!silent) {
         setLoading(true);
       }
+
+      // Date tabhi bhejo jab user ne khud choose ki ho - warna SERVER ka aaj use karo
+      // (browser/server timezone mismatch na ho)
+      const params = {};
+      if (!dateIsAuto && quotaDate) {
+        params.date = quotaDate;
+      }
+
       const res = await axios.get(`${base}/portal/seva/catalogue`, {
         headers,
-        params: { date: quotaDateRef.current },
+        params,
       });
+
       if (res.data?.success) {
         setCategories(res.data.data.categories || []);
         setServices(res.data.data.services || []);
+
+        // Server jo date use kar raha hai, wahi humare selector me dikhao
+        const serverDate = res.data.data.quota_date;
+        if (serverDate) {
+          setQuotaDate(serverDate);
+        }
       }
     } catch (e) {
       if (!silent) {
@@ -164,20 +186,34 @@ const SevaPortal = ({ user, onLogout }) => {
   /**
    * REAL-TIME daily limit refresh.
    *
-   * Catalogue har 20 second me silently re-fetch hota hai - isse "X of Y left
-   * today" counter live update hota hai (kisi ke booking karte hi).
-   * Silent refresh user ka scroll/selection disturb nahi karta.
+   * Catalogue har 20 second me silently re-fetch hota hai - isse "X of Y left"
+   * counter live update hota hai (kisi ke booking karte hi).
+   * Din change hone par (midnight rollover) server naya date deta hai aur
+   * counter naye din ka data dikhata hai.
    */
   useEffect(() => {
     const timer = setInterval(() => {
       if (document.hidden) {
         return; // tab background me hai - zaroorat nahi
       }
+
       loadCatalogue(true);
     }, 20000);
 
     return () => clearInterval(timer);
-  }, []);
+  }, [dateIsAuto, quotaDate]);
+
+  // Live refresh of the selected date's slots (per-slot remaining places).
+  useEffect(() => {
+    if (view !== "booking" || !selectedService || !selectedPackage) return undefined;
+
+    const timer = setInterval(() => {
+      if (document.hidden) return;
+      loadSlots(selectedService, performDate, selectedPackage.package_id);
+    }, 20000);
+
+    return () => clearInterval(timer);
+  }, [view, selectedService, selectedPackage?.package_id, performDate]);
 
   // Page focus hone par bhi turant refresh
   useEffect(() => {
@@ -250,6 +286,16 @@ const SevaPortal = ({ user, onLogout }) => {
 
   const loadSlots = async (svc, date, pkgId) => {
     if (!svc) return;
+    if (svc.service_mode === "TITHI_BHOJAN") {
+      const pkg = (svc.packages || []).find((item) => String(item.package_id) === String(pkgId));
+      if (!pkg?.effective_from || !pkg?.effective_to || !(pkg?.slot_times || []).length
+        || date < pkg.effective_from || date > pkg.effective_to) {
+        setSlots([]);
+        setQuota(null);
+        setPackageLimit(null);
+        return;
+      }
+    }
     try {
       const res = await axios.get(`${base}/portal/seva/slots`, {
         headers,
@@ -260,8 +306,12 @@ const SevaPortal = ({ user, onLogout }) => {
         },
       });
       if (res.data?.success) {
-        setSlots(res.data.data.slots || []);
+        const freshSlots = res.data.data.slots || [];
+        setSlots(freshSlots);
         setQuota(res.data.data.quota || null);
+        setPackageLimit(res.data.data.package_limit || null);
+        // Selected slot ki remaining places bhi live update karo.
+        setSelectedSlot((cur) => (cur ? freshSlots.find((s) => s.slot_id === cur.slot_id) || cur : cur));
       }
     } catch (e) {
       toast.error(e.response?.data?.message || "Failed to load slots");
@@ -271,27 +321,74 @@ const SevaPortal = ({ user, onLogout }) => {
   const filteredServices = useMemo(() => {
     return services.filter((s) => {
       const byCat = activeCat === "ALL" || s.category_id == activeCat;
-      const byText = `${s.name} ${s.code} ${s.service_kind} ${s.short_description || ""
-        } ${s.category?.name || ""}`
+      const byMode = activeMode === "ALL" || s.service_mode === activeMode;
+      const byText = `${s.name} ${s.code} ${s.service_kind} ${
+        s.short_description || ""
+      } ${s.category?.name || ""}`
         .toLowerCase()
         .includes(query.trim().toLowerCase());
-      return byCat && byText;
+      return byCat && byMode && byText;
     });
-  }, [services, activeCat, query]);
+  }, [services, activeCat, activeMode, query]);
+
+  // ---- My Bookings filters (service / status / search) ----
+  const bookingServiceOptions = useMemo(() => {
+    const map = new Map();
+    myBookings.forEach((b) => {
+      if (b.service?.service_id) map.set(String(b.service.service_id), b.service.name);
+    });
+    return [...map.entries()].map(([id, name]) => ({ id, name }));
+  }, [myBookings]);
+
+  const visibleMyBookings = useMemo(() => {
+    const q = bookingSearch.trim().toLowerCase();
+    return myBookings.filter((b) => {
+      const byService = bookingServiceFilter === "ALL"
+        || String(b.service?.service_id) === String(bookingServiceFilter);
+      const byStatus = bookingStatusFilter === "ALL" || b.status === bookingStatusFilter;
+      const byText = !q
+        || `${b.receipt_no || ""} ${b.service?.name || ""} ${b.devotee_name || ""}`.toLowerCase().includes(q);
+      return byService && byStatus && byText;
+    });
+  }, [myBookings, bookingServiceFilter, bookingStatusFilter, bookingSearch]);
+
+  const BOOKING_STATUS_OPTIONS = [
+    "PENDING_PAYMENT", "PENDING_APPROVAL", "QUERY_RAISED", "APPROVED", "SCHEDULED",
+    "PERFORMED", "COMPLETED", "CANCELLED", "REJECTED", "REFUNDED",
+  ];
+
+  const dateForPackage = (pkg, currentDate) => {
+    const today = localDate();
+    const minDate = pkg?.effective_from && pkg.effective_from > today ? pkg.effective_from : today;
+    if (currentDate < minDate) return minDate;
+    if (pkg?.effective_to && currentDate > pkg.effective_to) return pkg.effective_to;
+    return currentDate;
+  };
+
+  const formatBookingDate = (value) => value
+    ? new Date(`${value}T00:00:00`).toLocaleDateString("en-IN")
+    : "Not configured";
 
   const selectService = (svc) => {
     const firstPkg = svc.packages?.[0] || null;
+    const nextDate = dateForPackage(firstPkg, performDate);
     setSelectedService(svc);
     setSelectedPackage(firstPkg);
+    setPerformDate(nextDate);
     setSelectedSlot(null);
     setSlots([]);
+    setPackageLimit(null);
     setPricePreview(null);
+    setDonationAmount("");
+    setCoDonorText("");
     setPayMode("");
-    // Group size default = package ka group size
+    // Tithi Bhojan: devotee chooses the people count (no group concept).
     setGroupSize(
-      Math.max(1, Number(firstPkg?.persons_per_booking ?? 1) || 1)
+      svc?.service_mode === "TITHI_BHOJAN"
+        ? 1
+        : Math.max(1, Number(firstPkg?.persons_per_booking ?? 1) || 1)
     );
-    loadSlots(svc, performDate, firstPkg?.package_id);
+    loadSlots(svc, nextDate, firstPkg?.package_id);
     setView("booking");
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -301,47 +398,70 @@ const SevaPortal = ({ user, onLogout }) => {
     1,
     Number(
       selectedPackage?.persons_per_booking ??
-      selectedPackage?.max_persons ??
-      selectedService?.max_persons ??
-      1
+        selectedPackage?.max_persons ??
+        selectedService?.max_persons ??
+        1
     ) || 1
   );
 
-  // Persons actually served under the temple (PACKAGE se decide)
-  const personsServed = Math.max(
-    1,
-    Math.min(
-      Number(
-        selectedPackage?.persons_served_count ??
-        selectedPackage?.persons_served ??
-        maxGroupSize
-      ) || 1,
-      maxGroupSize
-    )
-  );
+  // Persons actually served = GROUP size (alag "Persons Served" field nahi)
+  const personsServed = selectedService?.service_mode === "TITHI_BHOJAN" ? groupSize : maxGroupSize;
+  const tithiPackageNeedsSetup = selectedService?.service_mode === "TITHI_BHOJAN"
+    && (!selectedPackage?.effective_from || !selectedPackage?.effective_to || !(selectedPackage?.slot_times || []).length);
+
+  // Package total person-limit (live from the slots response, else catalogue).
+  // Unlimited / no limit => null, so nothing is enforced or shown.
+  const limitInfo = useMemo(() => {
+    const info = packageLimit || (() => {
+      const p = selectedPackage;
+      if (!p || !p.person_limit) return null;
+      const limit = Number(p.person_limit);
+      const used = Number(p.limit_used ?? 0);
+      const remaining = Math.max(0, limit - used);
+      return { limit, used, remaining, unlimited: false, is_full: remaining <= 0 };
+    })();
+
+    if (!info || info.unlimited || !info.limit) return null;
+
+    return info;
+  }, [packageLimit, selectedPackage]);
 
   // Group size = package ka group size (client input NAHI - sab package se)
   useEffect(() => {
-    setGroupSize(maxGroupSize);
-  }, [maxGroupSize]);
+    if (selectedService?.service_mode !== "TITHI_BHOJAN") setGroupSize(maxGroupSize);
+  }, [maxGroupSize, selectedService?.service_mode]);
 
   // Package change -> group size + slots (dynamic pattern) refresh
   const selectPackage = (pkg) => {
+    const nextDate = dateForPackage(pkg, performDate);
     setSelectedPackage(pkg);
-    setGroupSize(Math.max(1, Number(pkg?.persons_per_booking ?? 1) || 1));
+    setPerformDate(nextDate);
+    setDonationAmount("");
+    setGroupSize(
+      selectedService?.service_mode === "TITHI_BHOJAN"
+        ? 1
+        : Math.max(1, Number(pkg?.persons_per_booking ?? 1) || 1)
+    );
     setSelectedSlot(null);
 
     if (selectedService) {
-      loadSlots(selectedService, performDate, pkg?.package_id);
+      loadSlots(selectedService, nextDate, pkg?.package_id);
     }
   };
   const fetchPricePreview = async () => {
     if (!selectedService) return;
+    if (selectedService.service_mode === "TITHI_BHOJAN"
+      && (!selectedPackage?.effective_from || !selectedPackage?.effective_to || !(selectedPackage?.slot_times || []).length)) {
+      setPricePreview(null);
+      return;
+    }
     try {
       const res = await axios.post(
         `${base}/portal/seva/price-preview`,
         {
           service_id: selectedService.service_id,
+          persons: selectedService.service_mode === "TITHI_BHOJAN" ? groupSize : undefined,
+          donation_amount: selectedPackage?.pricing_mode === "DONATION" && donationAmount ? Number(donationAmount) : undefined,
           package_id: selectedPackage?.package_id || null,
           slot_id: selectedSlot?.slot_id || null,
           perform_date: performDate,
@@ -359,7 +479,7 @@ const SevaPortal = ({ user, onLogout }) => {
       fetchPricePreview();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedService, selectedPackage, selectedSlot, performDate]);
+  }, [selectedService, selectedPackage, selectedSlot, performDate, groupSize, donationAmount]);
 
   const resetForm = () => {
     setAadhaarFront(null);
@@ -375,12 +495,32 @@ const SevaPortal = ({ user, onLogout }) => {
 
   const handleBooking = async () => {
     if (!selectedService) return;
+    const paymentManagedAtTemple = ["ANNASHETRA_DONATION", "TITHI_BHOJAN"].includes(selectedService.service_mode);
+
+    if (tithiPackageNeedsSetup) return toast.error("This Tithi Bhojan package needs start/end dates and meal slots from the admin before booking.");
+    if (selectedService.service_mode === "TITHI_BHOJAN" && !selectedSlot) return toast.error("Please select a meal slot.");
+    if (selectedSlot?.closed) return toast.error("This meal slot has closed for today. Please pick another slot or date.");
+    if (limitInfo && (limitInfo.is_full || limitInfo.remaining < groupSize)) {
+      return toast.error(
+        limitInfo.is_full
+          ? "This package is fully booked. Please pick another package or date."
+          : `Only ${limitInfo.remaining} places left in this package.`
+      );
+    }
+    if (selectedSlot?.limit && (selectedSlot.is_full || selectedSlot.remaining < groupSize)) {
+      return toast.error(
+        selectedSlot.is_full
+          ? "This slot is full. Please pick another slot."
+          : `Only ${selectedSlot.remaining} places left in this slot.`
+      );
+    }
+    if (paymentManagedAtTemple && !razorpayKeyId) return toast.error("Razorpay is not configured yet. Please try again after online payment setup is complete.");
 
     if (!devoteeName.trim()) return toast.error("Please enter your name");
     if (!devoteePhone.trim())
       return toast.error("Please enter your mobile number");
     if (!address.trim()) return toast.error("Please enter your address");
-    if (!payMode) return toast.error("Select payment option (Cash or Online)");
+    if (!paymentManagedAtTemple && !payMode) return toast.error("Select payment option (Cash or Online)");
 
     // Mapped documents check
     for (const doc of requiredDocs) {
@@ -408,7 +548,7 @@ const SevaPortal = ({ user, onLogout }) => {
 
     if (selectedService.requires_gotra && !gotra.trim())
       return toast.error("Gotra is required for this seva");
-    if (selectedService.slot_required && !selectedSlot)
+        if ((selectedService.slot_required || selectedService.service_mode === "TITHI_BHOJAN") && !selectedSlot)
       return toast.error("Please select a time slot");
 
     try {
@@ -418,7 +558,12 @@ const SevaPortal = ({ user, onLogout }) => {
       if (selectedPackage?.package_id)
         fd.append("package_id", selectedPackage.package_id);
       if (selectedSlot?.slot_id) fd.append("slot_id", selectedSlot.slot_id);
-      fd.append("perform_date", performDate);
+      fd.append("perform_date", selectedService.service_mode === "ANNASHETRA_DONATION" ? localDate() : performDate);
+      if (selectedService.service_mode === "TITHI_BHOJAN") fd.append("persons", String(groupSize));
+      if (selectedService.service_mode === "ANNASHETRA_DONATION") {
+        coDonorText.split(/[,\n]/).map((name) => name.trim()).filter(Boolean).forEach((name) => fd.append("co_donors[]", name));
+      }
+      if (selectedPackage?.pricing_mode === "DONATION") fd.append("donation_amount", String(Number(donationAmount || selectedPackage.min_amount || 0)));
       fd.append("devotee_name", devoteeName.trim());
       fd.append("devotee_mobile", devoteePhone.trim());
       if (devoteeEmail.trim())
@@ -432,25 +577,28 @@ const SevaPortal = ({ user, onLogout }) => {
       Object.entries(extraDocs).forEach(([code, file]) => {
         if (file) fd.append(`document_${code}`, file);
       });
-      fd.append("pay_now", "1");
-      fd.append("payment_mode_id", payMode);
-      if (paymentRef.trim()) fd.append("payment_ref", paymentRef.trim());
+      if (!paymentManagedAtTemple) {
+        fd.append("pay_now", "1");
+        fd.append("payment_mode_id", payMode);
+        if (paymentRef.trim()) fd.append("payment_ref", paymentRef.trim());
+      }
 
       const res = await axios.post(`${base}/portal/seva/bookings`, fd, {
         headers: { ...headers, "Content-Type": "multipart/form-data" },
       });
 
       if (res.data?.success) {
-        toast.success(
-          res.data.paid
-            ? "Booking confirmed! Payment recorded."
-            : "Booking created. Please complete payment."
-        );
         resetForm();
-        loadMyBookings();
+        await loadMyBookings();
         // Daily limit counter turant update ho - catalogue refresh
         loadCatalogue(true);
         setView("mybookings");
+        if (paymentManagedAtTemple) {
+          toast.success("Booking created. Opening secure payment checkout…");
+          await startRazorpayPayment(res.data.data);
+        } else {
+          toast.success(res.data.paid ? "Booking confirmed! Payment recorded." : res.data.message || "Booking created. Please complete payment.");
+        }
       } else {
         toast.error(res.data?.message || "Booking failed");
       }
@@ -461,6 +609,61 @@ const SevaPortal = ({ user, onLogout }) => {
       toast.error(errs || "Booking failed");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const startRazorpayPayment = async (booking) => {
+    if (!razorpayKeyId) return toast.error("Online payment is not configured yet.");
+    try {
+      setRazorpayBusy(booking.booking_id);
+      if (!window.Razorpay) {
+        await new Promise((resolve, reject) => {
+          const script = document.createElement("script");
+          script.src = "https://checkout.razorpay.com/v1/checkout.js";
+          script.onload = resolve;
+          script.onerror = () => reject(new Error("Could not load the secure Razorpay checkout."));
+          document.body.appendChild(script);
+        });
+      }
+      const orderRes = await axios.post(`${base}/portal/seva/bookings/${booking.booking_id}/payment-order`, {}, { headers });
+      const order = orderRes.data?.data;
+      const checkout = new window.Razorpay({
+        key: order.key_id,
+        amount: order.amount,
+        currency: order.currency,
+        name: order.name,
+        description: order.description,
+        order_id: order.order_id,
+        prefill: order.prefill,
+        theme: { color: "#0f766e" },
+        handler: async (result) => {
+          try {
+            const paid = await axios.post(`${base}/portal/seva/bookings/${booking.booking_id}/pay`, {
+              amount: order.amount / 100,
+              payment_mode_id: null,
+              gateway: "RAZORPAY",
+              gateway_order_id: result.razorpay_order_id,
+              gateway_payment_id: result.razorpay_payment_id,
+              gateway_signature: result.razorpay_signature,
+            }, { headers });
+            toast.success(paid.data?.message || "Payment successful. Booking updated.");
+            await loadMyBookings();
+          } catch (e) {
+            toast.error(e.response?.data?.message || "Payment received; verification is pending. Refresh My Bookings shortly.");
+          } finally {
+            setRazorpayBusy(null);
+          }
+        },
+        modal: { ondismiss: () => setRazorpayBusy(null) },
+      });
+      checkout.on("payment.failed", (event) => {
+        toast.error(event.error?.description || "Razorpay payment failed.");
+        setRazorpayBusy(null);
+      });
+      checkout.open();
+    } catch (e) {
+      toast.error(e.response?.data?.message || e.message || "Could not start Razorpay checkout.");
+      setRazorpayBusy(null);
     }
   };
 
@@ -490,17 +693,17 @@ const SevaPortal = ({ user, onLogout }) => {
   };
 
   const statusStyle = (s) =>
-  ({
-    PENDING_PAYMENT: "bg-amber-100 text-amber-700",
-    PENDING_APPROVAL: "bg-blue-100 text-blue-700",
-    QUERY_RAISED: "bg-amber-100 text-amber-700",
-    APPROVED: "bg-cyan-100 text-cyan-700",
-    SCHEDULED: "bg-indigo-100 text-indigo-700",
-    PERFORMED: "bg-emerald-100 text-emerald-700",
-    COMPLETED: "bg-green-100 text-green-700",
-    CANCELLED: "bg-gray-200 text-gray-600",
-    REJECTED: "bg-red-100 text-red-700",
-  }[s] || "bg-gray-100 text-gray-700");
+    ({
+      PENDING_PAYMENT: "bg-amber-100 text-amber-700",
+      PENDING_APPROVAL: "bg-blue-100 text-blue-700",
+      QUERY_RAISED: "bg-amber-100 text-amber-700",
+      APPROVED: "bg-cyan-100 text-cyan-700",
+      SCHEDULED: "bg-indigo-100 text-indigo-700",
+      PERFORMED: "bg-emerald-100 text-emerald-700",
+      COMPLETED: "bg-green-100 text-green-700",
+      CANCELLED: "bg-gray-200 text-gray-600",
+      REJECTED: "bg-red-100 text-red-700",
+    }[s] || "bg-gray-100 text-gray-700");
 
   const money = (n) =>
     Number(n || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 });
@@ -517,59 +720,6 @@ const SevaPortal = ({ user, onLogout }) => {
   };
 
 
-  const refreshBookings = async () => {
-    setRefreshing(true);
-    await loadMyBookings();
-    setRefreshing(false);
-  };
-
-  const filteredBookings = useMemo(() => {
-    const q = bookingQuery.trim().toLowerCase();
-    return myBookings.filter((b) => {
-      const byStatus = bookingStatus === "ALL" || b.status === bookingStatus;
-      const byText =
-        !q ||
-        `${b.receipt_no || ""} ${b.service?.name || ""} ${b.package?.name || ""}`
-          .toLowerCase()
-          .includes(q);
-      return byStatus && byText;
-    });
-  }, [myBookings, bookingQuery, bookingStatus]);
-
-  const bookingPages = Math.max(
-    1,
-    Math.ceil(filteredBookings.length / BOOKINGS_PER_PAGE)
-  );
-
-  useEffect(() => {
-    setBookingPage(1);
-  }, [bookingQuery, bookingStatus]);
-
-  const pagedBookings = useMemo(
-    () =>
-      filteredBookings.slice(
-        (bookingPage - 1) * BOOKINGS_PER_PAGE,
-        bookingPage * BOOKINGS_PER_PAGE
-      ),
-    [filteredBookings, bookingPage]
-  );
-
-  const bookingStats = useMemo(
-    () => ({
-      total: myBookings.length,
-      active: myBookings.filter((b) =>
-        ["PENDING_APPROVAL", "QUERY_RAISED", "APPROVED", "SCHEDULED"].includes(
-          b.status
-        )
-      ).length,
-      done: myBookings.filter((b) =>
-        ["PERFORMED", "COMPLETED"].includes(b.status)
-      ).length,
-      due: myBookings.filter((b) => b.status === "PENDING_PAYMENT").length,
-    }),
-    [myBookings]
-  );
-
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-amber-50/40">
@@ -582,7 +732,7 @@ const SevaPortal = ({ user, onLogout }) => {
     <div className="min-h-screen bg-amber-50/40">
       {/* ===== HEADER ===== */}
       <header className="sticky top-0 z-20 border-b border-red-100 bg-white/95 backdrop-blur">
-        <div className="flex w-full items-center justify-between gap-3 px-4 py-3 sm:px-6">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
           <div className="flex min-w-0 items-center gap-3">
             <img
               src="/ambajilogo.png"
@@ -608,10 +758,11 @@ const SevaPortal = ({ user, onLogout }) => {
             </div>
             <button
               onClick={() => setView("mybookings")}
-              className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition ${view === "mybookings"
-                ? "bg-red-600 text-white"
-                : "border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
-                }`}
+              className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition ${
+                view === "mybookings"
+                  ? "bg-red-600 text-white"
+                  : "border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+              }`}
             >
               <Receipt className="h-4 w-4" /> My Bookings
             </button>
@@ -626,16 +777,10 @@ const SevaPortal = ({ user, onLogout }) => {
         </div>
       </header>
 
-      <main className="w-full px-4 py-6 sm:px-6">
+      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
         {/* ================= CATALOGUE ================= */}
         {view === "catalogue" && (
           <>
-            <div className="mb-4">
-              <BackButton
-                to={user?.isApplicant ? "/applicant-dashboard" : "/devotee-dashboard"}
-                label="Back to dashboard"
-              />
-            </div>
             <div
               className="relative overflow-hidden rounded-2xl px-6 py-7 text-white shadow-md sm:px-8"
               style={{
@@ -684,27 +829,34 @@ const SevaPortal = ({ user, onLogout }) => {
                   <input
                     type="date"
                     value={quotaDate}
-                    min={new Date().toISOString().slice(0, 10)}
+                    min={localDate()}
                     onChange={(e) => {
+                      setDateIsAuto(false);
                       setQuotaDate(e.target.value);
                       setPerformDate(e.target.value);
                     }}
                     className="w-full border-0 p-0 text-xs font-semibold text-gray-900 focus:outline-none focus:ring-0"
                   />
                 </div>
-                <span
-                  className="ml-1 inline-block h-2 w-2 shrink-0 animate-pulse rounded-full bg-emerald-500"
-                  title="Live - updates every 20 seconds"
-                />
+                {dateIsAuto && (
+                  <span
+                    className="ml-1 inline-block h-2 w-2 shrink-0 animate-pulse rounded-full bg-emerald-500"
+                    title="Live - updates every 20 seconds"
+                  />
+                )}
               </div>
 
+              <div className="mb-3 flex flex-wrap gap-2">
+                {[['ALL', 'All services'], ['ANNASHETRA_DONATION', 'Annakshetra Donation'], ['TITHI_BHOJAN', 'Tithi Bhojan']].map(([mode, label]) => <button key={mode} onClick={() => setActiveMode(mode)} className={`rounded-full px-3.5 py-1.5 text-xs font-medium ${activeMode === mode ? 'bg-teal-700 text-white' : 'bg-white text-gray-600 ring-1 ring-gray-200'}`}>{label}</button>)}
+              </div>
               <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => setActiveCat("ALL")}
-                  className={`rounded-full px-3.5 py-1.5 text-xs font-medium transition ${activeCat === "ALL"
-                    ? "bg-gray-900 text-white"
-                    : "bg-white text-gray-600 ring-1 ring-gray-200 hover:ring-gray-300"
-                    }`}
+                  className={`rounded-full px-3.5 py-1.5 text-xs font-medium transition ${
+                    activeCat === "ALL"
+                      ? "bg-gray-900 text-white"
+                      : "bg-white text-gray-600 ring-1 ring-gray-200 hover:ring-gray-300"
+                  }`}
                 >
                   All
                 </button>
@@ -712,10 +864,11 @@ const SevaPortal = ({ user, onLogout }) => {
                   <button
                     key={c.category_id}
                     onClick={() => setActiveCat(c.category_id)}
-                    className={`rounded-full px-3.5 py-1.5 text-xs font-medium transition ${activeCat == c.category_id
-                      ? "bg-red-600 text-white"
-                      : "bg-white text-gray-600 ring-1 ring-gray-200 hover:ring-gray-300"
-                      }`}
+                    className={`rounded-full px-3.5 py-1.5 text-xs font-medium transition ${
+                      activeCat == c.category_id
+                        ? "bg-red-600 text-white"
+                        : "bg-white text-gray-600 ring-1 ring-gray-200 hover:ring-gray-300"
+                    }`}
                   >
                     {c.name}
                   </button>
@@ -787,35 +940,31 @@ const SevaPortal = ({ user, onLogout }) => {
                           Time slots required
                         </div>
                       )}
-                      {svc.duration_minutes > 0 && (
-                        <div className="flex items-center gap-1.5">
-                          <Calendar className="h-3.5 w-3.5 text-gray-400" />
-                          {svc.duration_minutes} min pooja duration
-                        </div>
-                      )}
                     </div>
 
                     {/* Daily quota status - LIVE */}
                     {!svc.is_quota_unlimited && (
                       <div
-                        className={`mt-3 flex items-center justify-between rounded-lg px-2.5 py-2 text-[11px] font-medium ${svc.is_quota_full
-                          ? "bg-red-50 text-red-700"
-                          : "bg-emerald-50 text-emerald-700"
-                          }`}
+                        className={`mt-3 rounded-lg px-2.5 py-2 text-[11px] font-medium ${
+                          svc.is_quota_full
+                            ? "bg-red-50 text-red-700"
+                            : "bg-emerald-50 text-emerald-700"
+                        }`}
                       >
-                        <span className="flex items-center gap-1.5">
-                          <Users className="h-3.5 w-3.5" />
-                          Daily limit
-                          <span
-                            className="ml-0.5 inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500"
-                            title="Live - updates every 20 seconds"
-                          />
-                        </span>
-                        <span>
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="flex items-center gap-1.5">
+                            <Users className="h-3.5 w-3.5" />
+                            Daily limit
+                          </span>
+                          <span className="whitespace-nowrap text-[10px] font-normal opacity-70">
+                            {svc.quota_date ? fmtDate(svc.quota_date) : ""}
+                          </span>
+                        </div>
+                        <p className="mt-0.5 text-[12px] font-semibold">
                           {svc.is_quota_full
-                            ? `Full (${svc.daily_quota}/${svc.daily_quota} booked)`
-                            : `${svc.quota_remaining} of ${svc.daily_quota} left on ${fmtDate(svc.quota_date)}`}
-                        </span>
+                            ? `Full - ${svc.daily_quota}/${svc.daily_quota} booked`
+                            : `${svc.quota_remaining} of ${svc.daily_quota} left`}
+                        </p>
                       </div>
                     )}
 
@@ -867,12 +1016,12 @@ const SevaPortal = ({ user, onLogout }) => {
         {view === "booking" && selectedService && (
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
             <div className="lg:col-span-2">
-              <div className="mb-4">
-                <BackButton
-                  onClick={() => setView("catalogue")}
-                  label="Back to catalogue"
-                />
-              </div>
+              <button
+                onClick={() => setView("catalogue")}
+                className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-gray-600 hover:text-red-600"
+              >
+                <ChevronLeft className="h-4 w-4" /> Back to catalogue
+              </button>
 
               <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
                 <div className="flex items-start gap-3">
@@ -902,18 +1051,20 @@ const SevaPortal = ({ user, onLogout }) => {
 
               {/* STEP 1 */}
               <div className="mt-4 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-                <StepTitle n={1} title="Choose date, slot and package" />
+                <StepTitle n={1} title={selectedService.service_mode === "ANNASHETRA_DONATION" ? "Choose donation package" : "Choose date, slot and package"} />
                 <div className="mt-4 space-y-4">
-                  <div>
+                  {selectedService.service_mode !== "ANNASHETRA_DONATION" && <div>
                     <label className="mb-1.5 block text-xs font-semibold text-gray-700">
                       Perform date
                     </label>
                     <input
                       type="date"
                       value={performDate}
-                      min={new Date().toISOString().slice(0, 10)}
+                      min={selectedPackage?.effective_from && selectedPackage.effective_from > localDate() ? selectedPackage.effective_from : localDate()}
+                      max={selectedPackage?.effective_to || undefined}
                       onChange={(e) => {
                         setPerformDate(e.target.value);
+                        setSelectedSlot(null);
                         loadSlots(
                           selectedService,
                           e.target.value,
@@ -922,9 +1073,9 @@ const SevaPortal = ({ user, onLogout }) => {
                       }}
                       className="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm focus:border-red-400 focus:outline-none focus:ring-2 focus:ring-red-100 sm:w-64"
                     />
-                  </div>
+                  </div>}
 
-                  {selectedService.slot_required && (
+        {(selectedService.slot_required || selectedService.service_mode === "TITHI_BHOJAN") && (
                     <div>
                       <label className="mb-1.5 block text-xs font-semibold text-gray-700">
                         Time slot
@@ -936,34 +1087,50 @@ const SevaPortal = ({ user, onLogout }) => {
                         </p>
                       ) : (
                         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                          {slots.map((sl) => (
-                            <button
-                              key={sl.slot_id}
-                              type="button"
-                              disabled={!sl.available}
-                              onClick={() => setSelectedSlot(sl)}
-                              className={`rounded-xl border px-3 py-2.5 text-left transition ${selectedSlot?.slot_id === sl.slot_id
-                                ? "border-red-600 bg-red-50 ring-2 ring-red-100"
-                                : sl.available
-                                  ? "border-gray-200 bg-white hover:border-red-300 hover:bg-red-50/40"
-                                  : "cursor-not-allowed border-gray-100 bg-gray-50 opacity-60"
+                          {slots.map((sl) => {
+                            const selectable = sl.available && !sl.closed && !sl.is_full;
+                            return (
+                              <button
+                                key={sl.slot_id}
+                                type="button"
+                                disabled={!selectable}
+                                onClick={() => setSelectedSlot(sl)}
+                                className={`rounded-xl border px-3 py-2.5 text-left transition ${
+                                  selectedSlot?.slot_id === sl.slot_id
+                                    ? "border-red-600 bg-red-50 ring-2 ring-red-100"
+                                    : selectable
+                                      ? "border-gray-200 bg-white hover:border-red-300 hover:bg-red-50/40"
+                                      : "cursor-not-allowed border-gray-100 bg-gray-50 opacity-60"
                                 }`}
-                            >
-                              <p className="text-sm font-bold text-gray-900">
-                                {sl.start_time}
-                              </p>
-                              {sl.label && (
-                                <p className="text-[10px] text-gray-500">
-                                  {sl.label}
+                              >
+                                <p className="text-sm font-bold text-gray-900">
+                                  {sl.time_text || sl.start_time}
                                 </p>
-                              )}
-                              {sl.capacity > 0 && (
-                                <p className="mt-0.5 text-[10px] font-medium text-emerald-600">
-                                  {sl.capacity - sl.booked} seats left
-                                </p>
-                              )}
-                            </button>
-                          ))}
+                                {sl.label && (
+                                  <p className="text-[10px] text-gray-500">
+                                    {sl.label}
+                                  </p>
+                                )}
+                                {sl.closed ? (
+                                  <p className="mt-0.5 text-[10px] font-semibold text-gray-500">
+                                    Closed for today
+                                  </p>
+                                ) : sl.is_full ? (
+                                  <p className="mt-0.5 text-[10px] font-semibold text-red-600">
+                                    Full
+                                  </p>
+                                ) : sl.limit ? (
+                                  <p className="mt-0.5 text-[10px] font-medium text-emerald-600">
+                                    {sl.remaining} of {sl.limit} places left
+                                  </p>
+                                ) : (
+                                  <p className="mt-0.5 text-[10px] font-medium text-emerald-600">
+                                    Available
+                                  </p>
+                                )}
+                              </button>
+                            );
+                          })}
                         </div>
                       )}
                     </div>
@@ -979,11 +1146,15 @@ const SevaPortal = ({ user, onLogout }) => {
                           <button
                             key={pkg.package_id}
                             type="button"
+                            disabled={pkg.is_limit_full}
                             onClick={() => selectPackage(pkg)}
-                            className={`rounded-xl border px-3.5 py-3 text-left transition ${selectedPackage?.package_id === pkg.package_id
-                              ? "border-red-600 bg-red-50 ring-2 ring-red-100"
-                              : "border-gray-200 bg-white hover:border-red-300"
-                              }`}
+                            className={`rounded-xl border px-3.5 py-3 text-left transition ${
+                              pkg.is_limit_full
+                                ? "cursor-not-allowed border-gray-100 bg-gray-50 opacity-60"
+                                : selectedPackage?.package_id === pkg.package_id
+                                  ? "border-red-600 bg-red-50 ring-2 ring-red-100"
+                                  : "border-gray-200 bg-white hover:border-red-300"
+                            }`}
                           >
                             <div className="flex items-center justify-between">
                               <p className="text-sm font-bold text-gray-900">
@@ -999,21 +1170,23 @@ const SevaPortal = ({ user, onLogout }) => {
                               </p>
                             )}
                             <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[10px] font-medium text-gray-600">
-                              <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5">
-                                <Users className="h-3 w-3" />
-                                {pkg.persons_per_booking ?? pkg.max_persons ?? 1}{" "}
-                                person
-                                {(pkg.persons_per_booking ?? pkg.max_persons ?? 1) > 1
-                                  ? "s"
-                                  : ""}{" "}
-                                per booking
-                              </span>
-                              {pkg.duration_minutes > 0 && (
+                              {selectedService.service_mode !== "TITHI_BHOJAN" && (
                                 <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5">
-                                  <Clock className="h-3 w-3" />
-                                  {pkg.duration_minutes} min pooja
+                                  <Users className="h-3 w-3" />
+                                  {pkg.persons_per_booking ?? pkg.max_persons ?? 1}{" "}
+                                  person
+                                  {(pkg.persons_per_booking ?? pkg.max_persons ?? 1) > 1
+                                    ? "s"
+                                    : ""}{" "}
+                                  per booking
                                 </span>
                               )}
+                              {pkg.person_limit ? (
+                                <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 ${pkg.is_limit_full ? "bg-red-50 text-red-700" : "bg-emerald-50 text-emerald-700"}`}>
+                                  <Users className="h-3 w-3" />
+                                  {pkg.is_limit_full ? "Full" : `${pkg.limit_remaining} of ${pkg.person_limit} places left`}
+                                </span>
+                              ) : null}
                             </div>
                             {(pkg.included_list || []).length > 0 && (
                               <ul className="mt-1.5 space-y-0.5">
@@ -1037,10 +1210,11 @@ const SevaPortal = ({ user, onLogout }) => {
                   {/* Daily quota status for selected date */}
                   {quota && !quota.unlimited && (
                     <div
-                      className={`rounded-xl border px-3.5 py-2.5 text-xs font-medium ${quota.is_full
-                        ? "border-red-200 bg-red-50 text-red-700"
-                        : "border-emerald-200 bg-emerald-50 text-emerald-700"
-                        }`}
+                      className={`rounded-xl border px-3.5 py-2.5 text-xs font-medium ${
+                        quota.is_full
+                          ? "border-red-200 bg-red-50 text-red-700"
+                          : "border-emerald-200 bg-emerald-50 text-emerald-700"
+                      }`}
                     >
                       <div className="flex items-center justify-between">
                         <span className="flex items-center gap-1.5">
@@ -1056,52 +1230,38 @@ const SevaPortal = ({ user, onLogout }) => {
                     </div>
                   )}
 
-                  {/* GROUP & SERVED PERSONS - sab PACKAGE se decide */}
-                  <div className="rounded-xl border border-gray-200 bg-white p-3.5">
-                    <p className="mb-2 text-xs font-semibold text-gray-700">
-                      Your group
-                    </p>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="rounded-lg bg-gray-50 px-3 py-2">
-                        <p className="text-[10px] uppercase tracking-wide text-gray-500">
-                          Persons in your group
-                        </p>
-                        <p className="mt-0.5 text-lg font-bold text-gray-900">
-                          {groupSize}
-                        </p>
-                      </div>
-                      <div className="rounded-lg bg-emerald-50 px-3 py-2">
-                        <p className="text-[10px] uppercase tracking-wide text-emerald-700">
-                          Served under the temple
-                        </p>
-                        <p className="mt-0.5 text-lg font-bold text-emerald-800">
-                          {personsServed}
-                        </p>
-                      </div>
+                  {selectedService.service_mode === "ANNASHETRA_DONATION" && (
+                    <div className="rounded-xl border border-gray-200 bg-white p-3.5">
+                      <div className="mb-2 flex items-center justify-between text-xs font-semibold text-gray-700"><span>Co-donors (optional)</span><button type="button" onClick={() => setCoDonorText((value) => `${value}\n`)} className="inline-flex items-center gap-1 rounded-md bg-teal-700 px-2.5 py-1.5 text-white"><Plus className="h-3.5 w-3.5" /> Add co-donor</button></div>
+                      <div className="space-y-2">{coDonorRows.map((name, index) => <div key={index} className="flex items-center gap-2"><input value={name} onChange={(e) => { const next = [...coDonorRows]; next[index] = e.target.value; setCoDonorText(next.join("\n")); }} placeholder={`Co-donor ${index + 1} name`} className="w-full rounded-lg border p-2 text-sm font-normal" />{coDonorRows.length > 1 && <button type="button" aria-label="Remove co-donor" onClick={() => setCoDonorText(coDonorRows.filter((_, i) => i !== index).join("\n"))} className="rounded p-2 text-gray-500 hover:bg-red-50 hover:text-red-600"><Trash2 className="h-4 w-4" /></button>}</div>)}</div>
                     </div>
-                    <p className="mt-2 text-[11px] leading-relaxed text-gray-600">
-                      This package is for a group of{" "}
-                      <strong>{groupSize}</strong> person
-                      {groupSize > 1 ? "s" : ""}. Out of them{" "}
-                      <strong>{personsServed}</strong> will be served under the
-                      temple.
-                    </p>
-                    {quota && !quota.unlimited && (
-                      <p
-                        className={`mt-2 rounded-lg px-2 py-1.5 text-[11px] font-medium ${quota.remaining < personsServed
-                          ? "bg-red-50 text-red-700"
-                          : "bg-emerald-50 text-emerald-800"
-                          }`}
-                      >
-                        {quota.remaining < personsServed
-                          ? `Only ${quota.remaining} place${quota.remaining === 1 ? "" : "s"
-                          } left — this booking is not possible right now.`
-                          : `${personsServed} place${personsServed > 1 ? "s" : ""
-                          } will be reserved (out of ${quota.remaining
-                          } available).`}
+                  )}
+
+                  {/* Tithi Bhojan count is per booking and priced by the server. */}
+                  {selectedService.service_mode === "TITHI_BHOJAN" && (
+                    <div className="rounded-xl border border-gray-200 bg-white p-3.5">
+                      <label className="mb-2 block text-xs font-semibold text-gray-700">Number of people (other than you)</label>
+                      <input type="number" min="0" max="10000" value={Math.max(0, groupSize - 1)} onChange={(e) => setGroupSize(Math.max(1, (Number(e.target.value) || 0) + 1))} className="w-full rounded-lg border px-3 py-2" />
+                      <p className="mt-1 text-[11px] text-gray-500">
+                        Total for this booking: <span className="font-semibold text-gray-800">{groupSize}</span> people (including you).
                       </p>
-                    )}
-                  </div>
+                      {selectedSlot?.limit ? (
+                        <p className={`mt-1 text-[11px] font-semibold ${selectedSlot.is_full ? "text-red-600" : "text-emerald-700"}`}>
+                          {selectedSlot.is_full
+                            ? `${selectedSlot.label || "This slot"} is full (${selectedSlot.limit} places).`
+                            : `${selectedSlot.label || "This slot"}: ${selectedSlot.remaining} of ${selectedSlot.limit} places left.`}
+                        </p>
+                      ) : null}
+                      {limitInfo && !limitInfo.unlimited && (
+                        <p className={`mt-1 text-[11px] font-semibold ${limitInfo.is_full ? "text-red-600" : "text-emerald-700"}`}>
+                          {limitInfo.is_full
+                            ? "Package limit reached — booking closed."
+                            : `${limitInfo.remaining} of ${limitInfo.limit} package places left.`}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                  {tithiPackageNeedsSetup && <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">This package is visible but unavailable until admin configures its start date, end date, and at least one meal slot.</p>}
 
                   {/* WHAT'S INCLUDED - package bullets */}
                   {(selectedPackage?.included_list || []).length > 0 && (
@@ -1190,6 +1350,7 @@ const SevaPortal = ({ user, onLogout }) => {
               </div>
 
               {/* STEP 3 */}
+              {!['ANNASHETRA_DONATION', 'TITHI_BHOJAN'].includes(selectedService.service_mode) && requiredDocs.length > 0 && (
               <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50/50 p-5 shadow-sm">
                 <StepTitle n={3} title="Upload required documents" />
                 {requiredDocs.length > 0 ? (
@@ -1228,18 +1389,23 @@ const SevaPortal = ({ user, onLogout }) => {
                       );
                     })}
                   </div>
-                ) : (
-                  <p className="mt-3 rounded-lg bg-white/70 px-3 py-2 text-xs text-amber-800">
-                    No documents are required for this seva.
-                  </p>
-                )}
+                ) : null}
+
                 <p className="mt-2.5 flex items-center gap-1.5 text-[11px] text-amber-800">
                   <ShieldCheck className="h-3.5 w-3.5" />
                   JPG / PNG / PDF, max 5MB each. Dono side ki copy upload karein.
                 </p>
               </div>
+              )}
+              {selectedService.service_mode === "ANNASHETRA_DONATION" && selectedPackage?.pricing_mode === "DONATION" && (
+                <label className="mt-4 block rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs font-semibold text-gray-700">Donation amount (₹)
+                  <input required type="number" min={selectedPackage.min_amount || 1} max={selectedPackage.max_amount || undefined} step="0.01" value={donationAmount} onChange={(e) => setDonationAmount(e.target.value)} className="mt-2 w-full rounded-lg border p-2 text-sm font-normal" />
+                  <span className="mt-1 block font-normal text-gray-500">Enter the amount for this donation package.</span>
+                </label>
+              )}
 
               {/* STEP 4 */}
+              {!["ANNASHETRA_DONATION", "TITHI_BHOJAN"].includes(selectedService.service_mode) ? (
               <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50/50 p-5 shadow-sm">
                 <StepTitle n={4} title="Payment" />
                 <div className="mt-4">
@@ -1252,10 +1418,11 @@ const SevaPortal = ({ user, onLogout }) => {
                         key={m.id}
                         type="button"
                         onClick={() => setPayMode(String(m.id))}
-                        className={`flex items-center gap-2.5 rounded-xl border px-4 py-3 text-sm font-semibold transition ${payMode === String(m.id)
-                          ? "border-emerald-600 bg-emerald-600 text-white shadow-md"
-                          : "border-gray-200 bg-white text-gray-700 hover:border-emerald-400"
-                          }`}
+                        className={`flex items-center gap-2.5 rounded-xl border px-4 py-3 text-sm font-semibold transition ${
+                          payMode === String(m.id)
+                            ? "border-emerald-600 bg-emerald-600 text-white shadow-md"
+                            : "border-gray-200 bg-white text-gray-700 hover:border-emerald-400"
+                        }`}
                       >
                         {m.is_cash ? (
                           <IndianRupee className="h-4 w-4" />
@@ -1289,6 +1456,7 @@ const SevaPortal = ({ user, onLogout }) => {
                   </div>
                 )}
               </div>
+              ) : null}
 
               <div className="h-4" />
             </div>
@@ -1310,12 +1478,12 @@ const SevaPortal = ({ user, onLogout }) => {
                         Rs. {money(pricePreview?.fee ?? selectedService.current_fee)}
                       </dd>
                     </div>
-                    <div className="flex justify-between">
+                    {!['ANNASHETRA_DONATION', 'TITHI_BHOJAN'].includes(selectedService.service_mode) && <div className="flex justify-between">
                       <dt className="text-gray-500">Tax</dt>
                       <dd className="font-semibold text-gray-900">
                         Rs. {money(pricePreview?.tax)}
                       </dd>
-                    </div>
+                    </div>}
                     <div className="flex justify-between border-t border-gray-100 pt-2 text-base">
                       <dt className="font-bold text-gray-900">Total</dt>
                       <dd className="font-bold text-red-600">
@@ -1323,17 +1491,6 @@ const SevaPortal = ({ user, onLogout }) => {
                       </dd>
                     </div>
                   </dl>
-
-                  {selectedSlot?.tenure_text && (
-                    <div className="mt-3 rounded-xl bg-blue-50 px-3 py-2.5">
-                      <p className="text-[10px] font-semibold uppercase tracking-wide text-blue-600">
-                        Your seva tenure
-                      </p>
-                      <p className="mt-0.5 text-xs font-semibold text-gray-900">
-                        {selectedSlot.tenure_text}
-                      </p>
-                    </div>
-                  )}
 
                   {(selectedPackage?.included_list || []).length > 0 && (
                     <div className="mt-3 rounded-xl border border-gray-100 bg-gray-50 px-3 py-2.5">
@@ -1354,36 +1511,34 @@ const SevaPortal = ({ user, onLogout }) => {
                     </div>
                   )}
 
-                  <div className="mt-3 flex justify-between rounded-xl bg-gray-50 px-3 py-2.5 text-xs">
-                    <span className="text-gray-600">Persons in your group</span>
-                    <span className="font-semibold text-gray-900">
-                      {groupSize}
-                    </span>
-                  </div>
-                  <div className="flex justify-between rounded-xl bg-gray-50 px-3 py-2.5 text-xs mt-2">
-                    <span className="text-gray-600">Served under the temple</span>
-                    <span className="font-semibold text-gray-900">
-                      {personsServed}
-                    </span>
-                  </div>
+                  {selectedService.service_mode === "TITHI_BHOJAN" && <div className="mt-3 flex justify-between rounded-xl bg-gray-50 px-3 py-2.5 text-xs"><span className="text-gray-600">Total people (incl. you)</span><span className="font-semibold text-gray-900">{groupSize}</span></div>}
+
+                  {selectedSlot?.tenure_text && (
+                    <div className="mt-3 rounded-xl bg-blue-50 px-3 py-2.5">
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-blue-600">
+                        Your seva tenure
+                      </p>
+                      <p className="mt-0.5 text-xs font-semibold text-gray-900">
+                        {selectedSlot.tenure_text}
+                      </p>
+                    </div>
+                  )}
 
                   <button
                     onClick={handleBooking}
-                    disabled={submitting || quota?.is_full}
+                    disabled={submitting || quota?.is_full || tithiPackageNeedsSetup}
                     className="mt-5 w-full rounded-xl bg-emerald-600 px-4 py-3.5 text-sm font-bold text-white shadow-md transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-gray-300 disabled:shadow-none"
                   >
                     {submitting
                       ? "Processing..."
                       : quota?.is_full
                         ? "Daily limit reached - booking unavailable"
-                        : `Pay Now - Rs. ${money(
-                          pricePreview?.total ?? selectedService.current_fee
-                        )}`}
+                        : ["ANNASHETRA_DONATION", "TITHI_BHOJAN"].includes(selectedService.service_mode)
+                          ? `Pay & Book - Rs. ${money(pricePreview?.total ?? selectedService.current_fee)}`
+                          : `Pay Now - Rs. ${money(
+                            pricePreview?.total ?? selectedService.current_fee
+                          )}`}
                   </button>
-                  <p className="mt-2 text-center text-[11px] text-gray-500">
-                    Booking and payment are confirmed together. Receipt is
-                    generated instantly.
-                  </p>
                 </div>
               </div>
             </div>
@@ -1392,303 +1547,198 @@ const SevaPortal = ({ user, onLogout }) => {
 
         {/* ================= MY BOOKINGS ================= */}
         {view === "mybookings" && (
-          <div className="w-full space-y-5">
-            {/* Page header: back + title + primary action */}
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-              <div className="flex items-center">
-                <BackButton
-                  onClick={() => setView("catalogue")}
-                  title="Back to catalogue"
-                  className="mr-4"
-                />
-                <div>
-                  <h1 className="text-2xl font-bold text-gray-900">My Bookings</h1>
-                  <p className="mt-0.5 text-sm text-gray-500">
-                    Your seva bookings, payments and receipts
-                  </p>
-                </div>
+          <div>
+            <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">My Bookings</h1>
+                <p className="text-sm text-gray-500">
+                  Your seva bookings, payments and receipts
+                </p>
               </div>
               <button
                 onClick={() => setView("catalogue")}
-                className="inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-red-600 to-red-700 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:from-red-700 hover:to-red-800"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
               >
                 <Sparkles className="h-4 w-4" /> Book New Seva
               </button>
             </div>
 
-            {/* Stats */}
-            <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-              {[
-                ["Total Bookings", bookingStats.total, "text-gray-900", "bg-gray-100", Receipt],
-                ["In Progress", bookingStats.active, "text-blue-700", "bg-blue-50", Clock],
-                ["Completed", bookingStats.done, "text-emerald-700", "bg-emerald-50", CheckCircle],
-                ["Payment Due", bookingStats.due, "text-amber-700", "bg-amber-50", IndianRupee],
-              ].map(([label, value, color, bg, Icon]) => (
-                <div
-                  key={label}
-                  className="flex items-center justify-between rounded-xl border border-gray-200 bg-white p-4 shadow-sm"
-                >
-                  <div>
-                    <p className="text-xs font-medium text-gray-500">{label}</p>
-                    <p className={`mt-1 text-2xl font-bold ${color}`}>{value}</p>
-                  </div>
-                  <span className={`flex h-11 w-11 items-center justify-center rounded-xl ${bg} ${color}`}>
-                    <Icon className="h-5 w-5" />
-                  </span>
-                </div>
-              ))}
-            </div>
-
-            {/* Action bar: search + status + refresh */}
-            <div className="rounded-xl border border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100 p-4">
-              <div className="flex flex-col gap-3 md:flex-row md:items-center">
-                <div className="relative flex-1">
-                  <Search className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
-                  <input
-                    value={bookingQuery}
-                    onChange={(e) => setBookingQuery(e.target.value)}
-                    placeholder="Search by receipt no, seva or package..."
-                    className="w-full rounded-lg border border-gray-300 bg-white py-2.5 pl-10 pr-10 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-red-500"
-                  />
-                  {bookingQuery && (
-                    <button
-                      onClick={() => setBookingQuery("")}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  )}
-                </div>
-                <select
-                  value={bookingStatus}
-                  onChange={(e) => setBookingStatus(e.target.value)}
-                  className="rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
-                >
-                  <option value="ALL">All status</option>
-                  {BOOKING_STATUSES.map((s) => (
-                    <option key={s} value={s}>
-                      {s.replace(/_/g, " ")}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  onClick={refreshBookings}
-                  className="group inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-700 transition hover:bg-gray-50"
-                >
-                  <RefreshCw
-                    className={`mr-2 h-4 w-4 transition-transform duration-500 group-hover:rotate-180 ${refreshing ? "animate-spin" : ""
-                      }`}
-                  />
-                  Refresh
-                </button>
-              </div>
-            </div>
-
-            {/* Table */}
-            <div className="overflow-hidden rounded-xl border bg-white shadow-sm">
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
-                    <tr>
-                      {["Receipt", "Seva", "Perform Date", "Persons", "Amount", "Payment", "Status", "Actions"].map((h) => (
-                        <th
-                          key={h}
-                          className="whitespace-nowrap px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-gray-700"
-                        >
-                          {h}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100 bg-white">
-                    {pagedBookings.length === 0 ? (
-                      <tr>
-                        <td colSpan={8} className="px-6 py-14 text-center">
-                          <CalendarCheck className="mx-auto h-10 w-10 text-gray-300" />
-                          <p className="mt-3 text-sm font-medium text-gray-700">
-                            {myBookings.length === 0
-                              ? "No bookings yet"
-                              : "No matching bookings found"}
-                          </p>
-                          <p className="mt-1 text-xs text-gray-500">
-                            {myBookings.length === 0
-                              ? "Book your first seva to see it here."
-                              : "Try adjusting your search or status filter."}
-                          </p>
-                          {myBookings.length === 0 && (
-                            <button
-                              onClick={() => setView("catalogue")}
-                              className="mt-3 text-sm font-semibold text-red-600 hover:underline"
-                            >
-                              Browse seva services
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                    ) : (
-                      pagedBookings.map((b) => (
-                        <Fragment key={b.booking_id}>
-                          <tr className="transition-colors hover:bg-gray-50">
-                            <td className="whitespace-nowrap px-5 py-4">
-                              <p className="font-mono text-xs font-semibold text-gray-900">
-                                {b.receipt_no}
-                              </p>
-                              {b.created_at && (
-                                <p className="mt-0.5 text-[11px] text-gray-500">
-                                  {fmtDate(b.created_at)}
-                                </p>
-                              )}
-                            </td>
-                            <td className="px-5 py-4">
-                              <p className="text-sm font-semibold text-gray-900">
-                                {b.service?.name || "-"}
-                              </p>
-                              {b.package?.name && (
-                                <p className="text-[11px] text-gray-500">{b.package.name}</p>
-                              )}
-                            </td>
-                            <td className="whitespace-nowrap px-5 py-4 text-sm text-gray-700">
-                              {fmtDate(b.perform_date)}
-                              {b.slot?.start_time && (
-                                <p className="text-[11px] text-gray-500">
-                                  {String(b.slot.start_time).slice(0, 5)}
-                                </p>
-                              )}
-                            </td>
-                            <td className="px-5 py-4 text-sm text-gray-700">{b.persons}</td>
-                            <td className="whitespace-nowrap px-5 py-4">
-                              <p className="text-sm font-semibold text-gray-900">
-                                Rs. {money(b.total_amount)}
-                              </p>
-                              {Number(b.balance_amount) > 0 && (
-                                <p className="text-[11px] text-amber-600">
-                                  Due Rs. {money(b.balance_amount)}
-                                </p>
-                              )}
-                            </td>
-                            <td className="px-5 py-4">
-                              <span
-                                className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${b.payment_status === "PAID"
-                                    ? "bg-emerald-100 text-emerald-700"
-                                    : b.payment_status === "PARTIAL"
-                                      ? "bg-amber-100 text-amber-700"
-                                      : "bg-red-100 text-red-700"
-                                  }`}
-                              >
-                                {b.payment_status}
-                              </span>
-                            </td>
-                            <td className="px-5 py-4">
-                              <span
-                                className={`inline-flex whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${statusStyle(
-                                  b.status
-                                )}`}
-                              >
-                                {b.status?.replace(/_/g, " ")}
-                              </span>
-                            </td>
-                            <td className="px-5 py-4">
-                              <div className="flex items-center gap-2">
-                                <button
-                                  onClick={() => setReceiptBooking(b)}
-                                  className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition hover:bg-gray-50"
-                                  title="View & print receipt"
-                                >
-                                  <Printer className="h-3.5 w-3.5" /> Receipt
-                                </button>
-                                {b.status === "PENDING_PAYMENT" && (
-                                  <button
-                                    onClick={() => {
-                                      setActiveBooking(b);
-                                      setPayAmount(b.balance_amount);
-                                    }}
-                                    className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-emerald-700"
-                                  >
-                                    <IndianRupee className="h-3.5 w-3.5" /> Pay Rs. {money(b.balance_amount)}
-                                  </button>
-                                )}
-                              </div>
-                            </td>
-                          </tr>
-
-                          {/* QUERY - temple ne clarification maangi */}
-                          {b.status === "QUERY_RAISED" && (
-                            <tr className="bg-amber-50/60">
-                              <td colSpan={8} className="px-5 py-4">
-                                <p className="text-xs font-semibold text-amber-800">
-                                  Query from the temple
-                                </p>
-                                {b.remarks && (
-                                  <p className="mt-1 text-[12px] leading-relaxed text-amber-900">
-                                    {b.remarks}
-                                  </p>
-                                )}
-                                <div className="mt-2.5 flex flex-col gap-2 sm:flex-row sm:items-start">
-                                  <textarea
-                                    rows={2}
-                                    value={queryResponses[b.booking_id] || ""}
-                                    onChange={(e) =>
-                                      setQueryResponses((p) => ({
-                                        ...p,
-                                        [b.booking_id]: e.target.value,
-                                      }))
-                                    }
-                                    placeholder="Type your clarification / response"
-                                    className="w-full flex-1 rounded-lg border border-amber-200 bg-white px-3 py-2 text-xs focus:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-100"
-                                  />
-                                  <button
-                                    onClick={() => handleRespondQuery(b)}
-                                    disabled={
-                                      submitting ||
-                                      !(queryResponses[b.booking_id] || "").trim()
-                                    }
-                                    className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg bg-amber-600 px-4 py-2 text-xs font-medium text-white transition hover:bg-amber-700 disabled:opacity-50"
-                                  >
-                                    <RefreshCw className="h-3.5 w-3.5" /> Submit Response
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          )}
-                        </Fragment>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            {/* Pagination */}
-            {filteredBookings.length > BOOKINGS_PER_PAGE && (
-              <div className="flex flex-col items-center justify-between gap-3 md:flex-row">
-                <p className="text-sm text-gray-700">
-                  Showing {(bookingPage - 1) * BOOKINGS_PER_PAGE + 1} to{" "}
-                  {Math.min(bookingPage * BOOKINGS_PER_PAGE, filteredBookings.length)} of{" "}
-                  {filteredBookings.length} entries
-                </p>
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => setBookingPage((p) => Math.max(1, p - 1))}
-                    disabled={bookingPage === 1}
-                    className="inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <ChevronLeft className="mr-1 h-4 w-4" /> Previous
-                  </button>
-                  <span className="rounded-lg bg-red-600 px-4 py-2 text-sm text-white">
-                    {bookingPage} / {bookingPages}
-                  </span>
-                  <button
-                    onClick={() => setBookingPage((p) => Math.min(bookingPages, p + 1))}
-                    disabled={bookingPage === bookingPages}
-                    className="inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    Next <ChevronRight className="ml-1 h-4 w-4" />
-                  </button>
-                </div>
+            {myBookings.length > 0 && (
+              <div className="mb-4 flex flex-wrap items-end gap-3 rounded-xl border border-gray-200 bg-white p-4">
+                <label className="text-xs font-medium text-gray-600">Service
+                  <select value={bookingServiceFilter} onChange={(e) => setBookingServiceFilter(e.target.value)} className="mt-1 block min-w-44 rounded-lg border border-gray-300 px-3 py-2 text-sm">
+                    <option value="ALL">All services</option>
+                    {bookingServiceOptions.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  </select>
+                </label>
+                <label className="text-xs font-medium text-gray-600">Status
+                  <select value={bookingStatusFilter} onChange={(e) => setBookingStatusFilter(e.target.value)} className="mt-1 block min-w-40 rounded-lg border border-gray-300 px-3 py-2 text-sm">
+                    <option value="ALL">All statuses</option>
+                    {BOOKING_STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s.replace(/_/g, " ")}</option>)}
+                  </select>
+                </label>
+                <label className="text-xs font-medium text-gray-600">Search
+                  <input value={bookingSearch} onChange={(e) => setBookingSearch(e.target.value)} placeholder="Receipt no, service" className="mt-1 block w-52 rounded-lg border border-gray-300 px-3 py-2 text-sm" />
+                </label>
+                {(bookingServiceFilter !== "ALL" || bookingStatusFilter !== "ALL" || bookingSearch) && (
+                  <button type="button" onClick={() => { setBookingServiceFilter("ALL"); setBookingStatusFilter("ALL"); setBookingSearch(""); }} className="rounded-lg border border-gray-300 px-3 py-2 text-xs font-medium text-gray-600 hover:bg-gray-50">Clear filters</button>
+                )}
+                <span className="ml-auto text-xs text-gray-500">{visibleMyBookings.length} of {myBookings.length}</span>
               </div>
             )}
 
-            {/* Pay modal */}
+            {myBookings.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-gray-300 bg-white py-16 text-center">
+                <CalendarCheck className="mx-auto h-10 w-10 text-gray-300" />
+                <p className="mt-3 text-sm font-medium text-gray-600">
+                  No bookings yet
+                </p>
+                <button
+                  onClick={() => setView("catalogue")}
+                  className="mt-3 text-sm font-semibold text-red-600 hover:underline"
+                >
+                  Browse seva services
+                </button>
+              </div>
+            ) : visibleMyBookings.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-gray-300 bg-white py-16 text-center">
+                <p className="text-sm font-medium text-gray-600">No bookings match these filters.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                {visibleMyBookings.map((b) => (
+                  <div
+                    key={b.booking_id}
+                    className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-base font-bold text-gray-900">
+                          {b.service?.name}
+                        </p>
+                        <p className="mt-0.5 font-mono text-[11px] text-gray-500">
+                          {b.receipt_no}
+                        </p>
+                      </div>
+                      <span
+                        className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold ${statusStyle(
+                          b.status
+                        )}`}
+                      >
+                        {b.status?.replace(/_/g, " ")}
+                      </span>
+                    </div>
+
+                    <div className="mt-3 grid grid-cols-2 gap-2.5 text-xs">
+                      {b.service?.service_mode !== "ANNASHETRA_DONATION" && <div>
+                        <p className="text-gray-400">Perform date</p>
+                        <p className="font-semibold text-gray-900">
+                          {b.perform_date}
+                        </p>
+                      </div>}
+                      {b.service?.service_mode !== "ANNASHETRA_DONATION" && <div>
+                        <p className="text-gray-400">Persons</p>
+                        <p className="font-semibold text-gray-900">{b.persons}</p>
+                      </div>}
+                      <div>
+                        <p className="text-gray-400">Total</p>
+                        <p className="font-semibold text-gray-900">
+                          Rs. {money(b.total_amount)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-gray-400">Payment</p>
+                        <p
+                          className={`font-semibold ${
+                            b.payment_status === "PAID"
+                              ? "text-emerald-600"
+                              : "text-amber-600"
+                          }`}
+                        >
+                          {b.payment_status}
+                        </p>
+                      </div>
+                    </div>
+
+                    {(b.coupons || []).map((coupon) => (
+                      <div key={coupon.coupon_id} className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-3 text-xs">
+                        <p className="font-semibold text-emerald-800">Meal coupon: {coupon.coupon_no}</p>
+                        <p className="mt-1 text-emerald-700">{coupon.persons} people · {coupon.meal_slot || "Meal slot"} · valid {coupon.valid_date}</p>
+                      </div>
+                    ))}
+
+                    {/* QUERY - devotee se clarification maangi gayi */}
+                    {b.status === "QUERY_RAISED" && (
+                      <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-3">
+                        <p className="text-xs font-semibold text-amber-800">
+                          Query from the temple
+                        </p>
+                        {b.remarks && (
+                          <p className="mt-1 text-[12px] leading-relaxed text-amber-900">
+                            {b.remarks}
+                          </p>
+                        )}
+                        <div className="mt-2.5">
+                          <textarea
+                            rows={2}
+                            value={queryResponses[b.booking_id] || ""}
+                            onChange={(e) =>
+                              setQueryResponses((p) => ({
+                                ...p,
+                                [b.booking_id]: e.target.value,
+                              }))
+                            }
+                            placeholder="Type your clarification / response"
+                            className="w-full rounded-lg border border-amber-200 bg-white px-3 py-2 text-xs focus:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-100"
+                          />
+                          <button
+                            onClick={() => handleRespondQuery(b)}
+                            disabled={
+                              submitting ||
+                              !(queryResponses[b.booking_id] || "").trim()
+                            }
+                            className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-amber-700 disabled:opacity-50"
+                          >
+                            <RefreshCw className="h-3.5 w-3.5" /> Submit Response
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="mt-4 flex flex-wrap gap-2 border-t border-gray-100 pt-3">
+                      {(!["ANNASHETRA_DONATION", "TITHI_BHOJAN"].includes(b.service?.service_mode) || b.payment_status === "PAID") && <a
+                        href={`${base}/portal/seva/bookings/${b.booking_id}/receipt?token=${token}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 transition hover:bg-gray-50"
+                      >
+                        <Receipt className="h-3.5 w-3.5" /> Receipt
+                      </a>}
+
+                      {b.status === "PENDING_PAYMENT" && razorpayKeyId && ["ANNASHETRA_DONATION", "TITHI_BHOJAN"].includes(b.service?.service_mode) && (
+                        <button onClick={() => startRazorpayPayment(b)} disabled={razorpayBusy === b.booking_id} className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-60">
+                          <IndianRupee className="h-3.5 w-3.5" /> {razorpayBusy === b.booking_id ? "Opening checkout…" : `Pay online · ₹${money(b.balance_amount)}`}
+                        </button>
+                      )}
+
+                      {b.status === "PENDING_PAYMENT" && !["ANNASHETRA_DONATION", "TITHI_BHOJAN"].includes(b.service?.service_mode) && (
+                        <button
+                          onClick={() => {
+                            setActiveBooking(b);
+                            setPayAmount(b.balance_amount);
+                          }}
+                          className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-emerald-700"
+                        >
+                          <IndianRupee className="h-3.5 w-3.5" /> Pay Rs.{" "}
+                          {money(b.balance_amount)}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
             {activeBooking && (
               <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
                 <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-xl">
@@ -1745,174 +1795,9 @@ const SevaPortal = ({ user, onLogout }) => {
                 </div>
               </div>
             )}
-
-            {/* Receipt preview + print */}
-            {receiptBooking && (
-              <ReceiptModal
-                booking={receiptBooking}
-                orgName="Ambaji Temple"
-                onClose={() => setReceiptBooking(null)}
-              />
-            )}
           </div>
         )}
       </main>
-    </div>
-  );
-};
-
-/* ---------- Receipt (preview + print) ---------- */
-
-const esc = (v) =>
-  String(v ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-
-const rMoney = (n) =>
-  Number(n || 0).toLocaleString("en-IN", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-
-const rDate = (d) => {
-  if (!d) return "-";
-  const dt = new Date(d);
-  if (Number.isNaN(dt.getTime())) return esc(d);
-  return dt.toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-};
-
-// Ek hi receipt HTML - preview aur print dono isi se banta hai
-const buildReceiptHtml = (b, orgName = "Ambaji Temple") => {
-  const logo = `${window.location.origin}/ambajilogo.png`;
-  const paid = Number(b.amount_paid ?? 0);
-  const total = Number(b.total_amount ?? 0);
-  const balance = Number(b.balance_amount ?? Math.max(0, total - paid));
-  const rows = [
-    ["Receipt No", b.receipt_no],
-    ["Booking Date", b.created_at ? rDate(b.created_at) : null],
-    ["Devotee Name", b.devotee_name],
-    ["Mobile", b.devotee_mobile],
-    ["Gotra", b.gotra],
-    ["Seva / Pooja", b.service?.name],
-    ["Package", b.package?.name],
-    ["Perform Date", rDate(b.perform_date)],
-    ["Time Slot", b.slot?.start_time ? String(b.slot.start_time).slice(0, 5) : null],
-    ["Persons", b.persons],
-  ].filter(([, v]) => v !== null && v !== undefined && v !== "");
-
-  const tax = Number(b.tax_amount ?? 0);
-  const base = Number(b.amount ?? total - tax);
-  const statusPaid = b.payment_status === "PAID";
-
-  return `<!doctype html>
-<html><head><meta charset="utf-8"><title>Receipt ${esc(b.receipt_no)}</title>
-<style>
-  *{box-sizing:border-box}
-  body{margin:0;padding:24px;font-family:"Segoe UI",Arial,sans-serif;color:#1f2937;background:#fff}
-  .sheet{max-width:720px;margin:0 auto;border:1.5px solid #B71C1C;border-radius:10px;overflow:hidden}
-  .head{display:flex;align-items:center;gap:14px;padding:16px 20px;background:#FDECEC;border-bottom:1.5px solid #B71C1C}
-  .head img{height:56px;width:56px;object-fit:contain}
-  .head h1{margin:0;font-size:20px;color:#B71C1C}
-  .head p{margin:2px 0 0;font-size:12px;color:#6b7280}
-  .title{display:flex;justify-content:space-between;align-items:center;padding:12px 20px;border-bottom:1px solid #e5e7eb}
-  .title h2{margin:0;font-size:15px;letter-spacing:.08em;text-transform:uppercase}
-  .badge{font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;border:1px solid}
-  .paid{color:#047857;background:#E6F8F0;border-color:#6ee7b7}
-  .due{color:#b45309;background:#FEF6D8;border-color:#fcd34d}
-  table{width:100%;border-collapse:collapse}
-  .info td{padding:8px 20px;font-size:13px;border-bottom:1px solid #f1f5f9}
-  .info td:first-child{width:36%;color:#6b7280}
-  .info td:last-child{font-weight:600}
-  .amt{margin:14px 20px;width:calc(100% - 40px);border:1px solid #e5e7eb;border-radius:8px;overflow:hidden}
-  .amt td{padding:8px 12px;font-size:13px;border-bottom:1px solid #f1f5f9}
-  .amt td:last-child{text-align:right;font-weight:600}
-  .amt tr.total td{background:#f9fafb;font-size:14px;font-weight:700;color:#B71C1C}
-  .foot{display:flex;justify-content:space-between;align-items:flex-end;padding:18px 20px 16px;font-size:11px;color:#6b7280}
-  .sign{text-align:center;min-width:160px;border-top:1px solid #9ca3af;padding-top:4px}
-  @page{size:A4;margin:12mm}
-  @media print{body{padding:0}.sheet{border-radius:0}}
-</style></head><body>
-<div class="sheet">
-  <div class="head">
-    <img src="${logo}" alt="" onerror="this.style.display='none'">
-    <div><h1>${esc(orgName)}</h1><p>Seva / Pooja Booking Receipt</p></div>
-  </div>
-  <div class="title">
-    <h2>Payment Receipt</h2>
-    <span class="badge ${statusPaid ? "paid" : "due"}">${esc(b.payment_status || "")}</span>
-  </div>
-  <table class="info">
-    ${rows.map(([k, v]) => `<tr><td>${esc(k)}</td><td>${esc(v)}</td></tr>`).join("")}
-  </table>
-  <table class="amt">
-    <tr><td>Base Fee</td><td>Rs. ${rMoney(base)}</td></tr>
-    <tr><td>Tax</td><td>Rs. ${rMoney(tax)}</td></tr>
-    <tr class="total"><td>Total</td><td>Rs. ${rMoney(total)}</td></tr>
-    <tr><td>Amount Paid</td><td>Rs. ${rMoney(paid)}</td></tr>
-    <tr><td>Balance</td><td>Rs. ${rMoney(balance)}</td></tr>
-  </table>
-  <div class="foot">
-    <div>Printed on ${new Date().toLocaleString("en-IN")}<br>This is a computer generated receipt.</div>
-    <div class="sign">Authorised Signatory</div>
-  </div>
-</div>
-</body></html>`;
-};
-
-const ReceiptModal = ({ booking, orgName, onClose }) => {
-  const frameRef = useRef(null);
-  const html = useMemo(() => buildReceiptHtml(booking, orgName), [booking, orgName]);
-
-  useEffect(() => {
-    const onKey = (e) => e.key === "Escape" && onClose();
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
-
-  const handlePrint = () => {
-    const w = frameRef.current?.contentWindow;
-    if (!w) return;
-    w.focus();
-    w.print();
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="flex min-h-full w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-xl">
-        <div className="flex items-center justify-between border-b border-gray-200 px-5 py-3">
-          <div>
-            <h3 className="text-base font-bold text-gray-900">Receipt</h3>
-            <p className="font-mono text-[11px] text-gray-500">{booking.receipt_no}</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handlePrint}
-              className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-red-600 to-red-700 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:from-red-700 hover:to-red-800"
-            >
-              <Printer className="h-4 w-4" /> Print
-            </button>
-            <button
-              onClick={onClose}
-              className="rounded-lg border border-gray-300 p-2 text-gray-500 hover:bg-gray-50 hover:text-gray-700"
-              title="Close"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-        <iframe
-          ref={frameRef}
-          title={`Receipt ${booking.receipt_no}`}
-          srcDoc={html}
-          className="h-[70vh] w-full flex-1 bg-gray-100"
-        />
-      </div>
     </div>
   );
 };
@@ -1942,8 +1827,9 @@ const Field = ({ label, value, onChange, placeholder, required, icon: Icon }) =>
         value={value}
         onChange={(e) => onChange(e && e.target ? e.target.value : e)}
         placeholder={placeholder}
-        className={`w-full rounded-xl border border-gray-200 py-2.5 pr-3 text-sm focus:border-red-400 focus:outline-none focus:ring-2 focus:ring-red-100 ${Icon ? "pl-9" : "pl-3.5"
-          }`}
+        className={`w-full rounded-xl border border-gray-200 py-2.5 pr-3 text-sm focus:border-red-400 focus:outline-none focus:ring-2 focus:ring-red-100 ${
+          Icon ? "pl-9" : "pl-3.5"
+        }`}
       />
     </div>
   </div>
@@ -1955,10 +1841,11 @@ const FileDrop = ({ label, required, file, onChange }) => (
       {label} {required && <span className="text-red-500">*</span>}
     </label>
     <label
-      className={`flex cursor-pointer items-center gap-3 rounded-xl border-2 border-dashed px-4 py-4 transition ${file
-        ? "border-emerald-400 bg-emerald-50"
-        : "border-gray-300 bg-white hover:border-amber-400 hover:bg-amber-50/50"
-        }`}
+      className={`flex cursor-pointer items-center gap-3 rounded-xl border-2 border-dashed px-4 py-4 transition ${
+        file
+          ? "border-emerald-400 bg-emerald-50"
+          : "border-gray-300 bg-white hover:border-amber-400 hover:bg-amber-50/50"
+      }`}
     >
       <input
         type="file"
@@ -1987,8 +1874,9 @@ const FileDrop = ({ label, required, file, onChange }) => (
         }}
       />
       <span
-        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${file ? "bg-emerald-600 text-white" : "bg-amber-100 text-amber-700"
-          }`}
+        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${
+          file ? "bg-emerald-600 text-white" : "bg-amber-100 text-amber-700"
+        }`}
       >
         {file ? (
           <CheckCircle className="h-4 w-4" />

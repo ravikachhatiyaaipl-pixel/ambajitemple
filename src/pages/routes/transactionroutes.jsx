@@ -1,6 +1,5 @@
-import { Routes, Route } from "react-router-dom";
 import { useState, useEffect, lazy } from "react";
-import axios from "axios";
+import { Routes, Route } from "react-router-dom";
 const OpeningVoucherList = lazy(() => import("../transactions/bookkeeping-vouchers/opening-balance-entries/list"));
 const CreateOpeningVoucher = lazy(() => import("../transactions/bookkeeping-vouchers/opening-balance-entries/add"));
 const OpeningVoucherEdit = lazy(() => import("../transactions/bookkeeping-vouchers/opening-balance-entries/edit"));
@@ -31,6 +30,8 @@ const WorkAllocationList = lazy(() => import("../transactions/tender-management/
 const ViewWorkAllocation = lazy(() => import("../transactions/tender-management/workallocation/view"));
 const ProfitLossPage = lazy(() => import("../transactions/profit-loss"));
 const LedgerTransactionPage = lazy(() => import("../transactions/ledgertransaction"));
+import axios from "axios";
+const PaymentVoucherList = lazy(() => import("../transactions/bookkeeping-vouchers/payment/list"));
 const DonationEntry = lazy(() => import("../transactions/donation/entry"));
 const DonationApproval = lazy(() => import("../transactions/donation/approval"));
 const DonationApprovalView = lazy(() => import("../transactions/donation/approval-view"));
@@ -41,7 +42,7 @@ const ArticleDonationList = lazy(() => import("../transactions/article-donation/
 const ArticleDonationApproval = lazy(() => import("../transactions/article-donation/approval"));
 const ArticleDonationApprovalView = lazy(() => import("../transactions/article-donation/approval-view"));
 const ArticleDonationReport = lazy(() => import("../transactions/article-donation/report"));
-const PaymentVoucherList = lazy(() => import("../transactions/bookkeeping-vouchers/payment/list"));
+
 const CreatePaymentVoucher = lazy(() => import("../transactions/bookkeeping-vouchers/payment/add"));
 const PaymentVoucherEdit = lazy(() => import("../transactions/bookkeeping-vouchers/payment/edit"));
 const PaymentVoucherView = lazy(() => import("../transactions/bookkeeping-vouchers/payment/view"));
