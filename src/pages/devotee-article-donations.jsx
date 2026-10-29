@@ -92,7 +92,7 @@ const DevoteeArticleDonations = ({ user }) => {
     `${import.meta.env.VITE_API_URL}/article-donation/documents/${d.doc_id}/view`;
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <div className="p-6 w-full">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
         <div className="flex items-center">
           <button
