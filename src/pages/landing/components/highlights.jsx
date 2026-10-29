@@ -5,7 +5,7 @@ import Mandala from "./mandala";
 import Reveal from "./reveal";
 
 const TONES = {
-  marigold: { band: "bg-cream", mark: "text-temple-900/[0.07]", btn: "bg-brand-dark text-white hover:bg-temple-800" },
+  marigold: { band: "bg-marigold", mark: "text-temple-900/[0.07]", btn: "bg-brand-dark text-white hover:bg-temple-800" },
   cream: { band: "bg-cream-light", mark: "text-brand/[0.07]", btn: "bg-brand text-white hover:bg-brand-dark" },
 };
 

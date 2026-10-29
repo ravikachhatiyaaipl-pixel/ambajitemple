@@ -359,7 +359,7 @@ const DevoteeDonationEntry = ({ user }) => {
   const pendingCount = Object.keys(uploadFiles).length;
 
   return (
-    <div className="p-6 w-full">
+    <div className="p-6 max-w-5xl mx-auto">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
         <div className="flex items-center">
           <button
