@@ -1,6 +1,4 @@
 /***
-export default MasterRoutes;
-/***
 *
 *  Application Name: I3EMS
 *
@@ -16,17 +14,16 @@ export default MasterRoutes;
 *  
 */
 
-import { Routes, Route } from "react-router-dom";
-
+import { Routes, Route } from "react-router-dom";
 import { lazy } from "react";
 const DonationCategoryMaster = lazy(() => import("../masters/donation/category"));
-const DocumentMasterScreen = lazy(() => import("../masters/document/document-master"));
-const DocumentMappingScreen = lazy(() => import("../masters/document/document-mapping"));
 const DonationTypeMaster = lazy(() => import("../masters/donation/type"));
 const DonationPurityMaster = lazy(() => import("../masters/donation/purity"));
 const DonationWeightUnitMaster = lazy(() => import("../masters/donation/weight-unit"));
 const DonationReceiptSeriesMaster = lazy(() => import("../masters/donation/receipt-series"));
 const ArticleDonationActionMaster = lazy(() => import("../masters/donation/article-action-master"));
+const DocumentMasterScreen = lazy(() => import("../masters/document/document-master"));
+const DocumentMappingScreen = lazy(() => import("../masters/document/document-mapping"));
 const DepartmentMaster = lazy(() => import("../masters/organization-management/department-master/departmentmaster"));
 const ZoneList = lazy(() => import("../masters/organization-management/zone-master/list"));
 const AddEditZone = lazy(() => import("../masters/organization-management/zone-master/addedit"));
@@ -273,12 +270,11 @@ const AddEditShopRentAgreement = lazy(() => import("../masters/hall-shop-managem
 const SevaServices = lazy(() => import("../masters/hall-shop-management/seva-services/addedit"));
 const SevaServiceKinds = lazy(() => import("../masters/hall-shop-management/seva-services/kinds"));
 const SevaPackages = lazy(() => import("../masters/hall-shop-management/seva-services/packages"));
+const SevaDocumentMaster = lazy(() => import("../masters/hall-shop-management/seva-services/document-master"));
+const SevaDocumentMapping = lazy(() => import("../masters/hall-shop-management/seva-services/document-mapping"));
 const SevaCategoryMaster = lazy(() => import("../masters/hall-shop-management/seva-services/categories"));
 const SevaBookings = lazy(() => import("../masters/hall-shop-management/seva-services/bookings"));
-const TithiBhojanReport = lazy(() => import("../masters/hall-shop-management/seva-services/tithi-bhojan-report"));
-const AnnakshetraReport = lazy(() => import("../masters/hall-shop-management/seva-services/annakshetra-report"));
 const SevaApprovals = lazy(() => import("../masters/hall-shop-management/seva-services/approvals"));
-const SevaApprovalView = lazy(() => import("../masters/hall-shop-management/seva-services/approval-view"));
 const SevaActionMaster = lazy(() => import("../masters/hall-shop-management/seva-services/action-master"));
 const SevaPriests = lazy(() => import("../masters/hall-shop-management/seva-services/priests"));
 const SevaOrganizers = lazy(() => import("../masters/hall-shop-management/seva-services/organizers"));
@@ -1666,24 +1662,14 @@ const MasterRoutes = ({ user }) => {
       <Route path="hall-shop-management/shop-rent-agreement" element={<ShopRentAgreementList user={user} />} />
       <Route path="hall-shop-management/shop-rent-agreement/create" element={<AddEditShopRentAgreement user={user} />} />
       <Route path="hall-shop-management/shop-rent-agreement/edit/:id" element={<AddEditShopRentAgreement user={user} />} />
-      <Route path="donation/category" element={<DonationCategoryMaster user={user} />} />
-      <Route path="document/document-master" element={<DocumentMasterScreen user={user} />} />
-      <Route path="document/document-mapping" element={<DocumentMappingScreen user={user} />} />
-      <Route path="donation/type" element={<DonationTypeMaster user={user} />} />
-      <Route path="donation/purity" element={<DonationPurityMaster user={user} />} />
-      <Route path="donation/weight-unit" element={<DonationWeightUnitMaster user={user} />} />
-      <Route path="donation/receipt-series" element={<DonationReceiptSeriesMaster user={user} />} />
-      <Route path="donation/article-action-master" element={<ArticleDonationActionMaster user={user} />} />
-
       <Route path="hall-shop-management/seva-services" element={<SevaServices user={user} />} />
       <Route path="hall-shop-management/seva-service-kinds" element={<SevaServiceKinds user={user} />} />
       <Route path="hall-shop-management/seva-categories" element={<SevaCategoryMaster user={user} />} />
       <Route path="hall-shop-management/seva-packages" element={<SevaPackages user={user} />} />
+      <Route path="hall-shop-management/seva-document-master" element={<SevaDocumentMaster user={user} />} />
+      <Route path="hall-shop-management/seva-document-mapping" element={<SevaDocumentMapping user={user} />} />
       <Route path="hall-shop-management/seva-bookings" element={<SevaBookings user={user} />} />
-      <Route path="hall-shop-management/seva-tithi-bhojan-report" element={<TithiBhojanReport user={user} />} />
-      <Route path="hall-shop-management/seva-annakshetra-report" element={<AnnakshetraReport user={user} />} />
       <Route path="hall-shop-management/seva-bookings-approval" element={<SevaApprovals user={user} />} />
-      <Route path="hall-shop-management/seva-bookings-approval/view/:id" element={<SevaApprovalView user={user} />} />
       <Route path="hall-shop-management/seva-priests" element={<SevaPriests user={user} />} />
       <Route path="hall-shop-management/seva-organizers" element={<SevaOrganizers user={user} />} />
       <Route path="hall-shop-management/seva-action-master" element={<SevaActionMaster user={user} />} />
@@ -1743,6 +1729,17 @@ const MasterRoutes = ({ user }) => {
     <Route path="hall-shop-management/hall-rent-booking-transaction/view/:id" element={<ViewHallRentBookingTransaction user={user} />} />
     <Route path="hall-shop-management/hall-rent-booking-transaction-approval" element={<HallRentBookingTransactionApprovalList user={user} />} />
     <Route path="hall-shop-management/hall-rent-booking-transaction-approval/view/:id" element={<HallRentBookingTransactionApprovalView user={user} />} />
+
+
+    {/* Donation & Article Donation Masters */}
+    <Route path="donation/category" element={<DonationCategoryMaster user={user} />} />
+    <Route path="donation/type" element={<DonationTypeMaster user={user} />} />
+    <Route path="donation/purity" element={<DonationPurityMaster user={user} />} />
+    <Route path="donation/weight-unit" element={<DonationWeightUnitMaster user={user} />} />
+    <Route path="donation/receipt-series" element={<DonationReceiptSeriesMaster user={user} />} />
+    <Route path="donation/article-action-master" element={<ArticleDonationActionMaster user={user} />} />
+    <Route path="document/document-master" element={<DocumentMasterScreen user={user} />} />
+    <Route path="document/document-mapping" element={<DocumentMappingScreen user={user} />} />
 
     </Routes>
   );

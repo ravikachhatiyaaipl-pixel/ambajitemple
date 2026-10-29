@@ -81,33 +81,3 @@ export function canApproveAction(user, forwardAction) {
     (auth) => parseInt(auth.Dsg_id ?? auth.Dsg_Id ?? auth) === desigId,
   );
 }
-
-/**
- * Kya user ye CURRENT step perform kar sakta hai?
- *
- * Seva booking flow jaisa: jo user abhi step perform kar raha hai, us
- * CURRENT action ki authority check hoti hai (target ki nahi).
- *
- *   current = "HOD Approved"  (authorities: 17) -> HOD (17) allowed
- *   current = "Admin Approved"(authorities: []) -> sirf Admin
- */
-export function canPerformAction(user, currentAction) {
-  if (!currentAction) return false;
-
-  // Admin kuch bhi kar sakta hai
-  if (isAdminUser(user)) return true;
-
-  const desigId = getDesignationId(user);
-  if (!desigId) return false;
-
-  const authorities = currentAction.authorities_details;
-
-  // Authorities khali hai -> sirf ADMIN
-  if (!Array.isArray(authorities) || authorities.length === 0) {
-    return false;
-  }
-
-  return authorities.some(
-    (auth) => parseInt(auth.Dsg_id ?? auth.Dsg_Id ?? auth) === desigId,
-  );
-}

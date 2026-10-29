@@ -28,7 +28,7 @@ function Card({ title, items, good }) {
 
 export default function Guidelines() {
   return (
-    <section id="guidelines" className="relative isolate scroll-mt-20 overflow-hidden bg-marigold py-16 sm:py-24">
+    <section id="guidelines" className="relative isolate scroll-mt-20 overflow-hidden bg-cream py-16 sm:py-24">
       <Mandala className="absolute -left-40 top-1/2 -z-10 h-[560px] w-[560px] -translate-y-1/2 text-temple-900/[0.07]" />
       <div className="mx-auto grid max-w-6xl items-center gap-10 px-5 sm:px-8 lg:grid-cols-[1fr_1.4fr] lg:gap-16">
         <Reveal>

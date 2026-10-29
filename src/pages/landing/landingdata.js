@@ -21,10 +21,10 @@ export const NAV_LINKS = [
 
 // VERIFY: sample figures
 export const STATS = [
-  { value: "51", label: "Shakti Peethas — this is one" },
-  { value: "1.4 Cr+", label: "Devotees welcomed yearly" },
-  { value: "24/7", label: "Online booking & donations" },
-  { value: "8", label: "Daily aarti & seva slots" },
+  { icon: "landmark", value: "51", label: "Shakti Peethas — this is one" },
+  { icon: "users", value: "1.4 Cr+", label: "Devotees welcomed yearly" },
+  { icon: "clock", value: "24/7", label: "Online booking & donations" },
+  { icon: "sparkles", value: "8", label: "Daily aarti & seva slots" },
 ];
 
 // VERIFY: sample timings (24h format). Times drive the live "Next Aarti" card too.
@@ -36,6 +36,16 @@ export const TIMINGS = [
   { id: "shayan", title: "Shayan Aarti", note: "Closing ceremony", time: "21:00", icon: "moon", aarti: true },
   { id: "close", title: "Temple Closes", note: "Reopens 6:00 AM next day", time: "21:30", icon: "lock", aarti: false },
 ];
+// Card look per timing: gradient + decorative sky icon (sunrise -> night).
+export const TIMING_THEMES = {
+  mangala: "from-amber-400 via-orange-500 to-rose-700",
+  abhishek: "from-amber-500 via-orange-500 to-red-700",
+  rajbhog: "from-yellow-500 via-amber-600 to-orange-700",
+  sandhya: "from-orange-600 via-rose-700 to-temple-800",
+  shayan: "from-temple-700 via-temple-800 to-temple-950",
+  close: "from-gray-600 to-gray-800",
+};
+
 export const OPEN_TIME = "06:00";
 export const CLOSE_TIME = "21:30";
 
@@ -75,9 +85,9 @@ export const TESTIMONIALS = [
 ];
 
 export const GALLERY = [
-  { title: "Shri Ambaji Mata Devasthan", img: "/splash.png", pos: "center 35%", big: true },
-  { title: "Temple Complex", img: "/Ambaji-Temple.jpg", pos: "center" },
-  { title: "Golden Shikhara", img: "/Golden Shikhara.png", pos: "72% 18%" },
+  { title: "Shri Ambaji Mata Devasthan", img: "/ambaji-temple2.jpg", pos: "center 35%", big: true },
+  { title: "Temple Complex", img: "/suvarna-shikar-hero.jpg", pos: "center" },
+  { title: "Golden Shikhara", img: "/images11.jpg", pos: "72% 18%" },
   { title: "Marble Courtyard", img: "/Golden Shikhara.png", pos: "center 96%" },
   { title: "Temple Entrance", img: "/Ambaji-Temple.jpg", pos: "42% 72%" },
 ];
@@ -91,7 +101,7 @@ export const FAQS = [
 ];
 
 export const FOOTER_COLUMNS = [
-  { title: "Explore", links: [["About the Temple", "about"], ["Darshan Timings", "timings"], ["Services", "services"], ["Gallery", "gallery"]] },
+  { title: "Explore", links: [["About the Temple", "about"], ["Darshan Timings", "timings"], ["Services", "services"], ["Events", "events"], ["Guidelines", "guidelines"], ["Gallery", "gallery"]] },
   { title: "Services", links: [["Darshan Booking", "services"], ["VIP Darshan", "services"], ["Seva & Pooja", "services"], ["Donations", "donate"]] },
   { title: "Support", links: [["FAQ", "faq"]] },
 ];
@@ -101,6 +111,112 @@ export const CONTACT = {
   address: "Ambaji, Banaskantha, Gujarat 385110",
   phone: "",
   email: "",
+};
+
+/* ---------- Highlight bands (alternating image + text) ----------
+ * tone: "marigold" (yellow band) | "cream". Add `img` of prasad / other offerings here later. */
+export const HIGHLIGHTS = [
+  {
+    id: "aarti",
+    tone: "marigold",
+    tag: "Maa Amba's Darshan",
+    title: "Begin your visit with the morning and evening aarti",
+    text: "Stand in the sanctum as the lamps are lit. Reserve your slot online and spend your time in prayer, not in the queue.",
+    cta: "Book Darshan",
+    img: "/images10.jpg",
+    pos: "center 40%",
+    portrait: true,
+  },
+  {
+    id: "shikhar",
+    tone: "cream",
+    tag: "Pure gold plated",
+    title: "Suvarna Shikhar of Ambaji Temple",
+    text: "The golden shikhara covered in pure gold stands as a symbol of faith, drawing devotees from across the world to Maa Amba's blessings.",
+    cta: "Donate Now",
+    img: "/Golden Shikhara.png",
+    pos: "70% 20%",
+    anchor: "donate",
+  },
+];
+
+/* ---------- Announcement (VERIFY wording before go-live) ---------- */
+export const ANNOUNCEMENT = {
+  tag: "Events & Celebrations",
+  title: "Light & Sound Show at Gabbar Hill",
+  text: "Experience the divine celebration of Navratri at Ambaji Temple, filled with devotion, traditional Garba, cultural performances, and spiritual festivities. Join devotees in seeking the blessings of Maa Ambe and celebrating this auspicious festival with faith, joy, and enthusiasm.",
+  img: "/ambaji1.jpg",
+  pos: "center",
+};
+
+/* ---------- Events (VERIFY dates; kept general on purpose) ---------- */
+export const EVENTS = [
+  { title: "Bhadarvi Poonam Fair", period: "Bhadarvo full moon", text: "Lakhs of padyatris walk to Ambaji for the largest fair of the year.", img: "/ambaji_bhadarvi_poonam.jpg", pos: "center 30%" },
+  { title: "Navratri Mahotsav", period: "Ashwin Navratri", text: "Nine nights of garba, aarti and special shringar at the temple.", img: "/ambaji1.jpg", pos: "center" },
+  { title: "Chaitra Navratri", period: "Chaitra Shukla Paksha", text: "Special pooja and havan during the spring Navratri.", img: "/chaitra navaratri.jpg", pos: "72% 18%" },
+  { title: "Poonam Darshan", period: "Every full moon", text: "A large number of devotees visit on each Poonam for darshan.", img: "/Ambaji_poonam.jpeg", pos: "center 35%" },
+];
+
+/* ---------- Guidelines (VERIFY with temple trust) ---------- */
+export const GUIDELINES = {
+  dos: [
+    "Carry a valid photo ID and your booking QR code",
+    "Dress modestly and follow the queue",
+    "Keep your valuables with you or in the cloakroom",
+    "Use only the official portal for bookings and donations",
+  ],
+  donts: [
+    "Do not carry large bags into the queue area",
+    "Do not litter in the temple premises",
+    "Do not pay anyone outside for \"fast\" darshan",
+    "Do not use flash or loud devices near the sanctum",
+  ],
+};
+
+/* ---------- Devotee portal (post-login dashboard) ----------
+ * Everything the devotee dashboard shows that is not user data lives here.
+ * VERIFY: contact numbers / email / trust name below are taken from the approved design - confirm before go-live.
+ * `to` = route inside the portal. Items without `to` are shown as plain text. */
+export const DEVOTEE_PORTAL = {
+  badge: "Shaktipeeth",
+  subtitleGu: "\u0aaf\u0abe\u0aa4\u0acd\u0ab0\u0abe\u0ab3\u0ac1 \u0ab8\u0ac7\u0ab5\u0abe \u0aaa\u0acb\u0ab0\u0acd\u0a9f\u0ab2",
+  subtitleEn: "Devotee Portal",
+  location: "Ambaji, Banaskantha, Gujarat",
+  liveDarshan: "Live Darshan Online",
+  crowdFlow: "Normal (Minor Queue)",
+  trustName: "Shree Arasuri Ambaji Mata Devasthan Trust",
+  managementLine: "Shree Arasuri Ambaji Mata Devasthan Trust (SKDT) Management",
+};
+
+export const DEVOTEE_SERVICES = [
+  { id: "pooja", icon: "pooja", tone: "orange", title: "Pooja Services", tag: { text: "Sacred", tone: "amber" },
+    text: "Book daily rituals, Abhishek, Archana & Special Sevas.", foot: "Instant confirmation", cta: "Book Pooja", to: "/seva-portal" },
+  { id: "donation", icon: "donate", tone: "red", title: "Donation", tag: { text: "80G Benefit", tone: "green" },
+    text: "General temple fund, Gaushala & Annadan with 80G exemption.", foot: "Tax exemption receipt", cta: "Donate Now", to: "/devotee-donation-entry" },
+  { id: "gold", icon: "gold", tone: "amber", title: "Gold Donation", tag: { text: "SKDT Verified", tone: "amber" },
+    text: "Offer pure bullion with SKDT digital treasury verification.", foot: "SKDT Treasury", cta: "Offer Gold", to: "/devotee-donation-entry" },
+  { id: "article", icon: "article", tone: "purple", title: "Article Donation", tag: { text: "\u0ab5\u0ab8\u0acd\u0aa4\u0ac1 \u0aa6\u0abe\u0aa8", tone: "purple" },
+    text: "Offer vastra, grains, brassware & temple materials.", foot: "In-kind offerings", cta: "Donate Articles", to: "/devotee-article-donation-entry" },
+  { id: "bhojan", icon: "food", tone: "amber", title: "Annakshetra & Bhojan Booking", tag: { text: "\u0a85\u0aa8\u0acd\u0aa8\u0a95\u0acd\u0ab7\u0ac7\u0aa4\u0acd\u0ab0", tone: "amber" },
+    text: "Reserve dining slots & Bhojanalaya coupons.", foot: "Free & Seva coupons", cta: "Book Bhojan", to: "/seva-portal" },
+  { id: "receipts", icon: "receipt", tone: "blue", title: "My Donations", tag: { text: "80G Tax", tone: "blue" },
+    text: "View donation history & download official tax receipts.", foot: "Download PDFs", cta: "View Receipts", to: "/devotee-donations", soft: true },
+];
+
+export const DEVOTEE_FOOTER = {
+  about: "One of the 51 celebrated Shaktipeeths of Bharat. Worship the sacred Vishwa Yantra in the holy Arasur hills.",
+  columns: [
+    { title: "Quick Access", links: [
+      { label: "Online Prasad Delivery" }, { label: "Live Darshan 24\u00d77" },
+      { label: "Bhojanalaya Timings" }, { label: "Gabbar Hill Ropeway" },
+    ] },
+    { title: "Devotee Support", links: [
+      { label: "Wheelchair & Senior Citizens" }, { label: "Lost & Found Center" },
+      { label: "Donation Tax Exemption (80G)" }, { label: "Security & Cloakroom Facilities" },
+    ] },
+  ],
+  emergency: { title: "Emergency Contacts", helpdesk: "Devasthan Trust Helpdesk:", phones: "+91 02749 262136 / 262623", email: "info@ambajitemple.in" },
+  legal: ["Designed & Developed by Aark InfoSoft Pvt. Ltd."],
 };
 
 /* ---------- time helpers (temple time = IST) ---------- */
