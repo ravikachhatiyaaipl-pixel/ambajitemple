@@ -97,13 +97,25 @@ const DevoteeDashboard = ({ user, onLogout }) => {
               onClick={() => navigate("/devotee-donation-entry")}
               className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700"
             >
-              <IndianRupee className="h-4 w-4" /> Donate
+              <IndianRupee className="h-4 w-4" /> Gold/Silver Donate
+            </button>
+            <button
+              onClick={() => navigate("/devotee-article-donation-entry")}
+              className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-3 py-2 text-sm font-medium text-white hover:bg-red-700"
+            >
+              <MapPin className="h-4 w-4" /> Article Donate
             </button>
             <button
               onClick={() => navigate("/devotee-donations")}
               className="inline-flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-sm font-medium text-gray-700 ring-1 ring-gray-200 hover:bg-gray-50"
             >
               <ReceiptText className="h-4 w-4" /> My Donations
+            </button>
+            <button
+              onClick={() => navigate("/devotee-article-donations")}
+              className="inline-flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-sm font-medium text-gray-700 ring-1 ring-gray-200 hover:bg-gray-50"
+            >
+              <MapPin className="h-4 w-4" /> My Article Donations
             </button>
             <button onClick={onLogout}
               className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-3 py-2 text-sm font-medium text-white hover:bg-red-700">

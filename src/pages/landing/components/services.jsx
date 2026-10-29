@@ -8,8 +8,8 @@ const ICONS = { ticket: Ticket, crown: Crown, pooja: Flame, donate: HandHeart, f
 
 export default function Services() {
   return (
-    <section>
-      {/* <div className="mx-auto max-w-7xl px-5 sm:px-8">
+    <section id="services" className="scroll-mt-20 bg-white py-20 sm:py-28">
+      <div className="mx-auto max-w-7xl px-5 sm:px-8">
         <Reveal>
           <SectionHeading
             tag="What You Can Do Here"
@@ -45,8 +45,7 @@ export default function Services() {
             );
           })}
         </div>
-      </div> */}
-    {/* id="services" className="scroll-mt-20 bg-white py-20 sm:py-28" */}
-     </section>
+      </div>
+    </section>
   );
 }

@@ -32,6 +32,8 @@ import {
   Handshake,
   HandCoins,
   CalendarCheck,
+  Plus,
+  Trash2,
 } from "lucide-react";
 
 const KIND_META = {
@@ -75,6 +77,10 @@ const SevaPortal = ({ user, onLogout }) => {
   const [paymentModes, setPaymentModes] = useState([]);
   const [query, setQuery] = useState("");
   const [activeCat, setActiveCat] = useState("ALL");
+  const [activeMode, setActiveMode] = useState("ALL");
+  const [coDonorText, setCoDonorText] = useState("");
+  const coDonorRows = coDonorText.split("\n");
+  const [donationAmount, setDonationAmount] = useState("");
 
   const [selectedService, setSelectedService] = useState(null);
   const [selectedPackage, setSelectedPackage] = useState(null);
@@ -91,6 +97,7 @@ const SevaPortal = ({ user, onLogout }) => {
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [quota, setQuota] = useState(null);
   const [groupSize, setGroupSize] = useState(1);
+  const [packageLimit, setPackageLimit] = useState(null);
   const [pricePreview, setPricePreview] = useState(null);
 
   const [devoteeName, setDevoteeName] = useState(
@@ -118,15 +125,23 @@ const SevaPortal = ({ user, onLogout }) => {
   );
 
   const [myBookings, setMyBookings] = useState([]);
+  const [bookingServiceFilter, setBookingServiceFilter] = useState("ALL");
+  const [bookingStatusFilter, setBookingStatusFilter] = useState("ALL");
+  const [bookingSearch, setBookingSearch] = useState("");
   const [queryResponses, setQueryResponses] = useState({});
   const [activeBooking, setActiveBooking] = useState(null);
   const [paying, setPaying] = useState(false);
+  const [razorpayKeyId, setRazorpayKeyId] = useState("");
+  const [razorpayBusy, setRazorpayBusy] = useState(null);
   const [payAmount, setPayAmount] = useState("");
 
   useEffect(() => {
     loadCatalogue();
     loadMyBookings();
     loadPaymentModes();
+    axios.get(`${base}/portal/seva/payment-config`, { headers })
+      .then((res) => setRazorpayKeyId(res.data?.data?.enabled ? (res.data.data.key_id || "") : ""))
+      .catch(() => setRazorpayKeyId(""));
   }, []);
 
   const loadCatalogue = async (silent = false) => {
@@ -187,6 +202,18 @@ const SevaPortal = ({ user, onLogout }) => {
 
     return () => clearInterval(timer);
   }, [dateIsAuto, quotaDate]);
+
+  // Live refresh of the selected date's slots (per-slot remaining places).
+  useEffect(() => {
+    if (view !== "booking" || !selectedService || !selectedPackage) return undefined;
+
+    const timer = setInterval(() => {
+      if (document.hidden) return;
+      loadSlots(selectedService, performDate, selectedPackage.package_id);
+    }, 20000);
+
+    return () => clearInterval(timer);
+  }, [view, selectedService, selectedPackage?.package_id, performDate]);
 
   // Page focus hone par bhi turant refresh
   useEffect(() => {
@@ -259,6 +286,16 @@ const SevaPortal = ({ user, onLogout }) => {
 
   const loadSlots = async (svc, date, pkgId) => {
     if (!svc) return;
+    if (svc.service_mode === "TITHI_BHOJAN") {
+      const pkg = (svc.packages || []).find((item) => String(item.package_id) === String(pkgId));
+      if (!pkg?.effective_from || !pkg?.effective_to || !(pkg?.slot_times || []).length
+        || date < pkg.effective_from || date > pkg.effective_to) {
+        setSlots([]);
+        setQuota(null);
+        setPackageLimit(null);
+        return;
+      }
+    }
     try {
       const res = await axios.get(`${base}/portal/seva/slots`, {
         headers,
@@ -269,8 +306,12 @@ const SevaPortal = ({ user, onLogout }) => {
         },
       });
       if (res.data?.success) {
-        setSlots(res.data.data.slots || []);
+        const freshSlots = res.data.data.slots || [];
+        setSlots(freshSlots);
         setQuota(res.data.data.quota || null);
+        setPackageLimit(res.data.data.package_limit || null);
+        // Selected slot ki remaining places bhi live update karo.
+        setSelectedSlot((cur) => (cur ? freshSlots.find((s) => s.slot_id === cur.slot_id) || cur : cur));
       }
     } catch (e) {
       toast.error(e.response?.data?.message || "Failed to load slots");
@@ -280,28 +321,74 @@ const SevaPortal = ({ user, onLogout }) => {
   const filteredServices = useMemo(() => {
     return services.filter((s) => {
       const byCat = activeCat === "ALL" || s.category_id == activeCat;
+      const byMode = activeMode === "ALL" || s.service_mode === activeMode;
       const byText = `${s.name} ${s.code} ${s.service_kind} ${
         s.short_description || ""
       } ${s.category?.name || ""}`
         .toLowerCase()
         .includes(query.trim().toLowerCase());
-      return byCat && byText;
+      return byCat && byMode && byText;
     });
-  }, [services, activeCat, query]);
+  }, [services, activeCat, activeMode, query]);
+
+  // ---- My Bookings filters (service / status / search) ----
+  const bookingServiceOptions = useMemo(() => {
+    const map = new Map();
+    myBookings.forEach((b) => {
+      if (b.service?.service_id) map.set(String(b.service.service_id), b.service.name);
+    });
+    return [...map.entries()].map(([id, name]) => ({ id, name }));
+  }, [myBookings]);
+
+  const visibleMyBookings = useMemo(() => {
+    const q = bookingSearch.trim().toLowerCase();
+    return myBookings.filter((b) => {
+      const byService = bookingServiceFilter === "ALL"
+        || String(b.service?.service_id) === String(bookingServiceFilter);
+      const byStatus = bookingStatusFilter === "ALL" || b.status === bookingStatusFilter;
+      const byText = !q
+        || `${b.receipt_no || ""} ${b.service?.name || ""} ${b.devotee_name || ""}`.toLowerCase().includes(q);
+      return byService && byStatus && byText;
+    });
+  }, [myBookings, bookingServiceFilter, bookingStatusFilter, bookingSearch]);
+
+  const BOOKING_STATUS_OPTIONS = [
+    "PENDING_PAYMENT", "PENDING_APPROVAL", "QUERY_RAISED", "APPROVED", "SCHEDULED",
+    "PERFORMED", "COMPLETED", "CANCELLED", "REJECTED", "REFUNDED",
+  ];
+
+  const dateForPackage = (pkg, currentDate) => {
+    const today = localDate();
+    const minDate = pkg?.effective_from && pkg.effective_from > today ? pkg.effective_from : today;
+    if (currentDate < minDate) return minDate;
+    if (pkg?.effective_to && currentDate > pkg.effective_to) return pkg.effective_to;
+    return currentDate;
+  };
+
+  const formatBookingDate = (value) => value
+    ? new Date(`${value}T00:00:00`).toLocaleDateString("en-IN")
+    : "Not configured";
 
   const selectService = (svc) => {
     const firstPkg = svc.packages?.[0] || null;
+    const nextDate = dateForPackage(firstPkg, performDate);
     setSelectedService(svc);
     setSelectedPackage(firstPkg);
+    setPerformDate(nextDate);
     setSelectedSlot(null);
     setSlots([]);
+    setPackageLimit(null);
     setPricePreview(null);
+    setDonationAmount("");
+    setCoDonorText("");
     setPayMode("");
-    // Group size default = package ka group size
+    // Tithi Bhojan: devotee chooses the people count (no group concept).
     setGroupSize(
-      Math.max(1, Number(firstPkg?.persons_per_booking ?? 1) || 1)
+      svc?.service_mode === "TITHI_BHOJAN"
+        ? 1
+        : Math.max(1, Number(firstPkg?.persons_per_booking ?? 1) || 1)
     );
-    loadSlots(svc, performDate, firstPkg?.package_id);
+    loadSlots(svc, nextDate, firstPkg?.package_id);
     setView("booking");
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -318,30 +405,63 @@ const SevaPortal = ({ user, onLogout }) => {
   );
 
   // Persons actually served = GROUP size (alag "Persons Served" field nahi)
-  const personsServed = maxGroupSize;
+  const personsServed = selectedService?.service_mode === "TITHI_BHOJAN" ? groupSize : maxGroupSize;
+  const tithiPackageNeedsSetup = selectedService?.service_mode === "TITHI_BHOJAN"
+    && (!selectedPackage?.effective_from || !selectedPackage?.effective_to || !(selectedPackage?.slot_times || []).length);
+
+  // Package total person-limit (live from the slots response, else catalogue).
+  // Unlimited / no limit => null, so nothing is enforced or shown.
+  const limitInfo = useMemo(() => {
+    const info = packageLimit || (() => {
+      const p = selectedPackage;
+      if (!p || !p.person_limit) return null;
+      const limit = Number(p.person_limit);
+      const used = Number(p.limit_used ?? 0);
+      const remaining = Math.max(0, limit - used);
+      return { limit, used, remaining, unlimited: false, is_full: remaining <= 0 };
+    })();
+
+    if (!info || info.unlimited || !info.limit) return null;
+
+    return info;
+  }, [packageLimit, selectedPackage]);
 
   // Group size = package ka group size (client input NAHI - sab package se)
   useEffect(() => {
-    setGroupSize(maxGroupSize);
-  }, [maxGroupSize]);
+    if (selectedService?.service_mode !== "TITHI_BHOJAN") setGroupSize(maxGroupSize);
+  }, [maxGroupSize, selectedService?.service_mode]);
 
   // Package change -> group size + slots (dynamic pattern) refresh
   const selectPackage = (pkg) => {
+    const nextDate = dateForPackage(pkg, performDate);
     setSelectedPackage(pkg);
-    setGroupSize(Math.max(1, Number(pkg?.persons_per_booking ?? 1) || 1));
+    setPerformDate(nextDate);
+    setDonationAmount("");
+    setGroupSize(
+      selectedService?.service_mode === "TITHI_BHOJAN"
+        ? 1
+        : Math.max(1, Number(pkg?.persons_per_booking ?? 1) || 1)
+    );
     setSelectedSlot(null);
 
     if (selectedService) {
-      loadSlots(selectedService, performDate, pkg?.package_id);
+      loadSlots(selectedService, nextDate, pkg?.package_id);
     }
   };
   const fetchPricePreview = async () => {
     if (!selectedService) return;
+    if (selectedService.service_mode === "TITHI_BHOJAN"
+      && (!selectedPackage?.effective_from || !selectedPackage?.effective_to || !(selectedPackage?.slot_times || []).length)) {
+      setPricePreview(null);
+      return;
+    }
     try {
       const res = await axios.post(
         `${base}/portal/seva/price-preview`,
         {
           service_id: selectedService.service_id,
+          persons: selectedService.service_mode === "TITHI_BHOJAN" ? groupSize : undefined,
+          donation_amount: selectedPackage?.pricing_mode === "DONATION" && donationAmount ? Number(donationAmount) : undefined,
           package_id: selectedPackage?.package_id || null,
           slot_id: selectedSlot?.slot_id || null,
           perform_date: performDate,
@@ -359,7 +479,7 @@ const SevaPortal = ({ user, onLogout }) => {
       fetchPricePreview();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedService, selectedPackage, selectedSlot, performDate]);
+  }, [selectedService, selectedPackage, selectedSlot, performDate, groupSize, donationAmount]);
 
   const resetForm = () => {
     setAadhaarFront(null);
@@ -375,12 +495,32 @@ const SevaPortal = ({ user, onLogout }) => {
 
   const handleBooking = async () => {
     if (!selectedService) return;
+    const paymentManagedAtTemple = ["ANNASHETRA_DONATION", "TITHI_BHOJAN"].includes(selectedService.service_mode);
+
+    if (tithiPackageNeedsSetup) return toast.error("This Tithi Bhojan package needs start/end dates and meal slots from the admin before booking.");
+    if (selectedService.service_mode === "TITHI_BHOJAN" && !selectedSlot) return toast.error("Please select a meal slot.");
+    if (selectedSlot?.closed) return toast.error("This meal slot has closed for today. Please pick another slot or date.");
+    if (limitInfo && (limitInfo.is_full || limitInfo.remaining < groupSize)) {
+      return toast.error(
+        limitInfo.is_full
+          ? "This package is fully booked. Please pick another package or date."
+          : `Only ${limitInfo.remaining} places left in this package.`
+      );
+    }
+    if (selectedSlot?.limit && (selectedSlot.is_full || selectedSlot.remaining < groupSize)) {
+      return toast.error(
+        selectedSlot.is_full
+          ? "This slot is full. Please pick another slot."
+          : `Only ${selectedSlot.remaining} places left in this slot.`
+      );
+    }
+    if (paymentManagedAtTemple && !razorpayKeyId) return toast.error("Razorpay is not configured yet. Please try again after online payment setup is complete.");
 
     if (!devoteeName.trim()) return toast.error("Please enter your name");
     if (!devoteePhone.trim())
       return toast.error("Please enter your mobile number");
     if (!address.trim()) return toast.error("Please enter your address");
-    if (!payMode) return toast.error("Select payment option (Cash or Online)");
+    if (!paymentManagedAtTemple && !payMode) return toast.error("Select payment option (Cash or Online)");
 
     // Mapped documents check
     for (const doc of requiredDocs) {
@@ -408,7 +548,7 @@ const SevaPortal = ({ user, onLogout }) => {
 
     if (selectedService.requires_gotra && !gotra.trim())
       return toast.error("Gotra is required for this seva");
-        if (selectedService.slot_required && !selectedSlot)
+        if ((selectedService.slot_required || selectedService.service_mode === "TITHI_BHOJAN") && !selectedSlot)
       return toast.error("Please select a time slot");
 
     try {
@@ -418,7 +558,12 @@ const SevaPortal = ({ user, onLogout }) => {
       if (selectedPackage?.package_id)
         fd.append("package_id", selectedPackage.package_id);
       if (selectedSlot?.slot_id) fd.append("slot_id", selectedSlot.slot_id);
-      fd.append("perform_date", performDate);
+      fd.append("perform_date", selectedService.service_mode === "ANNASHETRA_DONATION" ? localDate() : performDate);
+      if (selectedService.service_mode === "TITHI_BHOJAN") fd.append("persons", String(groupSize));
+      if (selectedService.service_mode === "ANNASHETRA_DONATION") {
+        coDonorText.split(/[,\n]/).map((name) => name.trim()).filter(Boolean).forEach((name) => fd.append("co_donors[]", name));
+      }
+      if (selectedPackage?.pricing_mode === "DONATION") fd.append("donation_amount", String(Number(donationAmount || selectedPackage.min_amount || 0)));
       fd.append("devotee_name", devoteeName.trim());
       fd.append("devotee_mobile", devoteePhone.trim());
       if (devoteeEmail.trim())
@@ -432,25 +577,28 @@ const SevaPortal = ({ user, onLogout }) => {
       Object.entries(extraDocs).forEach(([code, file]) => {
         if (file) fd.append(`document_${code}`, file);
       });
-      fd.append("pay_now", "1");
-      fd.append("payment_mode_id", payMode);
-      if (paymentRef.trim()) fd.append("payment_ref", paymentRef.trim());
+      if (!paymentManagedAtTemple) {
+        fd.append("pay_now", "1");
+        fd.append("payment_mode_id", payMode);
+        if (paymentRef.trim()) fd.append("payment_ref", paymentRef.trim());
+      }
 
       const res = await axios.post(`${base}/portal/seva/bookings`, fd, {
         headers: { ...headers, "Content-Type": "multipart/form-data" },
       });
 
       if (res.data?.success) {
-        toast.success(
-          res.data.paid
-            ? "Booking confirmed! Payment recorded."
-            : "Booking created. Please complete payment."
-        );
         resetForm();
-        loadMyBookings();
+        await loadMyBookings();
         // Daily limit counter turant update ho - catalogue refresh
         loadCatalogue(true);
         setView("mybookings");
+        if (paymentManagedAtTemple) {
+          toast.success("Booking created. Opening secure payment checkout…");
+          await startRazorpayPayment(res.data.data);
+        } else {
+          toast.success(res.data.paid ? "Booking confirmed! Payment recorded." : res.data.message || "Booking created. Please complete payment.");
+        }
       } else {
         toast.error(res.data?.message || "Booking failed");
       }
@@ -461,6 +609,61 @@ const SevaPortal = ({ user, onLogout }) => {
       toast.error(errs || "Booking failed");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const startRazorpayPayment = async (booking) => {
+    if (!razorpayKeyId) return toast.error("Online payment is not configured yet.");
+    try {
+      setRazorpayBusy(booking.booking_id);
+      if (!window.Razorpay) {
+        await new Promise((resolve, reject) => {
+          const script = document.createElement("script");
+          script.src = "https://checkout.razorpay.com/v1/checkout.js";
+          script.onload = resolve;
+          script.onerror = () => reject(new Error("Could not load the secure Razorpay checkout."));
+          document.body.appendChild(script);
+        });
+      }
+      const orderRes = await axios.post(`${base}/portal/seva/bookings/${booking.booking_id}/payment-order`, {}, { headers });
+      const order = orderRes.data?.data;
+      const checkout = new window.Razorpay({
+        key: order.key_id,
+        amount: order.amount,
+        currency: order.currency,
+        name: order.name,
+        description: order.description,
+        order_id: order.order_id,
+        prefill: order.prefill,
+        theme: { color: "#0f766e" },
+        handler: async (result) => {
+          try {
+            const paid = await axios.post(`${base}/portal/seva/bookings/${booking.booking_id}/pay`, {
+              amount: order.amount / 100,
+              payment_mode_id: null,
+              gateway: "RAZORPAY",
+              gateway_order_id: result.razorpay_order_id,
+              gateway_payment_id: result.razorpay_payment_id,
+              gateway_signature: result.razorpay_signature,
+            }, { headers });
+            toast.success(paid.data?.message || "Payment successful. Booking updated.");
+            await loadMyBookings();
+          } catch (e) {
+            toast.error(e.response?.data?.message || "Payment received; verification is pending. Refresh My Bookings shortly.");
+          } finally {
+            setRazorpayBusy(null);
+          }
+        },
+        modal: { ondismiss: () => setRazorpayBusy(null) },
+      });
+      checkout.on("payment.failed", (event) => {
+        toast.error(event.error?.description || "Razorpay payment failed.");
+        setRazorpayBusy(null);
+      });
+      checkout.open();
+    } catch (e) {
+      toast.error(e.response?.data?.message || e.message || "Could not start Razorpay checkout.");
+      setRazorpayBusy(null);
     }
   };
 
@@ -643,6 +846,9 @@ const SevaPortal = ({ user, onLogout }) => {
                 )}
               </div>
 
+              <div className="mb-3 flex flex-wrap gap-2">
+                {[['ALL', 'All services'], ['ANNASHETRA_DONATION', 'Annakshetra Donation'], ['TITHI_BHOJAN', 'Tithi Bhojan']].map(([mode, label]) => <button key={mode} onClick={() => setActiveMode(mode)} className={`rounded-full px-3.5 py-1.5 text-xs font-medium ${activeMode === mode ? 'bg-teal-700 text-white' : 'bg-white text-gray-600 ring-1 ring-gray-200'}`}>{label}</button>)}
+              </div>
               <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => setActiveCat("ALL")}
@@ -732,12 +938,6 @@ const SevaPortal = ({ user, onLogout }) => {
                         <div className="flex items-center gap-1.5">
                           <Clock className="h-3.5 w-3.5 text-gray-400" />
                           Time slots required
-                        </div>
-                      )}
-                      {svc.duration_minutes > 0 && (
-                        <div className="flex items-center gap-1.5">
-                          <Calendar className="h-3.5 w-3.5 text-gray-400" />
-                          {svc.duration_minutes} min pooja duration
                         </div>
                       )}
                     </div>
@@ -851,18 +1051,20 @@ const SevaPortal = ({ user, onLogout }) => {
 
               {/* STEP 1 */}
               <div className="mt-4 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-                <StepTitle n={1} title="Choose date, slot and package" />
+                <StepTitle n={1} title={selectedService.service_mode === "ANNASHETRA_DONATION" ? "Choose donation package" : "Choose date, slot and package"} />
                 <div className="mt-4 space-y-4">
-                  <div>
+                  {selectedService.service_mode !== "ANNASHETRA_DONATION" && <div>
                     <label className="mb-1.5 block text-xs font-semibold text-gray-700">
                       Perform date
                     </label>
                     <input
                       type="date"
                       value={performDate}
-                      min={localDate()}
+                      min={selectedPackage?.effective_from && selectedPackage.effective_from > localDate() ? selectedPackage.effective_from : localDate()}
+                      max={selectedPackage?.effective_to || undefined}
                       onChange={(e) => {
                         setPerformDate(e.target.value);
+                        setSelectedSlot(null);
                         loadSlots(
                           selectedService,
                           e.target.value,
@@ -871,9 +1073,9 @@ const SevaPortal = ({ user, onLogout }) => {
                       }}
                       className="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm focus:border-red-400 focus:outline-none focus:ring-2 focus:ring-red-100 sm:w-64"
                     />
-                  </div>
+                  </div>}
 
-                  {selectedService.slot_required && (
+        {(selectedService.slot_required || selectedService.service_mode === "TITHI_BHOJAN") && (
                     <div>
                       <label className="mb-1.5 block text-xs font-semibold text-gray-700">
                         Time slot
@@ -885,35 +1087,50 @@ const SevaPortal = ({ user, onLogout }) => {
                         </p>
                       ) : (
                         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                          {slots.map((sl) => (
-                            <button
-                              key={sl.slot_id}
-                              type="button"
-                              disabled={!sl.available}
-                              onClick={() => setSelectedSlot(sl)}
-                              className={`rounded-xl border px-3 py-2.5 text-left transition ${
-                                selectedSlot?.slot_id === sl.slot_id
-                                  ? "border-red-600 bg-red-50 ring-2 ring-red-100"
-                                  : sl.available
-                                    ? "border-gray-200 bg-white hover:border-red-300 hover:bg-red-50/40"
-                                    : "cursor-not-allowed border-gray-100 bg-gray-50 opacity-60"
-                              }`}
-                            >
-                              <p className="text-sm font-bold text-gray-900">
-                                {sl.start_time}
-                              </p>
-                              {sl.label && (
-                                <p className="text-[10px] text-gray-500">
-                                  {sl.label}
+                          {slots.map((sl) => {
+                            const selectable = sl.available && !sl.closed && !sl.is_full;
+                            return (
+                              <button
+                                key={sl.slot_id}
+                                type="button"
+                                disabled={!selectable}
+                                onClick={() => setSelectedSlot(sl)}
+                                className={`rounded-xl border px-3 py-2.5 text-left transition ${
+                                  selectedSlot?.slot_id === sl.slot_id
+                                    ? "border-red-600 bg-red-50 ring-2 ring-red-100"
+                                    : selectable
+                                      ? "border-gray-200 bg-white hover:border-red-300 hover:bg-red-50/40"
+                                      : "cursor-not-allowed border-gray-100 bg-gray-50 opacity-60"
+                                }`}
+                              >
+                                <p className="text-sm font-bold text-gray-900">
+                                  {sl.time_text || sl.start_time}
                                 </p>
-                              )}
-                              {sl.capacity > 0 && (
-                                <p className="mt-0.5 text-[10px] font-medium text-emerald-600">
-                                  {sl.capacity - sl.booked} seats left
-                                </p>
-                              )}
-                            </button>
-                          ))}
+                                {sl.label && (
+                                  <p className="text-[10px] text-gray-500">
+                                    {sl.label}
+                                  </p>
+                                )}
+                                {sl.closed ? (
+                                  <p className="mt-0.5 text-[10px] font-semibold text-gray-500">
+                                    Closed for today
+                                  </p>
+                                ) : sl.is_full ? (
+                                  <p className="mt-0.5 text-[10px] font-semibold text-red-600">
+                                    Full
+                                  </p>
+                                ) : sl.limit ? (
+                                  <p className="mt-0.5 text-[10px] font-medium text-emerald-600">
+                                    {sl.remaining} of {sl.limit} places left
+                                  </p>
+                                ) : (
+                                  <p className="mt-0.5 text-[10px] font-medium text-emerald-600">
+                                    Available
+                                  </p>
+                                )}
+                              </button>
+                            );
+                          })}
                         </div>
                       )}
                     </div>
@@ -929,11 +1146,14 @@ const SevaPortal = ({ user, onLogout }) => {
                           <button
                             key={pkg.package_id}
                             type="button"
+                            disabled={pkg.is_limit_full}
                             onClick={() => selectPackage(pkg)}
                             className={`rounded-xl border px-3.5 py-3 text-left transition ${
-                              selectedPackage?.package_id === pkg.package_id
-                                ? "border-red-600 bg-red-50 ring-2 ring-red-100"
-                                : "border-gray-200 bg-white hover:border-red-300"
+                              pkg.is_limit_full
+                                ? "cursor-not-allowed border-gray-100 bg-gray-50 opacity-60"
+                                : selectedPackage?.package_id === pkg.package_id
+                                  ? "border-red-600 bg-red-50 ring-2 ring-red-100"
+                                  : "border-gray-200 bg-white hover:border-red-300"
                             }`}
                           >
                             <div className="flex items-center justify-between">
@@ -950,21 +1170,23 @@ const SevaPortal = ({ user, onLogout }) => {
                               </p>
                             )}
                             <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[10px] font-medium text-gray-600">
-                              <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5">
-                                <Users className="h-3 w-3" />
-                                {pkg.persons_per_booking ?? pkg.max_persons ?? 1}{" "}
-                                person
-                                {(pkg.persons_per_booking ?? pkg.max_persons ?? 1) > 1
-                                  ? "s"
-                                  : ""}{" "}
-                                per booking
-                              </span>
-                              {pkg.duration_minutes > 0 && (
+                              {selectedService.service_mode !== "TITHI_BHOJAN" && (
                                 <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5">
-                                  <Clock className="h-3 w-3" />
-                                  {pkg.duration_minutes} min pooja
+                                  <Users className="h-3 w-3" />
+                                  {pkg.persons_per_booking ?? pkg.max_persons ?? 1}{" "}
+                                  person
+                                  {(pkg.persons_per_booking ?? pkg.max_persons ?? 1) > 1
+                                    ? "s"
+                                    : ""}{" "}
+                                  per booking
                                 </span>
                               )}
+                              {pkg.person_limit ? (
+                                <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 ${pkg.is_limit_full ? "bg-red-50 text-red-700" : "bg-emerald-50 text-emerald-700"}`}>
+                                  <Users className="h-3 w-3" />
+                                  {pkg.is_limit_full ? "Full" : `${pkg.limit_remaining} of ${pkg.person_limit} places left`}
+                                </span>
+                              ) : null}
                             </div>
                             {(pkg.included_list || []).length > 0 && (
                               <ul className="mt-1.5 space-y-0.5">
@@ -1008,56 +1230,38 @@ const SevaPortal = ({ user, onLogout }) => {
                     </div>
                   )}
 
-                  {/* GROUP & SERVED PERSONS - sab PACKAGE se decide */}
-                  <div className="rounded-xl border border-gray-200 bg-white p-3.5">
-                    <p className="mb-2 text-xs font-semibold text-gray-700">
-                      Your group
-                    </p>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="rounded-lg bg-gray-50 px-3 py-2">
-                        <p className="text-[10px] uppercase tracking-wide text-gray-500">
-                          Persons in your group
-                        </p>
-                        <p className="mt-0.5 text-lg font-bold text-gray-900">
-                          {groupSize}
-                        </p>
-                      </div>
-                      <div className="rounded-lg bg-emerald-50 px-3 py-2">
-                        <p className="text-[10px] uppercase tracking-wide text-emerald-700">
-                          Served under the temple
-                        </p>
-                        <p className="mt-0.5 text-lg font-bold text-emerald-800">
-                          {personsServed}
-                        </p>
-                      </div>
+                  {selectedService.service_mode === "ANNASHETRA_DONATION" && (
+                    <div className="rounded-xl border border-gray-200 bg-white p-3.5">
+                      <div className="mb-2 flex items-center justify-between text-xs font-semibold text-gray-700"><span>Co-donors (optional)</span><button type="button" onClick={() => setCoDonorText((value) => `${value}\n`)} className="inline-flex items-center gap-1 rounded-md bg-teal-700 px-2.5 py-1.5 text-white"><Plus className="h-3.5 w-3.5" /> Add co-donor</button></div>
+                      <div className="space-y-2">{coDonorRows.map((name, index) => <div key={index} className="flex items-center gap-2"><input value={name} onChange={(e) => { const next = [...coDonorRows]; next[index] = e.target.value; setCoDonorText(next.join("\n")); }} placeholder={`Co-donor ${index + 1} name`} className="w-full rounded-lg border p-2 text-sm font-normal" />{coDonorRows.length > 1 && <button type="button" aria-label="Remove co-donor" onClick={() => setCoDonorText(coDonorRows.filter((_, i) => i !== index).join("\n"))} className="rounded p-2 text-gray-500 hover:bg-red-50 hover:text-red-600"><Trash2 className="h-4 w-4" /></button>}</div>)}</div>
                     </div>
-                    <p className="mt-2 text-[11px] leading-relaxed text-gray-600">
-                      This package is for a group of{" "}
-                      <strong>{groupSize}</strong> person
-                      {groupSize > 1 ? "s" : ""}. Out of them{" "}
-                      <strong>{personsServed}</strong> will be served under the
-                      temple.
-                    </p>
-                    {quota && !quota.unlimited && (
-                      <p
-                        className={`mt-2 rounded-lg px-2 py-1.5 text-[11px] font-medium ${
-                          quota.remaining < personsServed
-                            ? "bg-red-50 text-red-700"
-                            : "bg-emerald-50 text-emerald-800"
-                        }`}
-                      >
-                        {quota.remaining < personsServed
-                          ? `Only ${quota.remaining} place${
-                              quota.remaining === 1 ? "" : "s"
-                            } left — this booking is not possible right now.`
-                          : `${personsServed} place${
-                              personsServed > 1 ? "s" : ""
-                            } will be reserved (out of ${
-                              quota.remaining
-                            } available).`}
+                  )}
+
+                  {/* Tithi Bhojan count is per booking and priced by the server. */}
+                  {selectedService.service_mode === "TITHI_BHOJAN" && (
+                    <div className="rounded-xl border border-gray-200 bg-white p-3.5">
+                      <label className="mb-2 block text-xs font-semibold text-gray-700">Number of people (other than you)</label>
+                      <input type="number" min="0" max="10000" value={Math.max(0, groupSize - 1)} onChange={(e) => setGroupSize(Math.max(1, (Number(e.target.value) || 0) + 1))} className="w-full rounded-lg border px-3 py-2" />
+                      <p className="mt-1 text-[11px] text-gray-500">
+                        Total for this booking: <span className="font-semibold text-gray-800">{groupSize}</span> people (including you).
                       </p>
-                    )}
-                  </div>
+                      {selectedSlot?.limit ? (
+                        <p className={`mt-1 text-[11px] font-semibold ${selectedSlot.is_full ? "text-red-600" : "text-emerald-700"}`}>
+                          {selectedSlot.is_full
+                            ? `${selectedSlot.label || "This slot"} is full (${selectedSlot.limit} places).`
+                            : `${selectedSlot.label || "This slot"}: ${selectedSlot.remaining} of ${selectedSlot.limit} places left.`}
+                        </p>
+                      ) : null}
+                      {limitInfo && !limitInfo.unlimited && (
+                        <p className={`mt-1 text-[11px] font-semibold ${limitInfo.is_full ? "text-red-600" : "text-emerald-700"}`}>
+                          {limitInfo.is_full
+                            ? "Package limit reached — booking closed."
+                            : `${limitInfo.remaining} of ${limitInfo.limit} package places left.`}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                  {tithiPackageNeedsSetup && <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">This package is visible but unavailable until admin configures its start date, end date, and at least one meal slot.</p>}
 
                   {/* WHAT'S INCLUDED - package bullets */}
                   {(selectedPackage?.included_list || []).length > 0 && (
@@ -1146,6 +1350,7 @@ const SevaPortal = ({ user, onLogout }) => {
               </div>
 
               {/* STEP 3 */}
+              {!['ANNASHETRA_DONATION', 'TITHI_BHOJAN'].includes(selectedService.service_mode) && requiredDocs.length > 0 && (
               <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50/50 p-5 shadow-sm">
                 <StepTitle n={3} title="Upload required documents" />
                 {requiredDocs.length > 0 ? (
@@ -1184,18 +1389,23 @@ const SevaPortal = ({ user, onLogout }) => {
                       );
                     })}
                   </div>
-                ) : (
-                  <p className="mt-3 rounded-lg bg-white/70 px-3 py-2 text-xs text-amber-800">
-                    No documents are required for this seva.
-                  </p>
-                )}
+                ) : null}
+
                 <p className="mt-2.5 flex items-center gap-1.5 text-[11px] text-amber-800">
                   <ShieldCheck className="h-3.5 w-3.5" />
                   JPG / PNG / PDF, max 5MB each. Dono side ki copy upload karein.
                 </p>
               </div>
+              )}
+              {selectedService.service_mode === "ANNASHETRA_DONATION" && selectedPackage?.pricing_mode === "DONATION" && (
+                <label className="mt-4 block rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs font-semibold text-gray-700">Donation amount (₹)
+                  <input required type="number" min={selectedPackage.min_amount || 1} max={selectedPackage.max_amount || undefined} step="0.01" value={donationAmount} onChange={(e) => setDonationAmount(e.target.value)} className="mt-2 w-full rounded-lg border p-2 text-sm font-normal" />
+                  <span className="mt-1 block font-normal text-gray-500">Enter the amount for this donation package.</span>
+                </label>
+              )}
 
               {/* STEP 4 */}
+              {!["ANNASHETRA_DONATION", "TITHI_BHOJAN"].includes(selectedService.service_mode) ? (
               <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50/50 p-5 shadow-sm">
                 <StepTitle n={4} title="Payment" />
                 <div className="mt-4">
@@ -1246,6 +1456,7 @@ const SevaPortal = ({ user, onLogout }) => {
                   </div>
                 )}
               </div>
+              ) : null}
 
               <div className="h-4" />
             </div>
@@ -1267,12 +1478,12 @@ const SevaPortal = ({ user, onLogout }) => {
                         Rs. {money(pricePreview?.fee ?? selectedService.current_fee)}
                       </dd>
                     </div>
-                    <div className="flex justify-between">
+                    {!['ANNASHETRA_DONATION', 'TITHI_BHOJAN'].includes(selectedService.service_mode) && <div className="flex justify-between">
                       <dt className="text-gray-500">Tax</dt>
                       <dd className="font-semibold text-gray-900">
                         Rs. {money(pricePreview?.tax)}
                       </dd>
-                    </div>
+                    </div>}
                     <div className="flex justify-between border-t border-gray-100 pt-2 text-base">
                       <dt className="font-bold text-gray-900">Total</dt>
                       <dd className="font-bold text-red-600">
@@ -1280,17 +1491,6 @@ const SevaPortal = ({ user, onLogout }) => {
                       </dd>
                     </div>
                   </dl>
-
-                  {selectedSlot?.tenure_text && (
-                    <div className="mt-3 rounded-xl bg-blue-50 px-3 py-2.5">
-                      <p className="text-[10px] font-semibold uppercase tracking-wide text-blue-600">
-                        Your seva tenure
-                      </p>
-                      <p className="mt-0.5 text-xs font-semibold text-gray-900">
-                        {selectedSlot.tenure_text}
-                      </p>
-                    </div>
-                  )}
 
                   {(selectedPackage?.included_list || []).length > 0 && (
                     <div className="mt-3 rounded-xl border border-gray-100 bg-gray-50 px-3 py-2.5">
@@ -1311,36 +1511,34 @@ const SevaPortal = ({ user, onLogout }) => {
                     </div>
                   )}
 
-                  <div className="mt-3 flex justify-between rounded-xl bg-gray-50 px-3 py-2.5 text-xs">
-                    <span className="text-gray-600">Persons in your group</span>
-                    <span className="font-semibold text-gray-900">
-                      {groupSize}
-                    </span>
-                  </div>
-                  <div className="flex justify-between rounded-xl bg-gray-50 px-3 py-2.5 text-xs mt-2">
-                    <span className="text-gray-600">Served under the temple</span>
-                    <span className="font-semibold text-gray-900">
-                      {personsServed}
-                    </span>
-                  </div>
+                  {selectedService.service_mode === "TITHI_BHOJAN" && <div className="mt-3 flex justify-between rounded-xl bg-gray-50 px-3 py-2.5 text-xs"><span className="text-gray-600">Total people (incl. you)</span><span className="font-semibold text-gray-900">{groupSize}</span></div>}
+
+                  {selectedSlot?.tenure_text && (
+                    <div className="mt-3 rounded-xl bg-blue-50 px-3 py-2.5">
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-blue-600">
+                        Your seva tenure
+                      </p>
+                      <p className="mt-0.5 text-xs font-semibold text-gray-900">
+                        {selectedSlot.tenure_text}
+                      </p>
+                    </div>
+                  )}
 
                   <button
                     onClick={handleBooking}
-                    disabled={submitting || quota?.is_full}
+                    disabled={submitting || quota?.is_full || tithiPackageNeedsSetup}
                     className="mt-5 w-full rounded-xl bg-emerald-600 px-4 py-3.5 text-sm font-bold text-white shadow-md transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-gray-300 disabled:shadow-none"
                   >
                     {submitting
                       ? "Processing..."
                       : quota?.is_full
                         ? "Daily limit reached - booking unavailable"
-                        : `Pay Now - Rs. ${money(
+                        : ["ANNASHETRA_DONATION", "TITHI_BHOJAN"].includes(selectedService.service_mode)
+                          ? `Pay & Book - Rs. ${money(pricePreview?.total ?? selectedService.current_fee)}`
+                          : `Pay Now - Rs. ${money(
                             pricePreview?.total ?? selectedService.current_fee
                           )}`}
                   </button>
-                  <p className="mt-2 text-center text-[11px] text-gray-500">
-                    Booking and payment are confirmed together. Receipt is
-                    generated instantly.
-                  </p>
                 </div>
               </div>
             </div>
@@ -1365,6 +1563,30 @@ const SevaPortal = ({ user, onLogout }) => {
               </button>
             </div>
 
+            {myBookings.length > 0 && (
+              <div className="mb-4 flex flex-wrap items-end gap-3 rounded-xl border border-gray-200 bg-white p-4">
+                <label className="text-xs font-medium text-gray-600">Service
+                  <select value={bookingServiceFilter} onChange={(e) => setBookingServiceFilter(e.target.value)} className="mt-1 block min-w-44 rounded-lg border border-gray-300 px-3 py-2 text-sm">
+                    <option value="ALL">All services</option>
+                    {bookingServiceOptions.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  </select>
+                </label>
+                <label className="text-xs font-medium text-gray-600">Status
+                  <select value={bookingStatusFilter} onChange={(e) => setBookingStatusFilter(e.target.value)} className="mt-1 block min-w-40 rounded-lg border border-gray-300 px-3 py-2 text-sm">
+                    <option value="ALL">All statuses</option>
+                    {BOOKING_STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s.replace(/_/g, " ")}</option>)}
+                  </select>
+                </label>
+                <label className="text-xs font-medium text-gray-600">Search
+                  <input value={bookingSearch} onChange={(e) => setBookingSearch(e.target.value)} placeholder="Receipt no, service" className="mt-1 block w-52 rounded-lg border border-gray-300 px-3 py-2 text-sm" />
+                </label>
+                {(bookingServiceFilter !== "ALL" || bookingStatusFilter !== "ALL" || bookingSearch) && (
+                  <button type="button" onClick={() => { setBookingServiceFilter("ALL"); setBookingStatusFilter("ALL"); setBookingSearch(""); }} className="rounded-lg border border-gray-300 px-3 py-2 text-xs font-medium text-gray-600 hover:bg-gray-50">Clear filters</button>
+                )}
+                <span className="ml-auto text-xs text-gray-500">{visibleMyBookings.length} of {myBookings.length}</span>
+              </div>
+            )}
+
             {myBookings.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-gray-300 bg-white py-16 text-center">
                 <CalendarCheck className="mx-auto h-10 w-10 text-gray-300" />
@@ -1378,9 +1600,13 @@ const SevaPortal = ({ user, onLogout }) => {
                   Browse seva services
                 </button>
               </div>
+            ) : visibleMyBookings.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-gray-300 bg-white py-16 text-center">
+                <p className="text-sm font-medium text-gray-600">No bookings match these filters.</p>
+              </div>
             ) : (
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                {myBookings.map((b) => (
+                {visibleMyBookings.map((b) => (
                   <div
                     key={b.booking_id}
                     className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"
@@ -1404,16 +1630,16 @@ const SevaPortal = ({ user, onLogout }) => {
                     </div>
 
                     <div className="mt-3 grid grid-cols-2 gap-2.5 text-xs">
-                      <div>
+                      {b.service?.service_mode !== "ANNASHETRA_DONATION" && <div>
                         <p className="text-gray-400">Perform date</p>
                         <p className="font-semibold text-gray-900">
                           {b.perform_date}
                         </p>
-                      </div>
-                      <div>
+                      </div>}
+                      {b.service?.service_mode !== "ANNASHETRA_DONATION" && <div>
                         <p className="text-gray-400">Persons</p>
                         <p className="font-semibold text-gray-900">{b.persons}</p>
-                      </div>
+                      </div>}
                       <div>
                         <p className="text-gray-400">Total</p>
                         <p className="font-semibold text-gray-900">
@@ -1433,6 +1659,13 @@ const SevaPortal = ({ user, onLogout }) => {
                         </p>
                       </div>
                     </div>
+
+                    {(b.coupons || []).map((coupon) => (
+                      <div key={coupon.coupon_id} className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-3 text-xs">
+                        <p className="font-semibold text-emerald-800">Meal coupon: {coupon.coupon_no}</p>
+                        <p className="mt-1 text-emerald-700">{coupon.persons} people · {coupon.meal_slot || "Meal slot"} · valid {coupon.valid_date}</p>
+                      </div>
+                    ))}
 
                     {/* QUERY - devotee se clarification maangi gayi */}
                     {b.status === "QUERY_RAISED" && (
@@ -1473,16 +1706,22 @@ const SevaPortal = ({ user, onLogout }) => {
                     )}
 
                     <div className="mt-4 flex flex-wrap gap-2 border-t border-gray-100 pt-3">
-                      <a
-                        href={`${base}/portal/seva/bookings/${b.booking_id}/receipt`}
+                      {(!["ANNASHETRA_DONATION", "TITHI_BHOJAN"].includes(b.service?.service_mode) || b.payment_status === "PAID") && <a
+                        href={`${base}/portal/seva/bookings/${b.booking_id}/receipt?token=${token}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 transition hover:bg-gray-50"
                       >
                         <Receipt className="h-3.5 w-3.5" /> Receipt
-                      </a>
+                      </a>}
 
-                      {b.status === "PENDING_PAYMENT" && (
+                      {b.status === "PENDING_PAYMENT" && razorpayKeyId && ["ANNASHETRA_DONATION", "TITHI_BHOJAN"].includes(b.service?.service_mode) && (
+                        <button onClick={() => startRazorpayPayment(b)} disabled={razorpayBusy === b.booking_id} className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-60">
+                          <IndianRupee className="h-3.5 w-3.5" /> {razorpayBusy === b.booking_id ? "Opening checkout…" : `Pay online · ₹${money(b.balance_amount)}`}
+                        </button>
+                      )}
+
+                      {b.status === "PENDING_PAYMENT" && !["ANNASHETRA_DONATION", "TITHI_BHOJAN"].includes(b.service?.service_mode) && (
                         <button
                           onClick={() => {
                             setActiveBooking(b);

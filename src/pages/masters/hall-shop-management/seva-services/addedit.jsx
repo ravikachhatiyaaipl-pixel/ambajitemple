@@ -35,6 +35,7 @@ const SevaServices = ({ user }) => {
     codeTouched: false,
     name: "",
     service_kind: "POOJA",
+    service_mode: "GENERAL",
     permission_approval: false,
     image_url: "",
     show_on_portal: true,
@@ -97,6 +98,7 @@ const SevaServices = ({ user }) => {
       codeTouched: false,
       name: "",
       service_kind: kinds[0]?.code || "POOJA",
+      service_mode: "GENERAL",
       permission_approval: false,
       image_url: "",
       show_on_portal: true,
@@ -114,6 +116,7 @@ const SevaServices = ({ user }) => {
       codeTouched: true,
       name: svc.name || "",
       service_kind: svc.service_kind || "POOJA",
+      service_mode: svc.service_mode || "GENERAL",
       permission_approval: !!svc.permission_approval,
       image_url: svc.image_url || "",
       show_on_portal: !!svc.show_on_portal,
@@ -472,6 +475,16 @@ const SevaServices = ({ user }) => {
                       </option>
                     ))}
                   </select>
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-gray-700">Booking Flow *</label>
+                  <select value={form.service_mode} onChange={(e) => setForm((p) => ({ ...p, service_mode: e.target.value }))} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
+                    <option value="GENERAL">General Seva</option>
+                    <option value="ANNASHETRA_DONATION">Annakshetra Donation</option>
+                    <option value="TITHI_BHOJAN">Tithi Bhojan</option>
+                  </select>
+                  <p className="mt-1 text-[10px] text-gray-500">Controls the devotee booking flow and its service listing.</p>
                 </div>
 
                 {/* PERMISSION APPROVAL = yes/no */}

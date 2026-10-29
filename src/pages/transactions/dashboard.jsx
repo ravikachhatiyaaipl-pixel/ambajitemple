@@ -44,12 +44,12 @@ import {
   Legend,
 } from "recharts";
 import { NavLink, useNavigate } from "react-router-dom";
-import { filterRemovedMenus } from "../../hooks/useaccountingnavigation";
 import { GoogleGenAI } from "@google/genai";
 
 // Import knowledge base and quick suggestions from utils
 import {
   findRelevantKnowledge,
+  quickSuggestions,
   initiateExpertCall,
   initiateEmergencyCall,
   isVoiceSupported,
@@ -76,43 +76,6 @@ const COLORS = [
   "#FFCE56",
 ];
 
-const QA_COLORS = [
-  { bg: "bg-purple-50", iconBg: "bg-purple-100", text: "text-purple-600", border: "border-purple-200" },
-  { bg: "bg-green-50", iconBg: "bg-green-100", text: "text-green-600", border: "border-green-200" },
-  { bg: "bg-blue-50", iconBg: "bg-blue-100", text: "text-blue-600", border: "border-blue-200" },
-  { bg: "bg-red-50", iconBg: "bg-red-100", text: "text-red-600", border: "border-red-200" },
-  { bg: "bg-yellow-50", iconBg: "bg-yellow-100", text: "text-yellow-600", border: "border-yellow-200" },
-  { bg: "bg-indigo-50", iconBg: "bg-indigo-100", text: "text-indigo-600", border: "border-indigo-200" },
-  { bg: "bg-pink-50", iconBg: "bg-pink-100", text: "text-pink-600", border: "border-pink-200" },
-  { bg: "bg-orange-50", iconBg: "bg-orange-100", text: "text-orange-600", border: "border-orange-200" },
-];
-
-const hasLink = (m) => !!m?.Menu_Links && m.Menu_Links != "#";
-const menuName = (m) => m?.Fnc_Desc || m?.title || "";
-const isQuick = (m) =>
-  m?.Is_Quick_Action == true || m?.Is_Quick_Action == "true" || m?.Is_Quick_Action == 1;
-const isHidden = (m) => m?.isvisible == 0 || m?.isvisible == false || m?.isvisible == "0";
-
-// Quick actions come only from the menu data (flag set in Menu Master).
-const buildQuickActions = (menus) => {
-  const seen = new Set();
-  return menus
-    .filter((m) => isQuick(m) && hasLink(m) && !isHidden(m) && menuName(m))
-    .filter((m) => {
-      const key = `${m.Menu_Links}|${menuName(m)}`;
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    })
-    .map((m, i) => ({
-      label: menuName(m),
-      path: m.Menu_Links.startsWith("/") ? m.Menu_Links : `/${m.Menu_Links}`,
-      Fnc_Id: m.Fnc_Id,
-      GrCod: m.GrCod,
-      colorScheme: QA_COLORS[i % QA_COLORS.length],
-    }));
-};
-
 const Dashboard = ({ user }) => {
   const [selectedOrganisation, setSelectedOrganisation] = useState(null);
   const [organisationData, setOrganisationData] = useState([]);
@@ -121,7 +84,7 @@ const Dashboard = ({ user }) => {
   const [ledgerData, setLedgerData] = useState([]);
   const [ledgerGroupData, setLedgerGroupData] = useState([]);
   const [transactionData, setTransactionData] = useState([]);
-  const [menuItems, setMenuItems] = useState([]);
+  const [expensesData, setExpensesData] = useState([]);
   const [transactionTrigger, setTransactionTrigger] = useState(0);
 
   // New state for department ledger mappings
@@ -195,23 +158,6 @@ const Dashboard = ({ user }) => {
   );
   const departmentId = departmentData?.Dpt_id || null;
 
-  // Top-level module names the user can actually open (dynamic, no removed modules).
-  const moduleNames = useMemo(
-    () =>
-      [...new Set(menuItems.filter((m) => !m.UpGrp && menuName(m)).map(menuName))],
-    [menuItems],
-  );
-
-  // Chat suggestions are built from the user's own menus (quick actions first).
-  const chatSuggestions = useMemo(() => {
-    const leaves = menuItems.filter((m) => hasLink(m) && menuName(m));
-    const ordered = [...leaves.filter(isQuick), ...leaves.filter((m) => !isQuick(m))];
-    const seen = new Set();
-    return ordered
-      .filter((m) => (seen.has(menuName(m)) ? false : seen.add(menuName(m)))) 
-      .map((m) => ({ label: menuName(m), query: `How to use ${menuName(m)}?` }));
-  }, [menuItems]);
-
   // Chatbot functions
   const sendToGemini = async (
     userMessage,
@@ -229,12 +175,9 @@ const Dashboard = ({ user }) => {
         ? `તમે "I3EMS Assistant" છો. તમારે ફક્ત અને ફક્ત ગુજરાતી ભાષામાં જ જવાબ આપવાનો છે. એક પણ અંગ્રેજી શબ્દ વાપરશો નહીં.`
         : `You are "I3EMS Assistant" - a helpful AI assistant for the I3EMS system.`;
 
-      const moduleList = moduleNames.join(", ");
-      const modules = moduleList
-        ? isGujarati
-          ? `ઉપલબ્ધ મોડ્યુલ: ${moduleList}.`
-          : `Modules: ${moduleList}.`
-        : "";
+      const modules = isGujarati
+        ? `ઉપલબ્ધ મોડ્યુલ: FAMS, HRMS, ટેક્સ કલેક્શન, પ્રાણી નોંધણી, હોલ બુકિંગ, દુકાન બુકિંગ.`
+        : `Modules: FAMS, HRMS, Tax Collection, Pet Register, Hall Booking, Shop Booking.`;
 
       const rules = isGujarati
         ? `નિયમો: સ્પષ્ટ ગુજરાતીમાં જ જવાબ આપો. પ્રક્રિયા સમજાવવા ક્રમ (1, 2, 3) વાપરો.`
@@ -316,8 +259,8 @@ const Dashboard = ({ user }) => {
       if (!botReply) {
         botReply =
           selectedLang ==  "gu"
-            ? `માફ કરશો, "${userMessage}" વિષે ચોક્કસ માહિતી ન મળી.${moduleNames.length ? `\n\nઆ વિષે પૂછો: ${moduleNames.join(", ")}` : ""}`
-            : `I couldn't find information about "${userMessage}".${moduleNames.length ? ` Try asking about: ${moduleNames.join(", ")}.` : ""}`;
+            ? `માફ કરશો, "${userMessage}" વિષે ચોક્કસ માહિતી ન મળી.\n\nઆ વિષે પૂછો:\n• ઝોન, વોર્ડ, વિભાગ\n• કર્મચારી, હાજરી, રજા\n• Receipt, Payment, Journal Voucher\n• Trial Balance, Ledger Report\n• Tax Payment, Pet Registration\n• Budget Entry, Tender\n• Salary Report, Cheque Print`
+            : `I couldn't find information about "${userMessage}". Try asking about: zones, wards, employees, vouchers, tax payments, leave, reports, or cheque printing.`;
       }
 
       setChatMessages((prev) => [
@@ -558,50 +501,117 @@ Say **"emergency"** for priority support`;
     }
   };
 
-  // Menus (and therefore Quick Actions) are dynamic: permission-filtered menu_details
-  // from login first, then - for admin - refreshed from Menu Master so changes show
-  // up without logging in again. Removed modules (Pet / Tax) are never shown.
+  // Load quick actions from localStorage
   useEffect(() => {
-    let cancelled = false;
-
-    const applyMenus = (list) => {
-      const clean = filterRemovedMenus(Array.isArray(list) ? list : []).filter(
-        (m) => !isHidden(m),
-      );
-      if (cancelled) return;
-      setMenuItems(clean);
-      setQuickActionsData(buildQuickActions(clean));
-    };
-
-    const load = async () => {
-      setQuickActionsLoading(true);
+    const loadQuickActions = () => {
       try {
-        applyMenus(JSON.parse(localStorage.getItem("menu_details") || "[]"));
-      } catch (err) {
-        console.error("Error loading menus from localStorage:", err);
-        applyMenus([]);
-      }
-      setQuickActionsLoading(false);
+        setQuickActionsLoading(true);
+        const storedMenus = localStorage.getItem("menu_details");
 
-      if (userRoleId == "1") {
-        try {
-          const res = await axios.get(
-            `${import.meta.env.VITE_API_URL}/menu-master/lst-menu-master`,
-            { headers: { Authorization: `Bearer ${localStorage.getItem("auth_token")}` } },
+        if (storedMenus) {
+          const menuData = JSON.parse(storedMenus);
+
+          const findQuickActions = (items) => {
+            let actions = [];
+
+            for (const item of items) {
+              if (
+                item.Is_Quick_Action == true ||
+                item.Is_Quick_Action == "true" ||
+                item.Is_Quick_Action == 1
+              ) {
+                actions.push({
+                  label: item.Fnc_Desc || item.title || "Untitled",
+                  path: item.Menu_Links
+                    ? item.Menu_Links.startsWith("/")
+                      ? item.Menu_Links
+                      : `/${item.Menu_Links}`
+                    : "#",
+                  Fnc_Id: item.Fnc_Id,
+                  GrCod: item.GrCod,
+                });
+              }
+            }
+
+            return actions;
+          };
+
+          const quickActionItems = findQuickActions(menuData);
+
+          const colorSchemes = [
+            {
+              bg: "bg-purple-50",
+              iconBg: "bg-purple-100",
+              text: "text-purple-600",
+              border: "border-purple-200",
+            },
+            {
+              bg: "bg-green-50",
+              iconBg: "bg-green-100",
+              text: "text-green-600",
+              border: "border-green-200",
+            },
+            {
+              bg: "bg-blue-50",
+              iconBg: "bg-blue-100",
+              text: "text-blue-600",
+              border: "border-blue-200",
+            },
+            {
+              bg: "bg-red-50",
+              iconBg: "bg-red-100",
+              text: "text-red-600",
+              border: "border-red-200",
+            },
+            {
+              bg: "bg-yellow-50",
+              iconBg: "bg-yellow-100",
+              text: "text-yellow-600",
+              border: "border-yellow-200",
+            },
+            {
+              bg: "bg-indigo-50",
+              iconBg: "bg-indigo-100",
+              text: "text-indigo-600",
+              border: "border-indigo-200",
+            },
+            {
+              bg: "bg-pink-50",
+              iconBg: "bg-pink-100",
+              text: "text-pink-600",
+              border: "border-pink-200",
+            },
+            {
+              bg: "bg-orange-50",
+              iconBg: "bg-orange-100",
+              text: "text-orange-600",
+              border: "border-orange-200",
+            },
+          ];
+
+          const actionsWithColors = quickActionItems.map((action, index) => ({
+            ...action,
+            colorScheme: colorSchemes[index % colorSchemes.length],
+          }));
+
+          setQuickActionsData(actionsWithColors);
+          console.log(
+            "Quick actions loaded from localStorage:",
+            actionsWithColors,
           );
-          if (res.data?.status == "success" && Array.isArray(res.data.data)) {
-            applyMenus(res.data.data.filter((m) => m.isvisible == 1));
-          }
-        } catch (err) {
-          console.warn("Could not refresh menus, using saved menus:", err?.message);
+        } else {
+          console.log("No menu_details found in localStorage");
+          setQuickActionsData([]);
         }
+        setQuickActionsLoading(false);
+      } catch (err) {
+        console.error("Error loading quick actions from localStorage:", err);
+        setQuickActionsData([]);
+        setQuickActionsLoading(false);
       }
     };
 
-    load();
-    return () => {
-      cancelled = true;
-    };
+    loadQuickActions();
   }, []);
 
   useEffect(() => {
@@ -634,6 +644,7 @@ Say **"emergency"** for priority support`;
       fetchLedgerData();
       fetchLedgerGroupData();
       fetchTransactionData();
+      fetchExpensesData();
     }
   }, [selectedOrganisation, transactionTrigger]);
 
@@ -950,6 +961,50 @@ Say **"emergency"** for priority support`;
     }
   };
 
+  const fetchExpensesData = async () => {
+    if (!selectedOrganisation) return;
+    setIsLoading(true);
+    try {
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_URL}/finan-trns/summary`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
+          },
+        },
+      );
+
+      if (response.data.success && response.data.data) {
+        const totalDebit = parseFloat(response.data.data.total_debit || 0);
+
+        const expenseLedgers = filterLedgersByAccess(ledgerData).filter(
+          (ledger) => {
+            const group = ledger.ledger_group;
+            return group && group.Gr_Cd && group.Gr_Cd.startsWith("04");
+          },
+        );
+
+        const expenseGroups = expenseLedgers
+          .slice(0, 5)
+          .map((ledger, index) => ({
+            name: ledger.Lg_Name || `Expense ${index + 1}`,
+            value: totalDebit / (expenseLedgers.length || 1),
+            color: COLORS[index % COLORS.length],
+          }));
+
+        setExpensesData(expenseGroups);
+      } else {
+        setExpensesData([]);
+      }
+      setIsLoading(false);
+    } catch (err) {
+      console.error("Error fetching expenses data:", err);
+      setError("Failed to load expenses data");
+      setExpensesData([]);
+      setIsLoading(false);
+    }
+  };
+
   const handleRefreshTransactions = () => {
     setTransactionTrigger((prev) => prev + 1);
   };
@@ -1020,25 +1075,6 @@ Say **"emergency"** for priority support`;
   };
 
   const profitLossData = calculateProfitLoss();
-
-  // Top expense ledgers with their real net amount (Dr - Cr) from transactions.
-  const expensesData = useMemo(() => {
-    return filterLedgersByAccess(ledgerData)
-      .filter((l) => l.ledger_group?.Gr_Cd && l.ledger_group.Gr_Cd.startsWith("04"))
-      .map((l) => {
-        const value = transactionData
-          .filter((t) => t.Lg_Id && String(t.Lg_Id) == String(l.Lg_Id))
-          .reduce(
-            (sum, t) => sum + (parseFloat(t.Dr_Amt) || 0) - (parseFloat(t.Cr_Amt) || 0),
-            0,
-          );
-        return { name: l.Lg_Name, group: l.ledger_group?.Gr_Nm || "", value };
-      })
-      .filter((e) => e.name && e.value > 0)
-      .sort((x, y) => y.value - x.value)
-      .slice(0, 5)
-      .map((e, i) => ({ ...e, color: COLORS[i % COLORS.length] }));
-  }, [ledgerData, transactionData, departmentLedgers]);
 
   const handleLedgerClick = (ledger) => {
     navigate(`/transactions/${ledger.Lg_Id}`);
@@ -1353,9 +1389,7 @@ Say **"emergency"** for priority support`;
                     <p className="text-sm md:text-base font-medium">
                       {expense.name}
                     </p>
-                    {expense.group && (
-                      <p className="text-xs md:text-sm text-gray-500">{expense.group}</p>
-                    )}
+                    <p className="text-xs md:text-sm text-gray-500">Category</p>
                   </div>
                   <div className="text-right">
                     <p className="font-bold text-sm md:text-base">
@@ -1675,11 +1709,9 @@ Say **"emergency"** for priority support`;
                 <h3 className="text-white font-bold text-2xl flex items-center gap-3">
                   I3EMS Assistant
                   
-                  {isApiReady && (
-                    <span className="text-xs bg-green-500/30 px-3 py-1 rounded-full text-green-200 font-medium">
-                      Live
-                    </span>
-                  )}
+                  <span className="text-xs bg-green-500/30 px-3 py-1 rounded-full text-green-200 font-medium">
+                    Live
+                  </span>
                 </h3>
                 
               </div>
@@ -1787,11 +1819,9 @@ Say **"emergency"** for priority support`;
                   <div className="flex flex-col items-center justify-center h-full text-center">
                     <div className="relative">
                       <div className="text-8xl mb-6 animate-bounce">🤖</div>
-                      {isApiReady && (
-                        <div className="absolute -top-2 -right-2 bg-green-400 text-white text-xs font-bold rounded-full px-3 py-1 animate-pulse shadow-lg">
-                          Live
-                        </div>
-                      )}
+                      <div className="absolute -top-2 -right-2 bg-green-400 text-white text-xs font-bold rounded-full px-3 py-1 animate-pulse shadow-lg">
+                        Live
+                      </div>
                     </div>
                     <h3 className="text-3xl font-bold text-gray-800 mb-3">
                       Hi! I'm your I3EMS Assistant
@@ -1800,9 +1830,9 @@ Say **"emergency"** for priority support`;
                       Ask me anything about your ERP system. I'm here to help!
                     </p>
 
-                    {/* Quick Suggestions Grid - built from the user's menus */}
+                    {/* Quick Suggestions Grid - Enhanced with larger buttons */}
                     <div className="grid grid-cols-3 gap-3 w-full max-w-2xl">
-                      {chatSuggestions.slice(0, 9).map((suggestion, index) => (
+                      {quickSuggestions.slice(0, 9).map((suggestion, index) => (
                         <button
                           key={index}
                           onClick={() =>
@@ -1936,10 +1966,9 @@ Say **"emergency"** for priority support`;
               </div>
 
               {/* Quick Suggestions - Always visible with more options */}
-              {chatSuggestions.length > 9 && (
               <div className="px-5 py-3 bg-gray-50 border-t border-gray-100">
                 <div className="flex flex-wrap gap-2">
-                  {chatSuggestions.slice(9, 15).map((suggestion, index) => (
+                  {quickSuggestions.slice(9, 15).map((suggestion, index) => (
                     <button
                       key={index}
                       onClick={() => handleSuggestionClick(suggestion.query)}
@@ -1950,7 +1979,6 @@ Say **"emergency"** for priority support`;
                   ))}
                 </div>
               </div>
-              )}
 
               {/* Chat Input - Enhanced with bigger design */}
               {/* Chat Input - Enhanced with bigger design */}

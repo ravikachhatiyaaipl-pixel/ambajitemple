@@ -26,6 +26,7 @@ import {
  */
 const SevaActionMaster = ({ user }) => {
   const [chain, setChain] = useState([]);
+  const [departments, setDepartments] = useState([]);
   const [designations, setDesignations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -49,9 +50,12 @@ const SevaActionMaster = ({ user }) => {
   const fetchAll = async () => {
     try {
       setLoading(true);
-      const [chainRes, dsgRes] = await Promise.all([
+      const [chainRes, dsgRes, deptRes] = await Promise.all([
         axios.get(`${base}/seva/approval-chain?stage=SEV`, { headers }),
         axios.get(`${base}/lst-designation-master`, { headers }).catch(() => ({
+          data: { data: [] },
+        })),
+        axios.get(`${base}/lst-department-master`, { headers }).catch(() => ({
           data: { data: [] },
         })),
       ]);
@@ -61,6 +65,10 @@ const SevaActionMaster = ({ user }) => {
       const d = dsgRes.data?.data;
       if (Array.isArray(d)) setDesignations(d);
       else if (d?.data && Array.isArray(d.data)) setDesignations(d.data);
+
+      const depts = deptRes.data?.data;
+      if (Array.isArray(depts)) setDepartments(depts);
+      else if (depts?.data && Array.isArray(depts.data)) setDepartments(depts.data);
     } catch (e) {
       toast.error(e.response?.data?.message || "Failed to load action master");
     } finally {
@@ -168,6 +176,12 @@ const SevaActionMaster = ({ user }) => {
   const dsgName = (id) => {
     const d = designations.find((x) => String(x.Dsg_id) === String(id));
     return d?.Dsg_Name || d?.name || `Designation ${id}`;
+  };
+
+  const deptName = (id) => {
+    if (!id) return "Any";
+    const d = departments.find((x) => String(x.Dpt_id) === String(id));
+    return d?.Dpt_Name || `Dept ${id}`;
   };
 
   const steps = useMemo(() => chain, [chain]);
@@ -288,6 +302,14 @@ const SevaActionMaster = ({ user }) => {
                         </strong>
                       </p>
                     )}
+                    {s.Dpt_id && (
+                      <p className="text-[11px] text-gray-600">
+                        <span className="inline-flex items-center gap-1">
+                          <span className="w-1 h-1 rounded-full bg-gray-400" />
+                          Dept: {deptName(s.Dpt_id)}
+                        </span>
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -347,6 +369,29 @@ const SevaActionMaster = ({ user }) => {
                       </option>
                     ))}
                 </select>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-700">
+                  Department
+                </label>
+                <select
+                  value={form.Dpt_id}
+                  onChange={(e) =>
+                    setForm((p) => ({ ...p, Dpt_id: e.target.value }))
+                  }
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                >
+                  <option value="">— Any department —</option>
+                  {departments.map((d) => (
+                    <option key={d.Dpt_id} value={d.Dpt_id}>
+                      {d.Dpt_Name}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-1 text-[10px] text-gray-500">
+                  Set department to restrict this step to users of that department only.
+                </p>
               </div>
 
               <div>

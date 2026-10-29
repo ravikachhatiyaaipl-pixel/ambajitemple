@@ -77,6 +77,7 @@ const AddEditShop = ({ user }) => {
     SPM_Fclt: "",
     SPM_Active: true,
     is_donation_storage: false,
+    is_article_storage: false,
     Documents: [],
   });
 
@@ -203,6 +204,7 @@ const AddEditShop = ({ user }) => {
         SPM_Fclt: d.SPM_Fclt || "",
         SPM_Active: d.SPM_Active ?? true,
         is_donation_storage: !!d.is_donation_storage,
+        is_article_storage: !!d.is_article_storage,
         Documents: [],
       });
 
@@ -539,6 +541,7 @@ const AddEditShop = ({ user }) => {
 
       formDataObj.append("SPM_Active", formData.SPM_Active ? "1" : "0");
   formDataObj.append("is_donation_storage", formData.is_donation_storage ? "1" : "0");
+formDataObj.append("is_article_storage", formData.is_article_storage ? "1" : "0");
 
       newDocuments.forEach((file) => {
         formDataObj.append("Documents[]", file);
@@ -1086,6 +1089,42 @@ const AddEditShop = ({ user }) => {
               </label>
             </div>
 
+            {/* Article Storage Flag (Estate Master se article donation storage) */}
+            <div className="flex items-center justify-between pt-1">
+              <div>
+                <label className="text-sm font-medium text-gray-700">
+                  Use as Article Donation Storage
+                </label>
+                <p className="text-[10px] text-gray-500">
+                  Is estate item ko article donation storage ke liye use karna hai
+                </p>
+              </div>
+              <label className="flex cursor-pointer">
+                <input
+                  type="checkbox"
+                  name="is_article_storage"
+                  checked={!!formData.is_article_storage}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      is_article_storage: e.target.checked,
+                    }))
+                  }
+                  className="sr-only"
+                />
+                <div
+                  className={`block w-14 h-8 rounded-full ${
+                    formData.is_article_storage ? "bg-emerald-500" : "bg-gray-300"
+                  } transition-colors duration-200`}
+                ></div>
+                <div
+                  className={`pointer-events-none absolute left-1 top-1 bg-white border-2 border-gray-200 rounded-full h-6 w-6 transition-transform duration-200 ${
+                    formData.is_article_storage ? "translate-x-6" : ""
+                  }`}
+                ></div>
+              </label>
+            </div>
+
             {/* Estate Documents (central document master - module ESTATE) */}
             <div className="rounded-xl border border-gray-200 bg-gray-50/60 p-3 mt-3">
               <div className="flex items-center justify-between mb-2">
@@ -1094,8 +1133,8 @@ const AddEditShop = ({ user }) => {
                     Estate Documents
                   </p>
                   <p className="text-[10px] text-gray-500">
-                    Mapped documents (Document Mapping screen se) yahan upload
-                    hote hain
+                    Mapped documents from Document Mapping screen will appear
+                    here for upload
                   </p>
                 </div>
                 {estateDocs.length > 0 && (
@@ -1107,11 +1146,11 @@ const AddEditShop = ({ user }) => {
 
               {estateDocs.length === 0 ? (
                 <p className="text-xs text-gray-500">
-                  Is estate item ke liye koi document map nahi hai.{" "}
+                  No document mapped for this estate item.{" "}
                   <span className="font-medium text-blue-600">
                     Document Mapping
                   </span>{" "}
-                  screen se map karo (module: Estate Master).
+                  Map from Document Mapping screen (module: Estate Master).
                 </p>
               ) : (
                 <div className="space-y-2">

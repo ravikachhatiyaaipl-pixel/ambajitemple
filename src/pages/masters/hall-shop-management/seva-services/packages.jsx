@@ -16,6 +16,11 @@ import {
   Calendar,
 } from "lucide-react";
 
+const localDate = () => {
+  const date = new Date();
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+};
+
 /**
  * Time slots - koi bhi time MANUALLY type kar sakte hain (fixed 30-min
  * dropdown nahi).
@@ -85,8 +90,10 @@ const SevaPackages = ({ user }) => {
     fee: "",
     duration_minutes: "",
     daily_quota: "",
+    person_limit: "",
     max_persons: 1,
     slot_times: [],
+    custom_fields: [],
     effective_from: "",
     effective_to: "",
     sort_order: 0,
@@ -99,6 +106,7 @@ const SevaPackages = ({ user }) => {
     start: "",
     end: "",
     label: "",
+    capacity: "",
   });
 
   const token = localStorage.getItem("auth_token");
@@ -168,6 +176,9 @@ const SevaPackages = ({ user }) => {
     );
   }, [services, form.service_kind, form.service_id]);
 
+  const selectedService = services.find((s) => String(s.service_id) === String(form.service_id));
+  const isTithiBhojanPackage = selectedService?.service_mode === "TITHI_BHOJAN";
+
   const openCreate = () => {
     setEditing(null);
     setForm({
@@ -183,13 +194,14 @@ const SevaPackages = ({ user }) => {
       daily_quota: "",
       max_persons: 1,
       slot_times: [],
+      custom_fields: [],
       effective_from: "",
       effective_to: "",
       sort_order: rows.length + 1,
       is_active: true,
     });
     setIncludeInput("");
-    setSlotDraft({ start: "", end: "", label: "" });
+    setSlotDraft({ start: "", end: "", label: "", capacity: "" });
     setSlotError(false);
     setShowForm(true);
   };
@@ -212,21 +224,24 @@ const SevaPackages = ({ user }) => {
       fee: p.fee ?? "",
       duration_minutes: p.duration_minutes ?? "",
       daily_quota: p.daily_quota ?? "",
+      person_limit: p.person_limit ?? "",
       max_persons: p.persons_per_booking ?? p.max_persons ?? 1,
       slot_times: Array.isArray(p.slot_times)
         ? p.slot_times.map((t) => ({
             start: t.start,
             end: t.end,
             label: t.label || "",
+            capacity: t.capacity ?? 0,
           }))
         : [],
+      custom_fields: Array.isArray(p.custom_fields) ? p.custom_fields : [],
       effective_from: p.effective_from || "",
       effective_to: p.effective_to || "",
       sort_order: p.sort_order ?? 0,
       is_active: !!p.is_active,
     });
     setIncludeInput("");
-    setSlotDraft({ start: "", end: "", label: "" });
+    setSlotDraft({ start: "", end: "", label: "", capacity: "" });
     setSlotError(false);
     setShowForm(true);
   };
@@ -248,6 +263,32 @@ const SevaPackages = ({ user }) => {
       ...p,
       includes: p.includes.filter((i) => i !== item),
     }));
+
+  // ---------- Custom fields (admin can add any field with name + type) ----------
+  const addCustomField = () => {
+    setForm((p) => ({
+      ...p,
+      custom_fields: [
+        ...p.custom_fields,
+        { field_name: "", field_type: "text", field_value: "" },
+      ],
+    }));
+  };
+
+  const updateCustomField = (idx, key, value) => {
+    setForm((p) => {
+      const next = [...p.custom_fields];
+      next[idx] = { ...next[idx], [key]: value };
+      return { ...p, custom_fields: next };
+    });
+  };
+
+  const removeCustomField = (idx) => {
+    setForm((p) => ({
+      ...p,
+      custom_fields: p.custom_fields.filter((_, i) => i !== idx),
+    }));
+  };
 
   // ---------- Time slots (multiple, dynamic/recurring) ----------
   const addEndTime = (start, mins) => {
@@ -307,11 +348,12 @@ const SevaPackages = ({ user }) => {
           start,
           end,
           label: slotDraft.label || "",
+          capacity: Number(slotDraft.capacity) || 0,
         },
       ],
     }));
 
-    setSlotDraft({ start: "", end: "", label: "" });
+    setSlotDraft({ start: "", end: "", label: "", capacity: "" });
     setSlotError(false);
   };
 
@@ -335,6 +377,12 @@ const SevaPackages = ({ user }) => {
     if (!form.name.trim()) return toast.error("Package name is required");
     if (form.fee === "" || Number(form.fee) < 0)
       return toast.error("Base fee is required");
+    if (isTithiBhojanPackage && !form.effective_from)
+      return toast.error("Start date is required for Tithi Bhojan packages");
+    if (isTithiBhojanPackage && !form.effective_to)
+      return toast.error("End date is required for Tithi Bhojan packages");
+    if (isTithiBhojanPackage && form.slot_times.length === 0)
+      return toast.error("Add at least one meal slot for Tithi Bhojan");
     if (form.effective_from && form.effective_to && form.effective_to < form.effective_from)
       return toast.error("End date cannot be before start date");
 
@@ -346,6 +394,9 @@ const SevaPackages = ({ user }) => {
       });
       payload.name = form.name.trim();
       payload.includes = form.includes;
+      payload.custom_fields = form.custom_fields.filter(
+        (f) => f.field_name && f.field_name.trim()
+      );
       payload.max_persons = Number(form.max_persons) || 1;
       payload.slot_times = form.slot_times;
       payload.sort_order = form.sort_order || 0;
@@ -353,6 +404,8 @@ const SevaPackages = ({ user }) => {
       // Daily limit HAMESHA bhejo (0 = unlimited). Agar ye delete ho gaya to
       // dusre package me purana limit reh jayega aur portal par old value dikhega.
       payload.daily_quota = Number(form.daily_quota) || 0;
+      // Total booking limit (persons) - 0 = unlimited. Consumed as payments succeed.
+      payload.person_limit = Number(form.person_limit) || 0;
 
       if (editing) {
         await axios.put(
@@ -499,7 +552,8 @@ const SevaPackages = ({ user }) => {
                   "Base Fee",
                   "Pooja Duration",
                   "Daily Limit",
-                  "Per Group",
+                  "Per Group / Limit",
+                  "Custom Fields",
                   "Start - End Date",
                   "Status",
                   "Actions",
@@ -558,9 +612,44 @@ const SevaPackages = ({ user }) => {
                     {r.daily_quota ? `${r.daily_quota} persons` : "Unlimited"}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-700">
-                    <p className="font-medium text-gray-800">
-                      {r.persons_per_booking ?? r.max_persons ?? 1} per group
-                    </p>
+                    {r.service?.service_mode === "TITHI_BHOJAN" ? (
+                      (r.slot_times || []).length ? (
+                        <div className="space-y-0.5">
+                          {(r.slot_times || []).map((t, i) => (
+                            <p key={i} className="text-[11px] text-gray-700">
+                              {t.label || `${t.start} - ${t.end}`}:{" "}
+                              <span className="font-medium text-gray-900">
+                                {Number(t.capacity) > 0 ? `${t.capacity} persons` : "Unlimited"}
+                              </span>
+                            </p>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-gray-400">No slots</span>
+                      )
+                    ) : (
+                      <p className="font-medium text-gray-800">
+                        {r.persons_per_booking ?? r.max_persons ?? 1} per group
+                      </p>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-700">
+                    {(r.custom_fields || []).length > 0 ? (
+                      <div className="space-y-0.5">
+                        {(r.custom_fields || []).map((f, i) => (
+                          <p
+                            key={i}
+                            className="flex items-start gap-1 text-[11px] text-amber-800"
+                          >
+                            <span className="mt-0.5 h-1 w-1 shrink-0 rounded-full bg-amber-500" />
+                            <span className="font-semibold">{f.field_name}:</span>{" "}
+                            <span>{f.field_value || "—"}</span>
+                          </p>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-gray-400">—</span>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-xs text-gray-600">
                     {r.effective_from || r.effective_to ? (
@@ -571,18 +660,25 @@ const SevaPackages = ({ user }) => {
                         <p className="text-gray-500">to {r.effective_to || "Open"}</p>
                       </>
                     ) : (
-                      <span className="text-gray-400">Always</span>
+                      <span className="text-gray-400">
+                        {r.service?.service_mode === "TITHI_BHOJAN" ? "Dates not set" : "Always"}
+                      </span>
+                    )}
+                    {r.service?.service_mode === "TITHI_BHOJAN" && (!r.effective_from || !r.effective_to || !r.slot_times?.length) && (
+                      <p className="mt-1 font-semibold text-amber-700">Needs dates and meal slots</p>
                     )}
                   </td>
                   <td className="px-4 py-3">
                     <span
                       className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
-                        r.is_active
-                          ? "bg-emerald-100 text-emerald-700"
-                          : "bg-gray-200 text-gray-600"
+                        !r.is_active || (r.effective_to && r.effective_to < localDate())
+                          ? "bg-gray-200 text-gray-600"
+                          : r.service?.service_mode === "TITHI_BHOJAN" && (!r.effective_from || !r.effective_to || !r.slot_times?.length)
+                            ? "bg-amber-100 text-amber-800"
+                            : "bg-emerald-100 text-emerald-700"
                       }`}
                     >
-                      {r.is_active ? "Active" : "Inactive"}
+                      {!r.is_active ? "Inactive" : r.effective_to && r.effective_to < localDate() ? "Expired" : r.service?.service_mode === "TITHI_BHOJAN" && (!r.effective_from || !r.effective_to || !r.slot_times?.length) ? "Needs setup" : "Active"}
                     </span>
                   </td>
                   <td className="px-4 py-3">
@@ -608,7 +704,7 @@ const SevaPackages = ({ user }) => {
               {filtered.length === 0 && (
                 <tr>
                   <td
-                    colSpan={10}
+                    colSpan={11}
                     className="px-4 py-12 text-center text-sm text-gray-500"
                   >
                     No packages found.
@@ -735,63 +831,73 @@ const SevaPackages = ({ user }) => {
                   />
                 </div>
 
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-gray-700">
-                    Pooja Duration
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={form.duration_minutes}
-                    onChange={(e) =>
-                      setForm((p) => ({ ...p, duration_minutes: e.target.value }))
-                    }
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-                  />
-                </div>
+                {!isTithiBhojanPackage && (
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-gray-700">
+                      Pooja Duration
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={form.duration_minutes}
+                      onChange={(e) =>
+                        setForm((p) => ({ ...p, duration_minutes: e.target.value }))
+                      }
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                    />
+                  </div>
+                )}
+
+                {!isTithiBhojanPackage && (
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-gray-700">
+                      Daily Limit (persons / day for this seva)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={form.daily_quota}
+                      onChange={(e) =>
+                        setForm((p) => ({ ...p, daily_quota: e.target.value }))
+                      }
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                    />
+                    <p className="mt-1 text-[10px] text-gray-500">
+                      Tithi Bhojan के लिए दैनिक सीमा लागू नहीं होती।
+                    </p>
+                  </div>
+                )}
+
+                {!isTithiBhojanPackage && (
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-gray-700">
+                      Persons per Group
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={form.max_persons}
+                      onChange={(e) =>
+                        setForm((p) => ({
+                          ...p,
+                          max_persons: e.target.value,
+                        }))
+                      }
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                    />
+                    <p className="mt-1 text-[10px] text-gray-500">
+                      Group size - कितने persons एक booking में आ सकते हैं।
+                    </p>
+                  </div>
+                )}
 
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-gray-700">
-                    Persons per Group
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={form.max_persons}
-                    onChange={(e) =>
-                      setForm((p) => ({
-                        ...p,
-                        max_persons: e.target.value,
-                      }))
-                    }
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-                  />
-                  <p className="mt-1 text-[10px] text-gray-500">
-                    Group size - jitne persons ek booking me aa sakte hain.
-                  </p>
-                </div>
-
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-gray-700">
-                    Daily Limit (persons / day for this seva)
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={form.daily_quota}
-                    onChange={(e) =>
-                      setForm((p) => ({ ...p, daily_quota: e.target.value }))
-                    }
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-gray-700">
-                    Start Date
+                    <label className="mb-1 block text-xs font-medium text-gray-700">
+                    Start Date {isTithiBhojanPackage && "*"}
                   </label>
                   <input
                     type="date"
+                    required={isTithiBhojanPackage}
                     value={form.effective_from}
                     onChange={(e) =>
                       setForm((p) => ({ ...p, effective_from: e.target.value }))
@@ -802,16 +908,19 @@ const SevaPackages = ({ user }) => {
 
                 <div>
                   <label className="mb-1 block text-xs font-medium text-gray-700">
-                    End Date
+                    End Date {isTithiBhojanPackage && "*"}
                   </label>
                   <input
                     type="date"
+                    required={isTithiBhojanPackage}
+                    min={form.effective_from || undefined}
                     value={form.effective_to}
                     onChange={(e) =>
                       setForm((p) => ({ ...p, effective_to: e.target.value }))
                     }
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
                   />
+                  {isTithiBhojanPackage && <p className="mt-1 text-[10px] text-amber-700">Bookings close automatically after this end date. Add at least one meal slot below.</p>}
                 </div>
               </div>
 
@@ -877,6 +986,103 @@ const SevaPackages = ({ user }) => {
                 )}
               </div>
 
+              {/* Custom Fields - admin can add any field */}
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                <div className="mb-3 flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-600">
+                      <Plus className="h-4 w-4" />
+                    </span>
+                    <div>
+                      <p className="text-xs font-semibold text-amber-800">
+                        Custom Fields (Dynamic)
+                      </p>
+                      <p className="text-[10px] text-amber-600">
+                        Add service-specific fields (e.g. Pandit name, Prashad
+                        type, Yagna material, Gotra required...)
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={addCustomField}
+                    className="shrink-0 rounded-lg border border-amber-300 px-3 py-2 text-xs font-medium text-amber-700 hover:bg-amber-100 transition"
+                  >
+                    <Plus className="h-3 w-3" /> Add Field
+                  </button>
+                </div>
+
+                <div className="space-y-2">
+                  {form.custom_fields.map((field, idx) => (
+                    <div
+                      key={idx}
+                      className="grid grid-cols-1 sm:grid-cols-12 gap-2 rounded-lg bg-white p-2.5 border border-amber-200"
+                    >
+                      <div className="sm:col-span-5">
+                        <label className="mb-1 block text-[10px] font-medium text-amber-700">
+                          Field Name
+                        </label>
+                        <input
+                          value={field.field_name}
+                          onChange={(e) =>
+                            updateCustomField(idx, "field_name", e.target.value)
+                          }
+                          placeholder="e.g. Pandit Name"
+                          className="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                        />
+                      </div>
+                      <div className="sm:col-span-3">
+                        <label className="mb-1 block text-[10px] font-medium text-amber-700">
+                          Field Type
+                        </label>
+                        <select
+                          value={field.field_type}
+                          onChange={(e) =>
+                            updateCustomField(idx, "field_type", e.target.value)
+                          }
+                          className="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                        >
+                          <option value="text">Text</option>
+                          <option value="number">Number</option>
+                          <option value="date">Date</option>
+                          <option value="select">Select/Dropdown</option>
+                          <option value="checkbox">Checkbox</option>
+                          <option value="textarea">Text Area</option>
+                        </select>
+                      </div>
+                      <div className="sm:col-span-3">
+                        <label className="mb-1 block text-[10px] font-medium text-amber-700">
+                          Default Value
+                        </label>
+                        <input
+                          value={field.field_value}
+                          onChange={(e) =>
+                            updateCustomField(idx, "field_value", e.target.value)
+                          }
+                          placeholder="Default value"
+                          className="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                        />
+                      </div>
+                      <div className="flex items-end sm:col-span-1">
+                        <button
+                          type="button"
+                          onClick={() => removeCustomField(idx)}
+                          className="rounded border border-red-300 px-2 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                  {form.custom_fields.length === 0 && (
+                    <p className="mt-2 text-[10px] text-amber-500 italic">
+                      No custom fields yet. Click "Add Field" to create
+                      service-specific fields.
+                    </p>
+                  )}
+                </div>
+              </div>
+
               {/* TIME SLOTS - dynamic (recurring) */}
               <div className="rounded-xl border border-gray-200 bg-gray-50/60 p-3">
                 <div className="mb-3 flex items-start justify-between gap-2">
@@ -886,7 +1092,7 @@ const SevaPackages = ({ user }) => {
                     </span>
                     <div>
                       <p className="text-xs font-semibold text-gray-800">
-                        Time Slots
+                        Time Slots {isTithiBhojanPackage && <span className="text-red-600">*</span>}
                       </p>
                       <p className="text-[10px] text-gray-500">
                         Har din repeat hote hain - koi bhi time manually type
@@ -973,7 +1179,7 @@ const SevaPackages = ({ user }) => {
                         : "Leave blank for auto"}
                     </p>
                   </div>
-                  <div className="sm:col-span-4">
+                  <div className="sm:col-span-2">
                     <label className="mb-1 block text-[10px] font-medium text-gray-500">
                       Label
                     </label>
@@ -983,7 +1189,22 @@ const SevaPackages = ({ user }) => {
                       onChange={(e) =>
                         setSlotDraft((s) => ({ ...s, label: e.target.value }))
                       }
-                      placeholder="Mangala Aarti"
+                      placeholder="Lunch"
+                      className="w-full rounded-lg border border-gray-300 bg-white px-2.5 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-red-500"
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="mb-1 block text-[10px] font-medium text-gray-500">
+                      Limit (persons)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={slotDraft.capacity}
+                      onChange={(e) =>
+                        setSlotDraft((s) => ({ ...s, capacity: e.target.value }))
+                      }
+                      placeholder="0 = unlimited"
                       className="w-full rounded-lg border border-gray-300 bg-white px-2.5 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-red-500"
                     />
                   </div>
@@ -1015,6 +1236,11 @@ const SevaPackages = ({ user }) => {
                         {t.label && (
                           <span className="truncate rounded bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-600">
                             {t.label}
+                          </span>
+                        )}
+                        {t.capacity > 0 && (
+                          <span className="shrink-0 rounded bg-emerald-50 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700">
+                            {t.capacity} limit
                           </span>
                         )}
                         <button

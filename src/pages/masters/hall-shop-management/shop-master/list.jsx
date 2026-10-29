@@ -242,6 +242,11 @@ const ShopList = ({ user }) => {
                             Donation Storage
                           </span>
                         )}
+                        {item.is_article_storage && (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
+                            Article Storage
+                          </span>
+                        )}
                       </div>
                     </td>
                     <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
