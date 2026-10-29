@@ -1,0 +1,67 @@
+{
+  "hash": "a7a425bd",
+  "configHash": "f360d494",
+  "lockfileHash": "2a44ceef",
+  "browserHash": "1d035f0d",
+  "optimized": {
+    "react-dom/client": {
+      "src": "../../node_modules/react-dom/client.js",
+      "file": "react-dom_client.js",
+      "fileHash": "a0bfb981",
+      "needsInterop": true
+    },
+    "react-router-dom": {
+      "src": "../../node_modules/react-router-dom/dist/index.mjs",
+      "file": "react-router-dom.js",
+      "fileHash": "2b2e98d4",
+      "needsInterop": false
+    },
+    "react": {
+      "src": "../../node_modules/react/index.js",
+      "file": "react.js",
+      "fileHash": "fb98872e",
+      "needsInterop": true
+    },
+    "react-hot-toast": {
+      "src": "../../node_modules/react-hot-toast/dist/index.mjs",
+      "file": "react-hot-toast.js",
+      "fileHash": "644e5fa5",
+      "needsInterop": false
+    },
+    "lucide-react": {
+      "src": "../../node_modules/lucide-react/dist/esm/lucide-react.js",
+      "file": "lucide-react.js",
+      "fileHash": "678a5c70",
+      "needsInterop": false
+    },
+    "sweetalert2": {
+      "src": "../../node_modules/sweetalert2/dist/sweetalert2.esm.all.js",
+      "file": "sweetalert2.js",
+      "fileHash": "7d452ddf",
+      "needsInterop": false
+    },
+    "axios": {
+      "src": "../../node_modules/axios/index.js",
+      "file": "axios.js",
+      "fileHash": "2d74c993",
+      "needsInterop": false
+    },
+    "@google/generative-ai": {
+      "src": "../../node_modules/@google/generative-ai/dist/index.mjs",
+      "file": "@google_generative-ai.js",
+      "fileHash": "1caea567",
+      "needsInterop": false
+    }
+  },
+  "chunks": {
+    "chunk-3HME3SJ2": {
+      "file": "chunk-3HME3SJ2.js"
+    },
+    "chunk-GH6UE3LJ": {
+      "file": "chunk-GH6UE3LJ.js"
+    },
+    "chunk-G3PMV62Z": {
+      "file": "chunk-G3PMV62Z.js"
+    }
+  }
+}

@@ -13,9 +13,8 @@ const initials = (name) =>
 
 export default function Testimonials() {
   return (
-    <section>
-      {/* <div className="mx-auto max-w-7xl px-5 sm:px-8">
-        className="bg-cream py-20 sm:py-28"
+    <section className="bg-cream py-20 sm:py-28">
+      <div className="mx-auto max-w-7xl px-5 sm:px-8">
         <Reveal>
           <SectionHeading tag="Devotee Experiences" title="Shared with devotion, from across the world" />
         </Reveal>
@@ -45,7 +44,7 @@ export default function Testimonials() {
             </Reveal>
           ))}
         </div>
-      </div> */}
+      </div>
     </section>
   );
 }

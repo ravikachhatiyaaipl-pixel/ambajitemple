@@ -470,7 +470,7 @@ const KotakPaymentDemo = () => {
   }
 
   return (
-    <div className="w-full p-6">
+    <div className="mx-auto max-w-6xl p-6">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold text-slate-900">

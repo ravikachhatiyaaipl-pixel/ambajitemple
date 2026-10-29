@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   Search,
@@ -7,7 +7,6 @@ import {
   ArrowLeft,
   Calendar,
   User,
-  Clock,
   Shield,
   AlertCircle,
   ChevronLeft,
@@ -16,6 +15,10 @@ import {
   Package,
   IndianRupee,
   Scale,
+  Loader2,
+  CheckCircle,
+  UserCircle,
+  Crown,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import debounce from "lodash/debounce";
@@ -24,28 +27,18 @@ import DonationApi from "../../services/donationapi";
 /**
  * S13 - DONATION APPROVAL DASHBOARD
  *
- * Design: Shop Rent Application Approval list ka EXACT mirror
- * (header, action bar, stat cards, "Awaiting You / All Donations" toggle,
- * table, pagination, empty state).
- *
  * Flow (action_master stage 'DON'):
  *   26 Pending -> 27 HOD Approved -> 28 Admin Approved
  *                 27 -> 29 Query / 30 Sent Back / 31 Rejected
+ *
+ * Rule: HOD must approve first (26→27), then Admin approves (27→28).
+ * Admin cannot approve Pending (26) - that's HOD's job.
+ * Non-admin cannot approve their own entry (maker-checker).
  */
 const DonationApproval = ({ user }) => {
   const navigate = useNavigate();
 
-  // Intl formatter - source me literal rupee sign nahi (encoding-safe)
-  const formatCurrency = (amount) => {
-    let val = Number(amount || 0);
-    if (!isFinite(val) || val < 0) val = 0;
-    return new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency: "INR",
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(val);
-  };
+  const isAdmin = (user?.Usr_Role_Id === 1) || (user?.role_id === 1) || (user?.Usr_RoleId === 1);
 
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -62,18 +55,28 @@ const DonationApproval = ({ user }) => {
     to: 0,
   });
   const [chain, setChain] = useState([]);
-  const [pendingItems, setPendingItems] = useState([]);
   const [onlyMine, setOnlyMine] = useState(true);
+
+  const statusLabel = (s) => {
+    const m = { 26: "Pending", 27: "HOD Approved", 28: "Admin Approved", 29: "Query", 30: "Sent Back", 31: "Rejected" };
+    return m[s] || String(s);
+  };
+
+  const statusColor = (s) => {
+    if (s === 28) return "bg-emerald-100 text-emerald-700";
+    if (s === 27) return "bg-blue-100 text-blue-700";
+    if (s === 26) return "bg-amber-100 text-amber-700";
+    if (s === 29) return "bg-orange-100 text-orange-700";
+    if (s === 30) return "bg-purple-100 text-purple-700";
+    if (s === 31) return "bg-red-100 text-red-700";
+    return "bg-gray-100 text-gray-600";
+  };
 
   useEffect(() => {
     try {
-      const menuDetails = JSON.parse(
-        localStorage.getItem("menu_details") || "[]"
-      );
+      const menuDetails = JSON.parse(localStorage.getItem("menu_details") || "[]");
       const currentPath = "/transactions/donation/approval";
-      const currentMenuItem = menuDetails.find(
-        (item) => item.Menu_Links == currentPath
-      );
+      const currentMenuItem = menuDetails.find((item) => item.Menu_Links === currentPath);
       if (currentMenuItem?.Fnc_Title) setPageTitle(currentMenuItem.Fnc_Title);
     } catch (error) {
       console.error("Error parsing menu details:", error);
@@ -101,18 +104,25 @@ const DonationApproval = ({ user }) => {
 
   useEffect(() => {
     loadItems();
-    loadPending();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage, searchDebounced]);
+  }, [currentPage, searchDebounced, onlyMine]);
 
   const loadItems = async () => {
     setLoading(true);
     try {
       const params = { page: currentPage, per_page: 10 };
       if (searchDebounced) params.search = searchDebounced;
-      const res = await DonationApi.getTransactions(params);
+      const res = await DonationApi.getPendingApprovals(params);
       const data = res?.data;
-      setItems(data?.data || []);
+      let list = data?.data || [];
+
+      // Role-based filtering
+      if (isAdmin) {
+        list = list.filter((item) => [27, 29, 30, 31].includes(Number(item.status)));
+      } else {
+        list = list.filter((item) => [26, 29, 30].includes(Number(item.status)));
+      }
+
+      setItems(list);
       setPagination({
         current_page: data?.current_page || 1,
         last_page: data?.last_page || 1,
@@ -121,339 +131,194 @@ const DonationApproval = ({ user }) => {
         from: data?.from || 0,
         to: data?.to || 0,
       });
-    } catch (error) {
-      toast.error(error.response?.data?.message || "Failed to load approvals");
+      if (res?.meta?.chain) setChain(res.meta.chain);
+    } catch (e) {
+      console.error("Failed to load donations:", e);
     } finally {
       setLoading(false);
     }
   };
 
-  // Pending approvals (authority filtered) + live chain
-  const loadPending = async () => {
+  const canHodApprove = (item) => {
+    return Number(item.status) === 26 && !isAdmin; // Pending - only HOD can approve
+  };
+
+  const canAdminApprove = (item) => {
+    return Number(item.status) === 27 && isAdmin; // HOD Approved - only Admin can approve
+  };
+
+  const canQuery = (item) => {
+    return [26, 27].includes(Number(item.status));
+  };
+
+  const canSentBack = (item) => {
+    return [26, 27].includes(Number(item.status));
+  };
+
+  const handleAction = async (item, actionId, actionName) => {
+    const confirmed = window.confirm(`Are you sure you want to ${actionName} this donation?`);
+    if (!confirmed) return;
+
     try {
-      const params = { per_page: 200 };
-      if (searchDebounced) params.search = searchDebounced;
-      const res = await DonationApi.getPendingApprovals(params);
-      setPendingItems(res?.data || []);
-      if (res?.meta?.chain) setChain(res.meta.chain);
-    } catch (error) {
-      console.error("Error loading pending approvals:", error);
+      const res = await DonationApi.act(item.transaction_id, {
+        action_id: actionId,
+        remarks: `Action: ${actionName}`,
+      });
+      if (res.success) {
+        toast.success(`Donation ${actionName} successfully`);
+        loadItems();
+      } else {
+        toast.error(res.message || "Action failed");
+      }
+    } catch (e) {
+      toast.error(e?.response?.data?.message || "Error performing action");
     }
   };
-
-  const formatDate = (date) => {
-    if (!date) return "N/A";
-    return new Date(date).toLocaleDateString("en-IN", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
-  };
-
-  const getStatusDisplay = (item) => {
-    if (item?.status_name) return item.status_name;
-    if (item?.status) return String(item.status).replace(/_/g, " ");
-    return "Pending";
-  };
-
-  const getStatusBadge = (item) => {
-    if (!item) return null;
-
-    const statusName = getStatusDisplay(item);
-    const hasQuery = item?.status === 29 && item?.status_remark;
-    let colorClass = "bg-yellow-100 text-yellow-800";
-    const statusLower = statusName.toLowerCase();
-
-    if (statusLower.includes("approv")) {
-      colorClass = "bg-green-100 text-green-800";
-    } else if (
-      statusLower.includes("reject") ||
-      statusLower.includes("query") ||
-      statusLower.includes("sent back")
-    ) {
-      colorClass = "bg-red-100 text-red-800";
-    } else if (
-      statusLower.includes("pend") ||
-      statusLower.includes("wait")
-    ) {
-      colorClass = "bg-yellow-100 text-yellow-800";
-    }
-
-    return (
-      <div className="flex flex-col gap-0.5">
-        <span
-          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${colorClass}`}
-        >
-          <Clock className="h-3 w-3 mr-1" />
-          {statusName}
-        </span>
-        {hasQuery && (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">
-            <AlertCircle className="h-3 w-3 mr-1" />
-            Query: {item.status_remark}
-          </span>
-        )}
-        {item?.current_action && item?.status === 26 && (
-          <div className="text-xs text-gray-400 mt-1">
-            At: {item.current_action.St_Name}
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  const handleRefresh = () => {
-    loadItems();
-    loadPending();
-    setSearchTerm("");
-    toast.success("Data refreshed successfully!");
-  };
-
-  const renderPagination = () => {
-    const pages = [];
-    const max = 5;
-    let start = Math.max(1, currentPage - Math.floor(max / 2));
-    let end = Math.min(pagination.last_page, start + max - 1);
-    if (end - start + 1 < max) start = Math.max(1, end - max + 1);
-    for (let i = start; i <= end; i++) pages.push(i);
-    return pages;
-  };
-
-  const displayItems = onlyMine
-    ? pendingItems.filter((a) => a.can_approve)
-    : items;
 
   return (
-    <div className="p-6 bg-[#f8f9fa] min-h-screen">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-        <div className="flex items-center">
-          <button
-            onClick={() => navigate("/dashboard")}
-            className="mr-4 text-gray-500 hover:text-gray-700"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </button>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">{pageTitle}</h1>
-            <p className="text-gray-500 text-sm mt-0.5">
-              Review and approve gold / silver / diamond donations
-            </p>
+    <div className="p-6 max-w-7xl mx-auto">
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <div className="flex items-center gap-2">
+            <Shield className="w-5 h-5 text-red-600" />
+            <h1 className="text-xl font-bold text-gray-800">{pageTitle}</h1>
           </div>
+          <p className="text-sm text-gray-500">
+            {isAdmin ? "Admin Approval Dashboard - Review HOD Approved donations" : "HOD Approval Dashboard - Review Pending donations"}
+          </p>
         </div>
-        <div className="flex items-center space-x-3">
-          <button
-            onClick={handleRefresh}
-            className="px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium flex items-center transition-all"
-          >
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh
-          </button>
-        </div>
-      </div>
-
-      {/* Action Bar */}
-      <div className="bg-gradient-to-r from-gray-50 to-gray-100 border border-gray-200 rounded-xl p-4 mb-6">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search by receipt no, donor or bill..."
-              className="w-full pl-10 pr-10 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              value={searchTerm}
-              onChange={handleSearchChange}
-            />
-            {searchTerm && (
-              <button
-                onClick={handleClearSearch}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              >
-                <XCircle className="h-5 w-5" />
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Stats + filter */}
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4 mb-6">
-        {[
-          ["Awaiting Approval", pendingItems.length, "text-amber-600"],
-          [
-            "You can approve",
-            pendingItems.filter((a) => a.can_approve).length,
-            "text-emerald-600",
-          ],
-          [
-            "Not in your authority",
-            pendingItems.filter((a) => !a.can_approve).length,
-            "text-gray-500",
-          ],
-          ["Steps in flow", chain.length, "text-indigo-600"],
-        ].map(([label, value, color]) => (
-          <div
-            key={label}
-            className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm"
-          >
-            <p className="text-xs text-gray-500">{label}</p>
-            <p className={`mt-1 text-2xl font-bold ${color}`}>{value}</p>
-          </div>
-        ))}
-      </div>
-
-      {/* Filter toggle */}
-      <div className="flex items-center gap-2 mb-4">
         <button
-          onClick={() => setOnlyMine(true)}
-          className={`rounded-full px-3.5 py-1.5 text-xs font-medium transition ${
-            onlyMine
-              ? "bg-gray-900 text-white"
-              : "bg-white text-gray-600 ring-1 ring-gray-200 hover:ring-gray-300"
-          }`}
+          onClick={loadItems}
+          className="px-3 py-1.5 border border-gray-300 text-gray-700 text-xs font-medium rounded hover:bg-gray-50 transition flex items-center gap-2"
         >
-          Awaiting You
+          <RefreshCw className="w-3 h-3" /> Refresh
         </button>
-        <button
-          onClick={() => setOnlyMine(false)}
-          className={`rounded-full px-3.5 py-1.5 text-xs font-medium transition ${
-            !onlyMine
-              ? "bg-gray-900 text-white"
-              : "bg-white text-gray-600 ring-1 ring-gray-200 hover:ring-gray-300"
-          }`}
-        >
-          All Donations
-        </button>
+      </div>
+
+      {/* Role Badge */}
+      <div className={`mb-6 p-3 rounded-lg ${isAdmin ? "bg-blue-50 border-blue-200 text-blue-800" : "bg-amber-50 border-amber-200 text-amber-800"}`}>
+        <div className="flex items-center gap-2">
+          {isAdmin ? <Crown className="w-4 h-4" /> : <UserCircle className="w-4 h-4" />}
+          <span className="text-sm font-medium">
+            {isAdmin ? "Admin Role" : "HOD Role"} - {isAdmin ? "Can approve HOD Approved (27) → Admin Approved (28)" : "Can approve Pending (26) → HOD Approved (27)"}
+          </span>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm mb-6">
+        <div className="flex flex-col md:flex-row gap-4 items-end">
+          <div className="flex-1">
+            <label className="block text-xs font-medium text-gray-600 mb-1">Search</label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text" value={searchTerm} onChange={handleSearchChange}
+                placeholder="Receipt No, Donor, Bill..."
+                className="w-full border border-gray-300 rounded pl-9 pr-3 py-2 text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none"
+              />
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setOnlyMine(!onlyMine)}
+              className={`px-3 py-2 text-xs font-medium rounded transition ${onlyMine ? "bg-red-600 text-white" : "bg-gray-200 text-gray-700"}`}
+            >
+              {onlyMine ? "Awaiting You" : "All Donations"}
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
+      <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
-              <tr>
-                {[
-                  "Donation",
-                  "Category",
-                  "Donation Date",
-                  "Donor",
-                  "Weight",
-                  "Valuation",
-                  "Status",
-                  "Actions",
-                ].map((h) => (
-                  <th
-                    key={h}
-                    className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider"
-                  >
-                    {h}
-                  </th>
-                ))}
+          <table className="w-full text-left">
+            <thead>
+              <tr className="border-b border-gray-200 bg-gray-50 text-xs font-semibold text-gray-600 uppercase">
+                <th className="px-4 py-3">Receipt No</th>
+                <th className="px-4 py-3">Category</th>
+                <th className="px-4 py-3">Type / Purity</th>
+                <th className="px-4 py-3">Weight (g)</th>
+                <th className="px-4 py-3">Valuation</th>
+                <th className="px-4 py-3">Donor</th>
+                <th className="px-4 py-3">Status</th>
+                <th className="px-4 py-3 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="divide-y divide-gray-100">
               {loading ? (
+                <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">Loading...</td></tr>
+              ) : items.length === 0 ? (
                 <tr>
-                  <td colSpan="8" className="px-6 py-12 text-center">
-                    <div className="flex flex-col items-center justify-center">
-                      <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-600"></div>
-                      <p className="mt-4 text-gray-600">Loading...</p>
-                    </div>
+                  <td colSpan={8} className="px-4 py-8 text-center text-gray-400">
+                    No donations pending approval for your role.
                   </td>
                 </tr>
-              ) : displayItems.length > 0 ? (
-                displayItems.map((item) => (
-                  <tr
-                    key={item.transaction_id}
-                    className="hover:bg-gray-50 transition-colors duration-150 group cursor-pointer"
-                    onClick={() =>
-                      navigate(
-                        `/transactions/donation/approval/view/${item.transaction_id}`
-                      )
-                    }
-                  >
-                    <td className="px-6 py-4">
-                      <div className="flex items-center">
-                        <div className="h-9 w-9 rounded-full bg-gradient-to-r from-amber-500 to-yellow-600 flex items-center justify-center shadow-sm mr-3">
-                          <Package className="h-4 w-4 text-white" />
-                        </div>
-                        <div>
-                          <div className="text-sm font-semibold text-gray-900 group-hover:text-blue-700 transition-colors">
-                            {item.receipt_no}
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            {item.type?.type_name || "--"}  -{" "}
-                            {item.purity?.purity_name || "--"}
-                          </div>
-                        </div>
-                      </div>
+              ) : (
+                items.map((item) => (
+                  <tr key={item.transaction_id} className="hover:bg-gray-50 transition">
+                    <td className="px-4 py-3 text-sm font-medium text-gray-800">{item.receipt_no}</td>
+                    <td className="px-4 py-3 text-sm text-gray-700">{item.category?.category_name || "-"}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">
+                      {item.type?.type_name || "-"} / {item.purity?.purity_name || "-"}
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-700">
-                      {item.category?.category_name || "--"}
+                    <td className="px-4 py-3 text-sm text-gray-600">
+                      {Number(item.weight_in_gram || 0).toFixed(3)}
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center text-sm text-gray-700">
-                        <Calendar className="h-3.5 w-3.5 text-gray-400 mr-1.5" />
-                        {formatDate(item.donation_date)}
-                      </div>
+                    <td className="px-4 py-3 text-sm text-gray-600">
+                      ₹{Number(item.valuation_amount || 0).toFixed(2)}
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center text-sm text-gray-700">
-                        <User className="h-3.5 w-3.5 text-gray-400 mr-1.5" />
-                        {item.donor?.donor_name || "N/A"}
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        {item.donor?.donor_phone || ""}
-                      </div>
+                    <td className="px-4 py-3 text-sm text-gray-700">{item.donor?.donor_name || "-"}</td>
+                    <td className="px-4 py-3 text-sm">
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${statusColor(item.status)}`}>
+                        {statusLabel(item.status)}
+                      </span>
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center text-sm text-gray-700">
-                        <Scale className="h-3.5 w-3.5 text-gray-400 mr-1.5" />
-                        {Number(item.weight_in_gram || 0).toFixed(3)} g
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm font-semibold text-gray-900">
-                        {formatCurrency(item.valuation_amount)}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">{getStatusBadge(item)}</td>
-                    <td
-                      className="px-6 py-4"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <div className="flex items-center space-x-1">
+                    <td className="px-4 py-3 text-right">
+                      <div className="flex items-center justify-end gap-2">
                         <Link
                           to={`/transactions/donation/approval/view/${item.transaction_id}`}
-                          className="p-2 text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
-                          title="View & Approve"
+                          className="px-3 py-1.5 text-[11px] font-medium bg-blue-50 text-blue-700 border border-blue-200 rounded hover:bg-blue-100 transition flex items-center gap-1"
                         >
-                          <Eye className="h-4 w-4" />
+                          <Eye className="w-3 h-3" /> View
                         </Link>
+                        {canHodApprove(item) && (
+                          <button
+                            onClick={() => handleAction(item, 27, "HOD Approve")}
+                            className="px-3 py-1.5 text-[11px] font-medium bg-blue-50 text-blue-700 border border-blue-200 rounded hover:bg-blue-100 transition flex items-center gap-1"
+                          >
+                            <CheckCircle className="w-3 h-3" /> HOD Approve
+                          </button>
+                        )}
+                        {canAdminApprove(item) && (
+                          <button
+                            onClick={() => handleAction(item, 28, "Admin Approve")}
+                            className="px-3 py-1.5 text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 rounded hover:bg-emerald-100 transition flex items-center gap-1"
+                          >
+                            <CheckCircle className="w-3 h-3" /> Admin Approve
+                          </button>
+                        )}
+                        {canQuery(item) && (
+                          <button
+                            onClick={() => handleAction(item, 29, "Query")}
+                            className="px-3 py-1.5 text-[11px] font-medium bg-orange-50 text-orange-700 border border-orange-200 rounded hover:bg-orange-100 transition flex items-center gap-1"
+                          >
+                            <AlertCircle className="w-3 h-3" /> Query
+                          </button>
+                        )}
+                        {canSentBack(item) && (
+                          <button
+                            onClick={() => handleAction(item, 30, "Sent Back")}
+                            className="px-3 py-1.5 text-[11px] font-medium bg-purple-50 text-purple-700 border border-purple-200 rounded hover:bg-purple-100 transition flex items-center gap-1"
+                          >
+                            <UserCircle className="w-3 h-3" /> Sent Back
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
                 ))
-              ) : (
-                <tr>
-                  <td colSpan="8" className="px-6 py-12 text-center">
-                    <div className="flex flex-col items-center justify-center">
-                      <div className="h-16 w-16 rounded-full bg-gray-100 flex items-center justify-center mb-4">
-                        <Shield className="h-8 w-8 text-gray-400" />
-                      </div>
-                      <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                        {searchTerm
-                          ? "No matching donations found"
-                          : "No donations pending for approval"}
-                      </h3>
-                      <p className="text-gray-600">
-                        {searchTerm
-                          ? "Try adjusting your search"
-                          : "All donations have been processed"}
-                      </p>
-                    </div>
-                  </td>
-                </tr>
               )}
             </tbody>
           </table>
@@ -461,42 +326,21 @@ const DonationApproval = ({ user }) => {
       </div>
 
       {/* Pagination */}
-      {pagination.last_page > 1 && (
-        <div className="flex flex-col md:flex-row md:items-center justify-between mt-6 gap-4">
-          <div className="text-sm text-gray-700">
-            Showing {pagination.from} to {pagination.to} of {pagination.total}{" "}
-            entries
-          </div>
-          <div className="flex items-center space-x-1">
-            <button
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              disabled={currentPage == 1}
-              className="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-            >
-              <ChevronLeft className="h-4 w-4 mr-1" />Previous
-            </button>
-            {renderPagination().map((page) => (
+      {pagination.total > 0 && (
+        <div className="mt-4 flex items-center justify-between">
+          <p className="text-xs text-gray-500">
+            Showing {pagination.from} to {pagination.to} of {pagination.total} entries
+          </p>
+          <div className="flex gap-1">
+            {Array.from({ length: pagination.last_page }, (_, i) => i + 1).map((p) => (
               <button
-                key={page}
-                onClick={() => setCurrentPage(page)}
-                className={`px-4 py-2 rounded-lg transition-colors ${
-                  currentPage == page
-                    ? "bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-sm"
-                    : "bg-white border border-gray-300 hover:bg-gray-50"
-                }`}
+                key={p}
+                onClick={() => setCurrentPage(p)}
+                className={`w-8 h-8 rounded text-xs transition ${p === currentPage ? "bg-red-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
               >
-                {page}
+                {p}
               </button>
             ))}
-            <button
-              onClick={() =>
-                setCurrentPage((p) => Math.min(pagination.last_page, p + 1))
-              }
-              disabled={currentPage == pagination.last_page}
-              className="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-            >
-              Next<ChevronRight className="h-4 w-4 ml-1" />
-            </button>
           </div>
         </div>
       )}

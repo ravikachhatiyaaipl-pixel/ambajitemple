@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
-  Search, Eye, RefreshCw, ArrowLeft, Calendar, Building, 
-  User, Clock, Shield, AlertCircle,
+  Search, Eye, RefreshCw, ArrowLeft, Calendar, Building,
+  User, Clock, Shield, AlertCircle, ShieldCheck,
   ChevronLeft, ChevronRight, XCircle, FileText
 } from "lucide-react";
 import { toast } from "react-hot-toast";
@@ -25,6 +25,10 @@ const ShopRentApplicationApprovalList = ({ user }) => {
   const [actionsList, setActionsList] = useState([]);
   const [userDesignationId, setUserDesignationId] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  // Seva booking approvals screen jaisa - chain + "awaiting you" list
+  const [chain, setChain] = useState([]);
+  const [pendingItems, setPendingItems] = useState([]);
+  const [onlyMine, setOnlyMine] = useState(true);
 
   useEffect(() => {
     try {
@@ -79,9 +83,10 @@ const ShopRentApplicationApprovalList = ({ user }) => {
     setCurrentPage(1);
   };
 
-  useEffect(() => { 
+  useEffect(() => {
     if (permissionsLoaded) {
-      loadItems(); 
+      loadItems();
+      loadPending();
     }
   }, [currentPage, searchDebounced, permissionsLoaded]);
 
@@ -105,6 +110,20 @@ const ShopRentApplicationApprovalList = ({ user }) => {
       toast.error(error.response?.data?.message || "Failed to load data");
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Pending approvals (authority filtered) + live chain
+  const loadPending = async () => {
+    try {
+      const res = await ShopRentApplicationApi.getPendingApprovals({
+        stage: "SRP",
+        per_page: 200,
+      });
+      setPendingItems(res?.data || []);
+      if (res?.meta?.chain) setChain(res.meta.chain);
+    } catch (error) {
+      console.error("Error loading pending approvals:", error);
     }
   };
 
@@ -168,6 +187,7 @@ const ShopRentApplicationApprovalList = ({ user }) => {
 
   const handleRefresh = () => {
     loadItems();
+    loadPending();
     setSearchTerm("");
     toast.success("Data refreshed successfully!");
   };
@@ -181,6 +201,9 @@ const ShopRentApplicationApprovalList = ({ user }) => {
     for (let i = start; i <= end; i++) pages.push(i);
     return pages;
   };
+
+  const displayItems = onlyMine ? pendingItems : items;
+
 
   if (!permissionsLoaded) {
     return (
@@ -236,6 +259,56 @@ const ShopRentApplicationApprovalList = ({ user }) => {
         </div>
       </div>
 
+      {/* Stats + filter */}
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4 mb-6">
+        {[
+          ["Awaiting Approval", pendingItems.length, "text-amber-600"],
+          [
+            "You can approve",
+            pendingItems.filter((a) => a.can_approve).length,
+            "text-emerald-600",
+          ],
+          [
+            "Not in your authority",
+            pendingItems.filter((a) => !a.can_approve).length,
+            "text-gray-500",
+          ],
+          ["Steps in flow", chain.length, "text-indigo-600"],
+        ].map(([label, value, color]) => (
+          <div
+            key={label}
+            className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm"
+          >
+            <p className="text-xs text-gray-500">{label}</p>
+            <p className={`mt-1 text-2xl font-bold ${color}`}>{value}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Filter toggle */}
+      <div className="flex items-center gap-2 mb-4">
+        <button
+          onClick={() => setOnlyMine(true)}
+          className={`rounded-full px-3.5 py-1.5 text-xs font-medium transition ${
+            onlyMine
+              ? "bg-gray-900 text-white"
+              : "bg-white text-gray-600 ring-1 ring-gray-200 hover:ring-gray-300"
+          }`}
+        >
+          Awaiting You
+        </button>
+        <button
+          onClick={() => setOnlyMine(false)}
+          className={`rounded-full px-3.5 py-1.5 text-xs font-medium transition ${
+            !onlyMine
+              ? "bg-gray-900 text-white"
+              : "bg-white text-gray-600 ring-1 ring-gray-200 hover:ring-gray-300"
+          }`}
+        >
+          All Applications
+        </button>
+      </div>
+
       {/* Table */}
       <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
         <div className="overflow-x-auto">
@@ -261,7 +334,7 @@ const ShopRentApplicationApprovalList = ({ user }) => {
                   </td>
                 </tr>
               ) : items.length > 0 ? (
-                items.map((item) => (
+                displayItems.map((item) => (
                   <tr
                     key={item.SPRA_Id}
                     className="hover:bg-gray-50 transition-colors duration-150 group cursor-pointer"
