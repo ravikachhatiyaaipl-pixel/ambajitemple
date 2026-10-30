@@ -41,6 +41,7 @@ import { useAccountingNavigation } from "../hooks/useaccountingnavigation";
 import { useFinancialYear } from "../context/financialyearcontext";
 import axios from "axios";
 import SettingsInitializer from "./settingsinitializer";
+import { AutoBackGuard } from "./backbutton";
 import { findRelevantKnowledge, quickSuggestions } from "../utils/ai-knowledge";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
@@ -1652,7 +1653,7 @@ const Layout = ({ user, onLogout, children }) => {
       {MobileNavigation}
 
       <main className="flex-1 w-full overflow-y-auto">
-        <div className="w-full">{children}</div>
+        <AutoBackGuard>{children}</AutoBackGuard>
       </main>
 
       {/* Footer - With Larger Help Button - Hidden on Dashboard */}
