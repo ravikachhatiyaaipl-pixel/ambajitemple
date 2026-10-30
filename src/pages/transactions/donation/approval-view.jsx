@@ -301,14 +301,14 @@ const DonationApprovalView = ({ user }) => {
                     s.state === "done"
                       ? "border-emerald-200 bg-emerald-50"
                       : s.state === "current"
-                      ? "border-amber-300 bg-amber-50"
-                      : "border-gray-200 bg-gray-50";
+                        ? "border-amber-300 bg-amber-50"
+                        : "border-gray-200 bg-gray-50";
                   const titleCls =
                     s.state === "done"
                       ? "text-emerald-800"
                       : s.state === "current"
-                      ? "text-amber-800"
-                      : "text-gray-500";
+                        ? "text-amber-800"
+                        : "text-gray-500";
                   return (
                     <div key={s.Act_Id} className={`rounded-lg border px-4 py-3 ${stateCls}`}>
                       <div className="flex items-center justify-between gap-2">
@@ -329,14 +329,13 @@ const DonationApprovalView = ({ user }) => {
                       </div>
                       <p className="mt-1 text-xs text-gray-500">
                         {s.state === "done"
-                          ? `Approved${s.approver ? ` by ${s.approver}` : ""}${
-                              s.action_date
-                                ? ` ${new Date(s.action_date).toLocaleString("en-IN")}`
-                                : ""
-                            }`
+                          ? `Approved${s.approver ? ` by ${s.approver}` : ""}${s.action_date
+                            ? ` ${new Date(s.action_date).toLocaleString("en-IN")}`
+                            : ""
+                          }`
                           : s.state === "current"
-                          ? "Waiting for approval"
-                          : "This step has not started yet"}
+                            ? "Waiting for approval"
+                            : "This step has not started yet"}
                       </p>
                       {s.state === "done" && s.remarks && (
                         <p className="mt-0.5 text-xs italic text-gray-500">{s.remarks}</p>
@@ -434,7 +433,7 @@ const DonationApprovalView = ({ user }) => {
             {((item.co_donors && item.co_donors.length > 0) || (item.co_donors && item.co_donors.length > 0) || (item.coDonors && item.coDonors.length > 0)) && (
               <div className="mt-4 pt-4 border-t border-gray-100">
                 <p className="text-xs font-semibold text-gray-700 mb-2 flex items-center gap-1.5">
-                  <Users className="h-3.5 w-3.5 text-amber-600" /> Co-Donors (सह-दानदाता)
+                  <Users className="h-3.5 w-3.5 text-amber-600" /> Co-Donors
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {(item.co_donors || item.coDonors || []).map((cd, i) => (
@@ -683,8 +682,8 @@ const DonationApprovalView = ({ user }) => {
                 {actionModal.Act_Id === 28
                   ? "Approve donation and forward to next stage"
                   : actionModal.Act_Id === 30
-                  ? "Send donation back to clerk for correction"
-                  : "Donation will be rejected"}
+                    ? "Send donation back to clerk for correction"
+                    : "Donation will be rejected"}
               </p>
             </div>
 

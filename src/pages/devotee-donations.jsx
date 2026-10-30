@@ -132,8 +132,8 @@ const DevoteeDonations = ({ user }) => {
               s.state === "done"
                 ? "border-emerald-200 bg-emerald-50"
                 : s.state === "current"
-                ? "border-amber-200 bg-amber-50"
-                : "border-gray-200 bg-gray-50";
+                  ? "border-amber-200 bg-amber-50"
+                  : "border-gray-200 bg-gray-50";
             const icon =
               s.state === "done" ? (
                 <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
@@ -146,8 +146,8 @@ const DevoteeDonations = ({ user }) => {
               s.state === "done"
                 ? "text-emerald-800"
                 : s.state === "current"
-                ? "text-amber-800"
-                : "text-gray-500";
+                  ? "text-amber-800"
+                  : "text-gray-500";
             return (
               <div
                 key={s.Act_Id}
@@ -346,11 +346,10 @@ const DevoteeDonations = ({ user }) => {
                     </td>
                     <td className="px-5 py-4">
                       <span
-                        className={`inline-flex items-center gap-1 text-xs ${
-                          (t.missing_documents || []).length
+                        className={`inline-flex items-center gap-1 text-xs ${(t.missing_documents || []).length
                             ? "text-amber-600"
                             : "text-emerald-600"
-                        }`}
+                          }`}
                       >
                         <FileText className="h-3.5 w-3.5" />
                         {(t.documents || []).length} uploaded
@@ -517,7 +516,7 @@ const DevoteeDonations = ({ user }) => {
                   {((detail.co_donors && detail.co_donors.length > 0) || (detail.coDonors && detail.coDonors.length > 0)) && (
                     <div className="col-span-2 pt-2 border-t border-gray-100">
                       <p className="text-[11px] font-semibold text-gray-600 mb-1 flex items-center gap-1">
-                        <Users className="h-3 w-3 text-amber-600" /> Co-Donors (सह-दानदाता):
+                        <Users className="h-3 w-3 text-amber-600" /> Co-Donors
                       </p>
                       <div className="flex flex-wrap gap-1.5">
                         {(detail.co_donors || detail.coDonors || []).map((cd, i) => (

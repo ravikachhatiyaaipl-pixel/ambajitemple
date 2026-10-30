@@ -176,16 +176,16 @@ const DonationApproval = ({ user }) => {
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="p-6 max-w-full mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
           <div className="flex items-center gap-2">
-            <Shield className="w-5 h-5 text-red-600" />
             <h1 className="text-xl font-bold text-gray-800">{pageTitle}</h1>
-          </div>
-          <p className="text-sm text-gray-500">
+            {/* <p className="text-sm text-gray-500">
             {isAdmin ? "Admin Approval Dashboard - Review HOD Approved donations" : "HOD Approval Dashboard - Review Pending donations"}
-          </p>
+          </p> */}
+          </div>
+          
         </div>
         <button
           onClick={loadItems}

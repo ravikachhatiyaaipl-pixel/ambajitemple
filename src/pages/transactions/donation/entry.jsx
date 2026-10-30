@@ -171,8 +171,8 @@ const DonationEntry = ({ user }) => {
     () =>
       form.category_id
         ? purities.filter(
-            (p) => String(p.category_id) === String(form.category_id)
-          )
+          (p) => String(p.category_id) === String(form.category_id)
+        )
         : purities,
     [purities, form.category_id]
   );
@@ -533,9 +533,6 @@ const DonationEntry = ({ user }) => {
                 className={inputCls}
                 placeholder="9876543210"
               />
-              <p className="mt-1 text-[10px] text-gray-500">
-                Donor record will be created automatically from this number
-              </p>
             </div>
             <div>
               <label className={labelCls}>Donor Email</label>
@@ -565,7 +562,7 @@ const DonationEntry = ({ user }) => {
                 <div>
                   <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-1.5">
                     <Users className="h-4 w-4 text-amber-600" />
-                    Co-Donors (सह-दानदाता)
+                    Co-Donors
                   </h3>
                   <p className="text-xs text-gray-500">
                     Add family members or joint co-donor names
@@ -781,17 +778,16 @@ const DonationEntry = ({ user }) => {
                 )}
               </div>
               <div className="sm:col-span-2">
-                <label className={labelCls}>Storage Documents</label>
+                
                 {selectedStorageDocs.length > 0 ? (
                   <div className="flex flex-wrap gap-1.5">
                     {selectedStorageDocs.map((d) => (
                       <span
                         key={d.document_id}
-                        className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${
-                          d.is_required
+                        className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${d.is_required
                             ? "bg-red-100 text-red-700"
                             : "bg-gray-100 text-gray-600"
-                        }`}
+                          }`}
                       >
                         {d.name}
                         {d.is_required ? " *" : ""}
@@ -800,7 +796,6 @@ const DonationEntry = ({ user }) => {
                   </div>
                 ) : (
                   <p className="text-[11px] text-gray-500">
-                    Mapped documents will appear when storage is selected
                   </p>
                 )}
               </div>
