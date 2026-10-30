@@ -27,7 +27,7 @@ import * as Icons from "lucide-react";
 const REMOVED_MENU_LINK = /(pet-registration-masters|masters\/tax-management|reports\/pet\/|reports\/property-tax|dashboards\/pet|dashboards\/revenue|tax-payments)/i;
 const REMOVED_MENU_NAME = /^\s*(pet\b.*|animal\b.*|tax management|property tax.*|revenue dashboard)\s*$/i;
 
-const filterRemovedMenus = (items) => {
+export const filterRemovedMenus = (items) => {
   if (!Array.isArray(items)) return [];
   const removed = new Set();
   items.forEach((item) => {

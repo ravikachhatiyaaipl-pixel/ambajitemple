@@ -756,7 +756,7 @@ const AddEditShopRental = ({ user }) => {
               <p className="mt-1 text-xs text-gray-500">
                 Number of months of security deposit (0-99)
               </p>
-            </div>
+            </div>  
 
             {/* Lease Tenure: Start Date -> End Date (duration auto) */}
             <div className="md:col-span-2 rounded-xl border border-blue-100 bg-blue-50/50 p-3">
