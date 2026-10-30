@@ -821,7 +821,7 @@ const AddEditShopRental = ({ user }) => {
                     - applicant ki application me yahi auto show hoga.
                   </>
                 ) : (
-                  "Start aur End date select karne par tenure auto calculate hoga."
+                  ""
                 )}
               </p>
             </div>

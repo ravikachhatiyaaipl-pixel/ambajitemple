@@ -441,7 +441,7 @@ const SevaServices = ({ user }) => {
                   </select>
                   {selectedCategory && (
                     <p className="mt-1 text-[10px] text-gray-500">
-                      Code automatically generate hoga (name se)
+                      Code will be auto-generated based on the entered name.
                     </p>
                   )}
                 </div>
